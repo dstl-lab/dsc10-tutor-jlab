@@ -1,0 +1,7 @@
+{
+  "ServerApp": {
+    "jpserver_extensions": {
+      "dsc10_tutor_jlab_backend": true
+    }
+  }
+}

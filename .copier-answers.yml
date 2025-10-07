@@ -1,0 +1,14 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v4.4.0
+_src_path: https://github.com/jupyterlab/extension-template
+author_email: lau@ucsd.edu
+author_name: dsc10-tutor-jlab
+has_binder: false
+has_settings: true
+kind: frontend-and-server
+labextension_name: dsc10-tutor-jlab-frontend
+project_short_description: AI Tutor for DSC 10
+python_name: dsc10_tutor_jlab_backend
+repository: ''
+test: true
+

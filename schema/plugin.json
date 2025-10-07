@@ -1,0 +1,8 @@
+{
+  "jupyter.lab.shortcuts": [],
+  "title": "dsc10-tutor-jlab-frontend",
+  "description": "dsc10-tutor-jlab-frontend settings.",
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}

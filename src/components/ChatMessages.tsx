@@ -13,13 +13,18 @@ const messages = [
 
 export default function ChatMessages() {
   return (
-    <div>
-      {messages.map((message, index) => (
-        <div key={index}>
-          <p>{message.text}</p>
-          <small>{message.author}</small>
-        </div>
-      ))}
+    <div className="chat-messages">
+      {messages.map((message, index) => {
+        const isUser = message.author === 'user';
+        return (
+          <div
+            key={index}
+            className={`chat-message ${isUser ? 'chat-message-user' : 'chat-message-tutor'}`}
+          >
+            <div className="chat-message-content">{message.text}</div>
+          </div>
+        );
+      })}
     </div>
   );
 }

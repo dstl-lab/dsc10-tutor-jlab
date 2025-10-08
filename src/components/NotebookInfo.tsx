@@ -5,9 +5,11 @@ export default function NotebookInfo() {
   const notebook = useNotebook();
   return (
     <div>
-      <p>Notebook: {notebook.notebookName}</p>
-      <p>Path: {notebook.notebookPath}</p>
-      <p>Active Cell Index: {notebook.activeCellIndex}</p>
+      <small>Notebook: {notebook.notebookName}</small>
+      <br />
+      <small>Path: {notebook.notebookPath}</small>
+      <br />
+      <small>Active Cell Index: {notebook.activeCellIndex}</small>
     </div>
   );
 }

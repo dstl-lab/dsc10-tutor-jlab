@@ -16,8 +16,8 @@ export default function Chat() {
   return (
     <div style={styles}>
       <ChatMessages />
-      <NotebookInfo />
       <ChatMessageBox />
+      <NotebookInfo />
     </div>
   );
 }

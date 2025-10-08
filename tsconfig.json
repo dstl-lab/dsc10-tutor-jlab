@@ -1,5 +1,11 @@
 {
   "compilerOptions": {
+    // Allow imports like @/components/ChatMessageBox
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
     "allowSyntheticDefaultImports": true,
     "composite": true,
     "declaration": true,

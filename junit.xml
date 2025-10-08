@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="1" failures="0" errors="0" time="1.574">
+  <testsuite name="dsc10-tutor-jlab-frontend" errors="0" failures="0" skipped="0" timestamp="2025-10-07T20:10:43" time="0.934" tests="1">
+    <testcase classname="dsc10-tutor-jlab-frontend should be tested" name="dsc10-tutor-jlab-frontend should be tested" time="0.001">
+    </testcase>
+  </testsuite>
+</testsuites>

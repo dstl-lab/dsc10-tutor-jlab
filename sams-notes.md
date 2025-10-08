@@ -1,3 +1,5 @@
+https://jupyterlab.readthedocs.io/en/stable/extension/extension_tutorial.html
+
 https://github.com/ucsd-ets/dsc10-notebook/blob/main/Dockerfile
 
 - dockerfile for dsc10 env

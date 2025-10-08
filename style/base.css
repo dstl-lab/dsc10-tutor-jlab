@@ -3,3 +3,14 @@
 
     https://jupyterlab.readthedocs.io/en/stable/developer/css.html
 */
+
+/* Set box-sizing to border-box, scoped for the app */
+#dsc10-tutor-jlab-app {
+  box-sizing: border-box;
+}
+
+#dsc10-tutor-jlab-app *,
+#dsc10-tutor-jlab-app *:before,
+#dsc10-tutor-jlab-app *:after {
+  box-sizing: inherit;
+}

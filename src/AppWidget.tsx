@@ -13,15 +13,22 @@ import { INotebookTracker } from '@jupyterlab/notebook';
 import { ReactWidget } from '@jupyterlab/ui-components';
 import { type Widget } from '@lumino/widgets';
 
-import Chat from './components/Chat';
-import { NotebookProvider, useNotebook } from './contexts/NotebookContext';
+import Chat from '@/components/Chat';
+import { NotebookProvider } from '@/contexts/NotebookContext';
+
+const styles = {
+  boxSizing: 'border-box' as const,
+  display: 'flex',
+  flexDirection: 'column' as const,
+  gap: '1rem',
+  width: '100%',
+  height: '100%',
+  padding: '0.5rem'
+};
 
 function App() {
-  const notebook = useNotebook();
-  console.log(notebook);
-
   return (
-    <div>
+    <div style={styles} id="dsc10-tutor-jlab-app">
       <strong>Welcome to the AI Tutor app!</strong>
       <Chat />
     </div>

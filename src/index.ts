@@ -51,6 +51,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     widget.title.closable = true;
 
     app.shell.add(widget, 'right');
+    app.shell.activateById(widget.id);
 
     // requestAPI<any>('get-example')
     //   .then(data => {

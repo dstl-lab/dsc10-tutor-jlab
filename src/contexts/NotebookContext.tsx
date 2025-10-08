@@ -2,9 +2,9 @@
  * Provides a React context to track the notebook state (e.g. currently opened
  * notebook file, select cell, etc.).
  *
- * Also provides hooks to grab notebook state from components
- *
  * See the INotebookTracker interface in @jupyterlab/notebook for reference.
+ *
+ * In components, use the useNotebook hook to get the notebook state.
  */
 
 import * as React from 'react';
@@ -40,6 +40,42 @@ export function NotebookProvider({
     notebookPath: '',
     activeCellIndex: -1
   });
+
+  // Build context state snapshot from the tracker
+  const getTrackerState = useCallback((): INotebookContext => {
+    const panel = notebookTracker.currentWidget;
+    const notebookName = panel?.title?.label ?? '';
+    const notebookPath = panel?.context?.path ?? '';
+    const activeCellIndex = panel?.content?.activeCellIndex ?? -1;
+
+    return { notebookName, notebookPath, activeCellIndex };
+  }, [notebookTracker]);
+
+  useEffect(() => {
+    // Initialize from current tracker state
+    setContextValue(getTrackerState());
+
+    // Update when current notebook changes (open/close/switch)
+    const handleCurrentChanged = () => {
+      setContextValue(getTrackerState());
+    };
+
+    // Update only the active cell index when selection changes
+    const handleActiveCellChanged = () => {
+      const index =
+        notebookTracker.currentWidget?.content?.activeCellIndex ?? -1;
+
+      setContextValue(prev => ({ ...prev, activeCellIndex: index }));
+    };
+
+    notebookTracker.currentChanged.connect(handleCurrentChanged);
+    notebookTracker.activeCellChanged.connect(handleActiveCellChanged);
+
+    return () => {
+      notebookTracker.currentChanged.disconnect(handleCurrentChanged);
+      notebookTracker.activeCellChanged.disconnect(handleActiveCellChanged);
+    };
+  }, [getTrackerState, notebookTracker]);
 
   return (
     <NotebookContext.Provider value={contextValue}>

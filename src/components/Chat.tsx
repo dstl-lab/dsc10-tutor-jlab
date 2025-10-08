@@ -1,4 +1,5 @@
 import * as React from 'react';
+import ChatMessageBox from './ChatMessageBox';
 
 const messages = [
   {
@@ -14,12 +15,15 @@ const messages = [
 export default function Chat() {
   return (
     <div>
-      {messages.map(message => (
-        <div>
-          <p>{message.text}</p>
-          <small>{message.author}</small>
-        </div>
-      ))}
+      <div>
+        {messages.map((message, index) => (
+          <div key={index}>
+            <p>{message.text}</p>
+            <small>{message.author}</small>
+          </div>
+        ))}
+      </div>
+      <ChatMessageBox />
     </div>
   );
 }

@@ -7,7 +7,7 @@ help:
 .PHONY: lab
 lab: ## Start JupyterLab
 	@echo "🚀 Starting JupyterLab"
-	jupyter lab
+	jupyter lab --port 9999
 
 .PHONY: watch
 watch: ## Rebuild JS bundle on JS changes

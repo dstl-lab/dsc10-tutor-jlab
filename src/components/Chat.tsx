@@ -1,28 +1,22 @@
 import * as React from 'react';
+
+import ChatMessages from './ChatMessages';
+import NotebookInfo from './NotebookInfo';
 import ChatMessageBox from './ChatMessageBox';
 
-const messages = [
-  {
-    author: 'user',
-    text: 'how do i read in a CSV file?'
-  },
-  {
-    author: 'tutor',
-    text: 'try pd.read_csv()!'
-  }
-];
+const styles = {
+  display: 'flex',
+  flexDirection: 'column' as const,
+  gap: '1rem',
+  width: '100%',
+  height: '100%'
+};
 
 export default function Chat() {
   return (
-    <div>
-      <div>
-        {messages.map((message, index) => (
-          <div key={index}>
-            <p>{message.text}</p>
-            <small>{message.author}</small>
-          </div>
-        ))}
-      </div>
+    <div style={styles}>
+      <ChatMessages />
+      <NotebookInfo />
       <ChatMessageBox />
     </div>
   );

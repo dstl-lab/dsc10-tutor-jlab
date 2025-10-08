@@ -1,5 +1,28 @@
 import * as React from 'react';
 
+const chatMessagesStyle: React.CSSProperties = {
+  flex: 1,
+  overflowY: 'auto',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.5rem'
+};
+
+const chatMessageBaseStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.25rem'
+};
+
+const userMessageStyle: React.CSSProperties = {
+  background: 'var(--jp-brand-color1)',
+  color: 'white',
+  borderRadius: '0.5rem',
+  padding: '0.5rem 0.75rem',
+  maxWidth: '90%',
+  alignSelf: 'flex-end'
+};
+
 const messages = [
   {
     author: 'user',
@@ -13,15 +36,18 @@ const messages = [
 
 export default function ChatMessages() {
   return (
-    <div className="chat-messages">
+    <div style={chatMessagesStyle}>
       {messages.map((message, index) => {
         const isUser = message.author === 'user';
         return (
           <div
             key={index}
-            className={`chat-message ${isUser ? 'chat-message-user' : 'chat-message-tutor'}`}
+            style={{
+              ...chatMessageBaseStyle,
+              ...(isUser ? userMessageStyle : {})
+            }}
           >
-            <div className="chat-message-content">{message.text}</div>
+            <div>{message.text}</div>
           </div>
         );
       })}

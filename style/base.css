@@ -1,8 +1,10 @@
-/*
-    See the JupyterLab Developer Guide for useful CSS Patterns:
-
-    https://jupyterlab.readthedocs.io/en/stable/developer/css.html
-*/
+/* See the JupyterLab Developer Guide for useful CSS Patterns:
+ * https://jupyterlab.readthedocs.io/en/stable/developer/css.html
+ *
+ * note from sam: i recommend that you use inline styles instead of class names
+ * to avoid potential conflicts with other styles! use this file for global
+ * style defaults / resets.
+ */
 
 /* Set box-sizing to border-box, scoped for the app */
 #dsc10-tutor-jlab-app {
@@ -13,31 +15,4 @@
 #dsc10-tutor-jlab-app *:before,
 #dsc10-tutor-jlab-app *:after {
   box-sizing: inherit;
-}
-
-#dsc10-tutor-jlab-app {
-  /* Chat styles */
-  & .chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  & .chat-message {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  /* User message: bubble with dark background and white text */
-  & .chat-message-user {
-    background: var(--jp-brand-color1);
-    color: white;
-    border-radius: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    max-width: 90%;
-    align-self: flex-end;
-  }
 }

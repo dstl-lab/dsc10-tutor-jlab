@@ -1,6 +1,7 @@
 import {
   JupyterFrontEnd,
-  JupyterFrontEndPlugin
+  JupyterFrontEndPlugin,
+  LabShell
 } from '@jupyterlab/application';
 
 import { MainAreaWidget } from '@jupyterlab/apputils';
@@ -41,7 +42,6 @@ const plugin: JupyterFrontEndPlugin<void> = {
     }
 
     // Attach app to the right-hand sidebar!
-    // TODO: the sidebar is closed by default, it should be opened
     // TODO: we should set a min-width so the sidebar can't be dragged to 0 width
     const widget = new MainAreaWidget({
       content: createAppWidget({ notebookTracker })
@@ -50,8 +50,10 @@ const plugin: JupyterFrontEndPlugin<void> = {
     widget.title.label = 'AI Tutor';
     widget.title.closable = true;
 
-    app.shell.add(widget, 'right');
-    app.shell.activateById(widget.id);
+    const labShell = app.shell as LabShell;
+    labShell.add(widget, 'right');
+    labShell.activateById(widget.id);
+    labShell.expandRight();
 
     // requestAPI<any>('get-example')
     //   .then(data => {

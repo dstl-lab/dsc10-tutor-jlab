@@ -16,20 +16,13 @@ import { type Widget } from '@lumino/widgets';
 import Chat from '@/components/Chat';
 import { NotebookProvider } from '@/contexts/NotebookContext';
 
-const styles = {
-  boxSizing: 'border-box' as const,
-  display: 'flex',
-  flexDirection: 'column' as const,
-  gap: '1rem',
-  width: '100%',
-  height: '100%',
-  padding: '0.5rem'
-};
-
 function App() {
   return (
-    <div style={styles} id="dsc10-tutor-jlab-app">
-      <strong>Welcome to the AI Tutor app!</strong>
+    <div
+      id="dsc10-tutor-jlab-app"
+      className="flex h-full w-full flex-col gap-2 p-2"
+    >
+      <strong>🧑‍🏫 DSC 10 AI Tutor</strong>
       <Chat />
     </div>
   );

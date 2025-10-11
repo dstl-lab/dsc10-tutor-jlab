@@ -1,27 +1,11 @@
 import * as React from 'react';
+import { cn } from '@/utils';
 
-const chatMessagesStyle: React.CSSProperties = {
-  flex: 1,
-  overflowY: 'auto',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.5rem'
-};
+const userMessageClasses = cn(
+  'max-w-[90%] self-end rounded-md bg-jp-brand-color1 p-2 text-white'
+);
 
-const chatMessageBaseStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.25rem'
-};
-
-const userMessageStyle: React.CSSProperties = {
-  background: 'var(--jp-brand-color1)',
-  color: 'white',
-  borderRadius: '0.5rem',
-  padding: '0.5rem 0.75rem',
-  maxWidth: '90%',
-  alignSelf: 'flex-end'
-};
+const tutorMessageClasses = cn('max-w-[90%] self-start');
 
 const messages = [
   {
@@ -36,18 +20,18 @@ const messages = [
 
 export default function ChatMessages() {
   return (
-    <div style={chatMessagesStyle}>
+    <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
       {messages.map((message, index) => {
         const isUser = message.author === 'user';
         return (
           <div
             key={index}
-            style={{
-              ...chatMessageBaseStyle,
-              ...(isUser ? userMessageStyle : {})
-            }}
+            className={cn(
+              'flex flex-col',
+              isUser ? userMessageClasses : tutorMessageClasses
+            )}
           >
-            <div>{message.text}</div>
+            {message.text}
           </div>
         );
       })}

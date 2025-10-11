@@ -4,17 +4,9 @@ import ChatMessages from './ChatMessages';
 import NotebookInfo from './NotebookInfo';
 import ChatMessageBox from './ChatMessageBox';
 
-const styles = {
-  display: 'flex',
-  flexDirection: 'column' as const,
-  gap: '1rem',
-  width: '100%',
-  height: '100%'
-};
-
 export default function Chat() {
   return (
-    <div style={styles}>
+    <div className="flex h-full w-full flex-col gap-2">
       <ChatMessages />
       <ChatMessageBox />
       <NotebookInfo />

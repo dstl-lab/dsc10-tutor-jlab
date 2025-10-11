@@ -1,0 +1,56 @@
+/* This file will get compiled into tailwind.generated.css */
+
+/*
+ * Normally we would just @import "tailwindcss" for everything, but we don't
+ * want to pull in tailwind preflight styles since those will apply globally.
+ */
+
+@layer theme, base, components, utilities;
+
+@import 'tailwindcss/theme.css' layer(theme);
+@import './preflight.css' layer(base);
+@import 'tailwindcss/utilities.css' layer(utilities) source('../src/');
+
+/*
+Copy jupyterlab color variables from
+https://github.com/jupyterlab/jupyterlab/blob/f3f75f777147955ea2bee59d848e466f301c6bfe/packages/theme-light-extension/style/variables.css
+*/
+@theme inline {
+  /* Brand/accent */
+  --color-jp-brand-color0: var(--md-blue-900, #0d47a1);
+  --color-jp-brand-color1: var(--md-blue-700, #1976d2);
+  --color-jp-brand-color2: var(--md-blue-300, #64b5f6);
+  --color-jp-brand-color3: var(--md-blue-100, #bbdefb);
+  --color-jp-brand-color4: var(--md-blue-50, #e3f2fd);
+  --color-jp-accent-color0: var(--md-green-900, #1b5e20);
+  --color-jp-accent-color1: var(--md-green-700, #388e3c);
+  --color-jp-accent-color2: var(--md-green-300, #81c784);
+  --color-jp-accent-color3: var(--md-green-100, #c8e6c9);
+
+  /* State colors (warn, error, success, info) */
+  --color-jp-warn-color0: var(--md-orange-900, #e65100);
+  --color-jp-warn-color1: var(--md-orange-700, #f57c00);
+  --color-jp-warn-color2: var(--md-orange-300, #ffb74d);
+  --color-jp-warn-color3: var(--md-orange-100, #ffe0b2);
+  --color-jp-error-color0: var(--md-red-900, #b71c1c);
+  --color-jp-error-color1: var(--md-red-700, #d32f2f);
+  --color-jp-error-color2: var(--md-red-300, #e57373);
+  --color-jp-error-color3: var(--md-red-100, #ffcdd2);
+  --color-jp-success-color0: var(--md-green-900, #1b5e20);
+  --color-jp-success-color1: var(--md-green-700, #388e3c);
+  --color-jp-success-color2: var(--md-green-300, #81c784);
+  --color-jp-success-color3: var(--md-green-100, #c8e6c9);
+  --color-jp-info-color0: var(--md-cyan-900, #006064);
+  --color-jp-info-color1: var(--md-cyan-700, #0097a7);
+  --color-jp-info-color2: var(--md-cyan-300, #4dd0e1);
+  --color-jp-info-color3: var(--md-cyan-100, #b2ebf2);
+
+  /* Borders
+   *
+   * The following variables, specify the visual styling of borders in JupyterLab.
+   */
+  --jp-border-color0: var(--md-grey-400, #bdbdbd);
+  --jp-border-color1: var(--md-grey-400, #bdbdbd);
+  --jp-border-color2: var(--md-grey-300, #e0e0e0);
+  --jp-border-color3: var(--md-grey-200, #eee);
+}

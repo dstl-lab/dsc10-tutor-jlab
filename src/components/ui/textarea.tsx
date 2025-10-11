@@ -1,5 +1,7 @@
 import * as React from 'react';
 
+import { cn } from '@/utils';
+
 type TextareaProps = React.ComponentProps<'textarea'> & {
   autoResize?: boolean;
 };
@@ -56,20 +58,10 @@ function Textarea({
     <textarea
       ref={internalRef}
       data-slot="textarea"
-      className={['jp-dsc10-Textarea', className].filter(Boolean).join(' ')}
-      style={{
-        // Provide sensible defaults compatible with JupyterLab theming
-        width: '100%',
-        minHeight: '4rem',
-        padding: '0.5rem 0.75rem',
-        borderRadius: 4,
-        border: '1px solid var(--jp-border-color2, #c6c6c6)',
-        background: 'var(--jp-input-background, transparent)',
-        color: 'var(--jp-ui-font-color1, inherit)',
-        fontSize: 'var(--jp-ui-font-size1, 14px)',
-        boxShadow: 'var(--jp-input-box-shadow, none)',
-        resize: 'none'
-      }}
+      className={cn(
+        'min-h-16, w-full resize-none rounded-md border-1 border-jp-brand-color2 p-2 transition-[color,box-shadow]',
+        className
+      )}
       onInput={handleInput}
       value={value}
       {...props}

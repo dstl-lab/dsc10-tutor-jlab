@@ -48,31 +48,44 @@ jupyter labextension list
 
 ### Development install
 
-Note: You will need NodeJS to build the extension package.
+Note: You will need `uv` and NodeJS to build the extension package.
 
 The `jlpm` command is JupyterLab's pinned version of
 [yarn](https://yarnpkg.com/) that is installed with JupyterLab. You may use
 `yarn` or `npm` in lieu of `jlpm` below.
 
+#### One-time setup (run once after cloning the repo)
+
 ```bash
 # Clone the repo to your local environment
 # Change directory to the dsc10_tutor_jlab_backend directory
-# Install package in development mode
-pip install -e ".[test]"
+# Install package and development dependencies using uv
+uv sync --dev
 # Link your development version of the extension with JupyterLab
 jupyter labextension develop . --overwrite
 # Server extension must be manually installed in develop mode
 jupyter server extension enable dsc10_tutor_jlab_backend
-# Rebuild extension Typescript source after making changes
-jlpm build
 ```
+
+#### Daily development workflow (run each time you start working)
+
+```bash
+# Sync packages
+uv sync --dev
+# Activate the uv environment
+source .venv/bin/activate  # On Unix/macOS
+# or
+.venv\Scripts\activate     # On Windows
+```
+
+**Important**: After running `uv sync --dev`, you need to activate the uv virtual environment before running JupyterLab commands. The environment will be created in `.venv/` directory in your project root.
 
 You can watch the source directory and run JupyterLab at the same time in different terminals to watch for changes in the extension's source and automatically rebuild the extension.
 
 ```bash
 # Watch the source directory in one terminal, automatically rebuilding when needed
 jlpm watch
-# Run JupyterLab in another terminal
+# Run JupyterLab in another terminal (make sure your uv environment is activated)
 jupyter lab
 ```
 
@@ -89,7 +102,8 @@ jupyter lab build --minimize=False
 ```bash
 # Server extension must be manually disabled in develop mode
 jupyter server extension disable dsc10_tutor_jlab_backend
-pip uninstall dsc10_tutor_jlab_backend
+# Remove the uv virtual environment (no need to uninstall the package)
+rm -rf .venv
 ```
 
 In development mode, you will also need to remove the symlink created by `jupyter labextension develop`
@@ -102,17 +116,24 @@ folder is located. Then you can remove the symlink named `dsc10-tutor-jlab-front
 
 This extension is using [Pytest](https://docs.pytest.org/) for Python code testing.
 
+**Note**: If you've already completed the one-time setup above, you can skip the dependency installation and extension linking steps.
+
 Install test dependencies (needed only once):
 
 ```sh
-pip install -e ".[test]"
+uv sync --dev
 # Each time you install the Python package, you need to restore the front-end extension link
 jupyter labextension develop . --overwrite
 ```
 
-To execute them, run:
+To execute tests, run:
 
 ```sh
+# Make sure your uv environment is activated
+source .venv/bin/activate  # On Unix/macOS
+# or
+.venv\Scripts\activate     # On Windows
+# Run the tests
 pytest -vv -r ap --cov dsc10_tutor_jlab_backend
 ```
 

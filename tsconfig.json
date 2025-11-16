@@ -27,5 +27,6 @@
     "target": "ES2018",
     "types": ["jest"]
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["**/node_modules", "**/.*/"]
 }

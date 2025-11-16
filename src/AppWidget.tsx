@@ -22,7 +22,7 @@ function App() {
       id="dsc10-tutor-jlab-app"
       className="flex h-full w-full flex-col gap-2 p-2"
     >
-      <strong>🧑‍🏫 DSC 10 AI Tutor</strong>
+      <strong className="text-center">🧑‍🏫 DSC 10 AI Tutor</strong>
       <Chat />
     </div>
   );

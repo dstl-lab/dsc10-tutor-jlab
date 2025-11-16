@@ -7,19 +7,19 @@ help:
 .PHONY: lab
 lab: ## Start JupyterLab
 	@echo "🚀 Starting JupyterLab"
-	jupyter lab --port 9999
+	uv run jupyter lab --port 9999
 
 .PHONY: watch
 watch: ## Rebuild JS bundle on JS changes
 	@echo "🚀 Starting JS bundle watch..."
-	jlpm run watch
+	uv run jlpm run watch
 
 .PHONY: build
 build: ## Build the JS bundle
 	@echo "🚀 Building JS bundle..."
-	jlpm run build
+	uv run jlpm run build
 
 .PHONY: test
 test: ## Run tests
 	@echo "🚀 Running tests..."
-	jlpm run test
+	uv run jlpm run test

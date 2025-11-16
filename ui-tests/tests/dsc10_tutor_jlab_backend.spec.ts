@@ -16,6 +16,8 @@ test('should emit an activation console message', async ({ page }) => {
   await page.goto();
 
   expect(
-    logs.filter(s => s === 'JupyterLab extension dsc10-tutor-jlab-frontend is activated!')
+    logs.filter(
+      s => s === 'JupyterLab extension dsc10-tutor-jlab-frontend is activated!'
+    )
   ).toHaveLength(1);
 });

@@ -27,7 +27,7 @@
     "style": "style/index.css",
     "repository": {
         "type": "git",
-        "url": ".git"
+        "url": "https://github.com/dstl-lab/dsc10-tutor-jlab.git"
     },
     "scripts": {
         "build": "jlpm build:tailwind && jlpm build:lib && jlpm build:labextension:dev",

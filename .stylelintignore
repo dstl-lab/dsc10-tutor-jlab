@@ -1,0 +1,4 @@
+style/preflight.css
+style/tailwind.css
+style/tailwind.generated.css
+.venv/**/*.css

@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "dsc10_tutor_jlab_backend"
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 classifiers = [
     "Framework :: Jupyter",
     "Framework :: Jupyter :: JupyterLab",
@@ -16,8 +16,6 @@ classifiers = [
     "License :: OSI Approved :: BSD License",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -30,19 +28,18 @@ dynamic = ["version", "description", "authors", "urls", "keywords"]
 
 [dependency-groups]
 dev = [
-    "jupyterlab>=4.4.9",
-    "pandas>=2.3.3",
-    "ruff>=0.13.3",
-    "ty>=0.0.1a21",
+    "jupyterlab~=4.4.0",
+    "pandas~=2.3.3",
+    "ruff~=0.13.3",
 ]
 
 [project.optional-dependencies]
 test = [
-    "coverage",
-    "pytest",
-    "pytest-asyncio",
-    "pytest-cov",
-    "pytest-jupyter[server]>=0.6.0"
+    "coverage~=7.10.7",
+    "pytest~=8.4.2",
+    "pytest-asyncio~=1.2.0",
+    "pytest-cov~=7.0.0",
+    "pytest-jupyter[server]~=0.10.0"
 ]
 
 [tool.hatch.version]

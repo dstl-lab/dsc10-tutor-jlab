@@ -6,11 +6,22 @@ export interface IAskTutorParams {
   student_question: string;
   notebook_json?: string;
   prompt?: string;
+  conversation_id?: string;
 }
 
 export interface ITutorResponse {
   conversation_id: string;
   tutor_response: string;
+}
+
+export interface ITutorRequest {
+  class_id: string;
+  assignment_id: string;
+  question_id: string;
+  student_question: string;
+  notebook_json: string;
+  prompt: string;
+  conversation_id?: string;
 }
 
 /**
@@ -20,16 +31,18 @@ export interface ITutorResponse {
  * @param params.student_question - The student's question to ask the tutor
  * @param params.notebook_json - Optional notebook JSON context
  * @param params.prompt - Optional system prompt for the LLM
+ * @param params.conversation_id - Optional conversation ID to continue an existing conversation
  * @returns The response from the API
  */
 export async function askTutor({
   student_question,
   notebook_json,
-  prompt
+  prompt,
+  conversation_id
 }: IAskTutorParams): Promise<ITutorResponse> {
   const url = 'https://slh-backend-v2-api-dev.slh.ucsd.edu/api/dsc10/ask';
 
-  const body = {
+  const body: ITutorRequest = {
     class_id: 'ca000000-0000-0000-0001-000000000001',
     assignment_id: 'ca000000-0000-0000-0002-000000000001',
     question_id: 'ca000000-0000-0000-0004-000000000001',
@@ -37,6 +50,10 @@ export async function askTutor({
     notebook_json: notebook_json || '',
     prompt: prompt || ''
   };
+
+  if (conversation_id) {
+    body.conversation_id = conversation_id;
+  }
 
   const response = await fetch(url, {
     method: 'POST',

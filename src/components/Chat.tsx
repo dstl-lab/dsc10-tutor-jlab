@@ -12,10 +12,20 @@ import { askTutor } from '@/api';
 export default function Chat() {
   const notebook = useNotebook();
   const [messages, setMessages] = useState<IMessage[]>([]);
+  const [conversationId, setConversationId] = useState<string | undefined>(
+    undefined
+  );
 
   const handleMessageSubmit = async (text: string) => {
     setMessages(prev => [...prev, { author: 'user', text }]);
-    const tutorMessage = await askTutor({ student_question: text });
+    const tutorMessage = await askTutor({
+      student_question: text,
+      conversation_id: conversationId
+    });
+    // Store the conversation ID from the first response
+    if (tutorMessage.conversation_id && !conversationId) {
+      setConversationId(tutorMessage.conversation_id);
+    }
     setMessages(prev => [
       ...prev,
       { author: 'tutor', text: tutorMessage.tutor_response }

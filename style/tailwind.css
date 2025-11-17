@@ -49,8 +49,8 @@ https://github.com/jupyterlab/jupyterlab/blob/f3f75f777147955ea2bee59d848e466f30
    *
    * The following variables, specify the visual styling of borders in JupyterLab.
    */
-  --jp-border-color0: var(--md-grey-400, #bdbdbd);
-  --jp-border-color1: var(--md-grey-400, #bdbdbd);
-  --jp-border-color2: var(--md-grey-300, #e0e0e0);
-  --jp-border-color3: var(--md-grey-200, #eee);
+  --color-jp-border-color0: var(--md-grey-400, #bdbdbd);
+  --color-jp-border-color1: var(--md-grey-400, #bdbdbd);
+  --color-jp-border-color2: var(--md-grey-300, #e0e0e0);
+  --color-jp-border-color3: var(--md-grey-200, #eee);
 }

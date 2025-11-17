@@ -1,35 +1,37 @@
 import * as React from 'react';
 import { cn } from '@/utils';
+import { type IMessage } from './types';
 
-const userMessageClasses = cn(
-  'max-w-[90%] self-end rounded-md bg-jp-brand-color1 p-2 text-white'
-);
+const messageClasses = {
+  user: cn('max-w-[90%] self-end rounded-md bg-jp-brand-color1 p-2 text-white'),
+  tutor: cn('max-w-[90%] self-start'),
+  system: cn(
+    'max-w-[90%] self-start rounded-md border border-jp-border-color0 p-2'
+  )
+};
 
-const tutorMessageClasses = cn('max-w-[90%] self-start');
+interface IChatMessagesProps {
+  messages: IMessage[];
+}
 
-const messages = [
-  {
-    author: 'user',
-    text: 'how do i read in a CSV file?'
-  },
-  {
-    author: 'tutor',
-    text: 'try pd.read_csv()!'
+export default function ChatMessages({ messages }: IChatMessagesProps) {
+  if (messages.length === 0) {
+    return (
+      <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
+        <div className={cn('flex flex-col', messageClasses.system)}>
+          Send a message to the tutor to start chatting!
+        </div>
+      </div>
+    );
   }
-];
 
-export default function ChatMessages() {
   return (
     <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
       {messages.map((message, index) => {
-        const isUser = message.author === 'user';
         return (
           <div
             key={index}
-            className={cn(
-              'flex flex-col',
-              isUser ? userMessageClasses : tutorMessageClasses
-            )}
+            className={cn('flex flex-col', messageClasses[message.author])}
           >
             {message.text}
           </div>

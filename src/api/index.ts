@@ -2,6 +2,8 @@ import { URLExt } from '@jupyterlab/coreutils';
 
 import { ServerConnection } from '@jupyterlab/services';
 
+import { getStudentUsernameFromUrl, isProduction } from '@/utils';
+
 export interface IAskTutorParams {
   student_question: string;
   notebook_json?: string;
@@ -18,11 +20,24 @@ export interface ITutorRequest {
   class_id: string;
   assignment_id: string;
   question_id: string;
+  student_email: string;
   student_question: string;
   notebook_json: string;
   prompt: string;
   conversation_id?: string;
 }
+
+// curl -X POST https://slh-backend-v2-api-dev.slh.ucsd.edu/api/dsc10/ask \
+//   -H "Content-Type: application/json" \
+//   -H "Authorization: mock:dsc10:student@university.edu:DSC10 Student" \
+//   -d '{
+//     "class_id": "ca000000-0000-0000-0001-000000000001",
+//     "assignment_id": "ca000000-0000-0000-0002-000000000001",
+//     "question_id": "ca000000-0000-0000-0004-000000000001",
+//     "student_question": "What is a DataFrame in pandas?",
+//     "notebook_json": "",
+//     "prompt": ""
+//   }'
 
 /**
  * Ask a question to the DSC10 tutor API
@@ -42,10 +57,30 @@ export async function askTutor({
 }: IAskTutorParams): Promise<ITutorResponse> {
   const url = 'https://slh-backend-v2-api-dev.slh.ucsd.edu/api/dsc10/ask';
 
+  const username = isProduction() ? getStudentUsernameFromUrl() : 'dsc10-test';
+
+  // In production (datahub), we DON'T use an authorization token since SLH
+  // whitelists all datahub requests. Instead, we need to include a
+  // student_email field in the request body.
+  //
+  // In development (local), we use a mock authorization token instead.
+  const headers: Record<string, string> = isProduction()
+    ? {
+        'Content-Type': 'application/json'
+      }
+    : {
+        'Content-Type': 'application/json',
+        Authorization:
+          'Bearer mock:dsc10:alice.johnson@example.edu:Alice Johnson'
+      };
+
   const body: ITutorRequest = {
     class_id: 'ca000000-0000-0000-0001-000000000001',
     assignment_id: 'ca000000-0000-0000-0002-000000000001',
     question_id: 'ca000000-0000-0000-0004-000000000001',
+    // technically we're sending a username, not an email, but the most
+    // important thing is that it's unique to the student
+    student_email: username,
     student_question: student_question,
     notebook_json: notebook_json || '',
     prompt: prompt || ''
@@ -57,10 +92,7 @@ export async function askTutor({
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer test-token'
-    },
+    headers,
     body: JSON.stringify(body)
   });
 

@@ -71,6 +71,7 @@
         "@tailwindcss/cli": "^4.1.14",
         "@types/jest": "^29.2.0",
         "@types/json-schema": "^7.0.11",
+        "@types/node": "^24.10.1",
         "@types/react": "^18.0.26",
         "@types/react-addons-linked-state-mixin": "^0.14.22",
         "@typescript-eslint/eslint-plugin": "^6.1.0",
@@ -129,7 +130,8 @@
         "**/*.d.ts",
         "tests",
         "**/__tests__",
-        "ui-tests"
+        "ui-tests",
+        ".venv"
     ],
     "eslintConfig": {
         "extends": [

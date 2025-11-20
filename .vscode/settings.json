@@ -1,4 +1,10 @@
 {
   "tailwindCSS.experimental.configFile": "src/style/tailwind.css",
-  "typescript.tsdk": "node_modules/typescript/lib"
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "files.watcherExclude": {
+    "**/.venv/**": true
+  },
+  "search.exclude": {
+    "**/.venv": true
+  }
 }

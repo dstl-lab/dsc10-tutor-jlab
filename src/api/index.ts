@@ -81,7 +81,9 @@ export async function askTutor({
     student_email: studentEmail,
     student_question: student_question,
     notebook_json: notebook_json || '',
-    prompt: prompt || ''
+    //prompt: prompt || ''
+    prompt:
+      'Always respond in Markdown. Use headers, bullet points, and code blocks where appropriate.'
   };
 
   if (conversation_id) {

@@ -2,7 +2,7 @@ import { URLExt } from '@jupyterlab/coreutils';
 
 import { ServerConnection } from '@jupyterlab/services';
 
-import { getStudentUsernameFromUrl, isProduction } from '@/utils';
+import { getStudentEmailFromUrl, isProduction } from '@/utils';
 
 export interface IAskTutorParams {
   student_question: string;
@@ -57,7 +57,7 @@ export async function askTutor({
 }: IAskTutorParams): Promise<ITutorResponse> {
   const url = 'https://slh-backend-v2-api-dev.slh.ucsd.edu/api/dsc10/ask';
 
-  const username = isProduction() ? getStudentUsernameFromUrl() : 'dsc10-test';
+  const studentEmail = getStudentEmailFromUrl();
 
   // In production (datahub), we DON'T use an authorization token since SLH
   // whitelists all datahub requests. Instead, we need to include a
@@ -78,9 +78,7 @@ export async function askTutor({
     class_id: 'ca000000-0000-0000-0001-000000000001',
     assignment_id: 'ca000000-0000-0000-0002-000000000001',
     question_id: 'ca000000-0000-0000-0004-000000000001',
-    // technically we're sending a username, not an email, but the most
-    // important thing is that it's unique to the student
-    student_email: username,
+    student_email: studentEmail,
     student_question: student_question,
     notebook_json: notebook_json || '',
     prompt: prompt || ''

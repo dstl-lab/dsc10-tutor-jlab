@@ -1,11 +1,11 @@
 import * as React from 'react';
-import ReactMarkdown, { Components } from 'react-markdown';
 import { cn } from '@/utils';
 import { type IMessage } from './types';
+import Markdown from './Markdown';
 
 const messageClasses = {
   user: cn('max-w-[90%] self-end rounded-md bg-jp-brand-color1 p-2 text-white'),
-  tutor: cn('max-w-[90%] self-start rounded-md bg-gray-100 p-2'),
+  tutor: cn('max-w-[90%] self-start'),
   system: cn(
     'max-w-[90%] self-start rounded-md border border-jp-border-color0 p-2'
   )
@@ -14,28 +14,6 @@ const messageClasses = {
 interface IChatMessagesProps {
   messages: IMessage[];
 }
-
-// Code component for ReactMarkdown
-const MarkdownCode: React.FC<{
-  inline?: boolean;
-  className?: string;
-  children?: React.ReactNode;
-}> = ({ inline, children }) => {
-  if (inline) {
-    return <code className="rounded bg-gray-200 px-1 py-0.5">{children}</code>;
-  }
-
-  return (
-    <code className="block overflow-x-auto rounded bg-gray-900 p-2 text-white">
-      {children}
-    </code>
-  );
-};
-
-// Components object for ReactMarkdown
-const markdownComponents: Components = {
-  code: MarkdownCode
-};
 
 export default function ChatMessages({ messages }: IChatMessagesProps) {
   if (messages.length === 0) {
@@ -55,13 +33,8 @@ export default function ChatMessages({ messages }: IChatMessagesProps) {
           key={index}
           className={cn('flex flex-col', messageClasses[message.author])}
         >
-          {message.author === 'tutor' ? (
-            <ReactMarkdown components={markdownComponents}>
-              {message.text}
-            </ReactMarkdown>
-          ) : (
-            message.text
-          )}
+          {/* Render Markdown for all messages (user, tutor, system) */}
+          <Markdown text={message.text} />
         </div>
       ))}
     </div>

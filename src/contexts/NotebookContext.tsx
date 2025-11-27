@@ -22,6 +22,9 @@ export interface INotebookContext {
   notebookName: string;
   notebookPath: string;
   activeCellIndex: number;
+
+  // Returns serialized notebook JSON string
+  getNotebookJson: () => string;
 }
 
 const NotebookContext = createContext<INotebookContext | null>(null);
@@ -35,20 +38,59 @@ export function NotebookProvider({
   children,
   notebookTracker
 }: INotebookProviderProps) {
-  const [contextValue, setContextValue] = useState<INotebookContext>({
+  // Keep local state just for the simple fields (no function here)
+  const [contextValue, setContextValue] = useState<
+    Omit<INotebookContext, 'getNotebookJson'>
+  >({
     notebookName: '',
     notebookPath: '',
     activeCellIndex: -1
   });
 
   // Build context state snapshot from the tracker
-  const getTrackerState = useCallback((): INotebookContext => {
+  const getTrackerState = useCallback((): Omit<
+    INotebookContext,
+    'getNotebookJson'
+  > => {
     const panel = notebookTracker.currentWidget;
     const notebookName = panel?.title?.label ?? '';
     const notebookPath = panel?.context?.path ?? '';
     const activeCellIndex = panel?.content?.activeCellIndex ?? -1;
 
     return { notebookName, notebookPath, activeCellIndex };
+  }, [notebookTracker]);
+
+  // Function to serialize current notebook to JSON string
+  const getNotebookJson = useCallback((): string => {
+    try {
+      const panel = notebookTracker.currentWidget;
+      if (!panel) {
+        return '';
+      }
+
+      // Try to find the notebook model in common places.
+      const docModel =
+        (panel.context && (panel.context.model as any)) ||
+        (panel.content && (panel.content.model as any));
+      if (!docModel) {
+        return '';
+      }
+
+      // Prefer toJSON() if available
+      let notebookObject: any = undefined;
+      if (typeof docModel.toJSON === 'function') {
+        notebookObject = docModel.toJSON();
+      } else if (typeof (panel.content as any).model?.toJSON === 'function') {
+        notebookObject = (panel.content as any).model.toJSON();
+      } else {
+        return '';
+      }
+
+      return JSON.stringify(notebookObject);
+    } catch (e) {
+      console.error('Failed to serialize notebook:', e);
+      return '';
+    }
   }, [notebookTracker]);
 
   useEffect(() => {
@@ -77,8 +119,14 @@ export function NotebookProvider({
     };
   }, [getTrackerState, notebookTracker]);
 
+  // Compose the full context (fields + function) for consumers
+  const fullContextValue: INotebookContext = {
+    ...contextValue,
+    getNotebookJson
+  };
+
   return (
-    <NotebookContext.Provider value={contextValue}>
+    <NotebookContext.Provider value={fullContextValue}>
       {children}
     </NotebookContext.Provider>
   );

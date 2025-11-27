@@ -9,6 +9,7 @@ export interface IAskTutorParams {
   notebook_json?: string;
   prompt?: string;
   conversation_id?: string;
+  getNotebookJson?: () => string;
 }
 
 export interface ITutorResponse {
@@ -53,21 +54,19 @@ export async function askTutor({
   student_question,
   notebook_json,
   prompt,
-  conversation_id
+  conversation_id,
+  getNotebookJson
 }: IAskTutorParams): Promise<ITutorResponse> {
   const url = 'https://slh-backend-v2-api-dev.slh.ucsd.edu/api/dsc10/ask';
-
   const studentEmail = getStudentEmailFromUrl();
 
-  // In production (datahub), we DON'T use an authorization token since SLH
-  // whitelists all datahub requests. Instead, we need to include a
-  // student_email field in the request body.
-  //
-  // In development (local), we use a mock authorization token instead.
+  // Get the notebook JSON here
+  const notebookJsonToSend =
+    notebook_json ??
+    (typeof getNotebookJson === 'function' ? getNotebookJson() : '');
+
   const headers: Record<string, string> = isProduction()
-    ? {
-        'Content-Type': 'application/json'
-      }
+    ? { 'Content-Type': 'application/json' }
     : {
         'Content-Type': 'application/json',
         Authorization:
@@ -80,7 +79,7 @@ export async function askTutor({
     question_id: 'ca000000-0000-0000-0004-000000000001',
     student_email: studentEmail,
     student_question: student_question,
-    notebook_json: notebook_json || '',
+    notebook_json: notebookJsonToSend,
     prompt: prompt || ''
   };
 

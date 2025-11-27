@@ -15,7 +15,9 @@ export default function ChatMessageBox({
   const [message, setMessage] = React.useState('');
 
   const handleSubmit = React.useCallback(() => {
-    if (disabled) return;
+    if (disabled) {
+      return;
+    }
     if (message.trim()) {
       onSubmit(message.trim());
       setMessage('');
@@ -24,7 +26,9 @@ export default function ChatMessageBox({
 
   const handleKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (disabled) return;
+      if (disabled) {
+        return;
+      }
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
         handleSubmit();
@@ -40,7 +44,9 @@ export default function ChatMessageBox({
         className={`max-h-128 ${disabled ? 'pointer-events-none' : ''}`}
         value={message}
         onChange={e => {
-          if (disabled) return;
+          if (disabled) {
+            return;
+          }
           setMessage(e.target.value);
         }}
         onKeyDown={handleKeyDown}

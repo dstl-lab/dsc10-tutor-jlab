@@ -1,5 +1,5 @@
-import * as React from 'react';
 import { cn } from '@/utils';
+import * as React from 'react';
 import { type IMessage } from './types';
 
 const messageClasses = {
@@ -12,9 +12,13 @@ const messageClasses = {
 
 interface IChatMessagesProps {
   messages: IMessage[];
+  isWaiting?: boolean;
 }
 
-export default function ChatMessages({ messages }: IChatMessagesProps) {
+export default function ChatMessages({
+  messages,
+  isWaiting = false
+}: IChatMessagesProps) {
   if (messages.length === 0) {
     return (
       <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
@@ -37,6 +41,24 @@ export default function ChatMessages({ messages }: IChatMessagesProps) {
           </div>
         );
       })}
+      {isWaiting && (
+        <div className={cn('flex flex-col', messageClasses.tutor)}>
+          <div className="inline-flex items-center gap-1">
+            <span
+              className="inline-block h-2 w-2 animate-pulse rounded-full bg-current opacity-80"
+              style={{ animationDelay: '0s' }}
+            />
+            <span
+              className="inline-block h-2 w-2 animate-pulse rounded-full bg-current opacity-80"
+              style={{ animationDelay: '0.12s' }}
+            />
+            <span
+              className="inline-block h-2 w-2 animate-pulse rounded-full bg-current opacity-80"
+              style={{ animationDelay: '0.24s' }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

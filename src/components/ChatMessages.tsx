@@ -33,7 +33,6 @@ export default function ChatMessages({ messages }: IChatMessagesProps) {
           key={index}
           className={cn('flex flex-col', messageClasses[message.author])}
         >
-          {/* Render Markdown for all messages (user, tutor, system) */}
           <Markdown text={message.text} />
         </div>
       ))}

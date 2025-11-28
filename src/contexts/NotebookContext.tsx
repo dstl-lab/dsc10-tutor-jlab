@@ -16,7 +16,8 @@ import {
   useState
 } from 'react';
 
-import { INotebookTracker } from '@jupyterlab/notebook';
+import { INotebookTracker, INotebookModel } from '@jupyterlab/notebook';
+import { INotebookContent } from '@jupyterlab/nbformat';
 
 export interface INotebookContext {
   notebookName: string;
@@ -62,35 +63,15 @@ export function NotebookProvider({
 
   // Function to serialize current notebook to JSON string
   const getNotebookJson = useCallback((): string => {
-    try {
-      const panel = notebookTracker.currentWidget;
-      if (!panel) {
-        return '';
-      }
+    const panel = notebookTracker.currentWidget;
+    const docModel: INotebookModel | null | undefined =
+      panel?.context?.model ?? panel?.content?.model;
 
-      // Try to find the notebook model in common places.
-      const docModel =
-        (panel.context && (panel.context.model as any)) ||
-        (panel.content && (panel.content.model as any));
-      if (!docModel) {
-        return '';
-      }
-
-      // Prefer toJSON() if available
-      let notebookObject: any = undefined;
-      if (typeof docModel.toJSON === 'function') {
-        notebookObject = docModel.toJSON();
-      } else if (typeof (panel.content as any).model?.toJSON === 'function') {
-        notebookObject = (panel.content as any).model.toJSON();
-      } else {
-        return '';
-      }
-
-      return JSON.stringify(notebookObject);
-    } catch (e) {
-      console.error('Failed to serialize notebook:', e);
+    if (!docModel || typeof docModel.toJSON !== 'function') {
       return '';
     }
+    const notebookObject = docModel.toJSON() as INotebookContent;
+    return JSON.stringify(notebookObject);
   }, [notebookTracker]);
 
   useEffect(() => {

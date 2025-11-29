@@ -16,12 +16,16 @@ import {
   useState
 } from 'react';
 
-import { INotebookTracker } from '@jupyterlab/notebook';
+import { INotebookTracker, INotebookModel } from '@jupyterlab/notebook';
+import { INotebookContent } from '@jupyterlab/nbformat';
 
 export interface INotebookContext {
   notebookName: string;
   notebookPath: string;
   activeCellIndex: number;
+
+  // Returns serialized notebook JSON string
+  getNotebookJson: () => string;
 }
 
 const NotebookContext = createContext<INotebookContext | null>(null);
@@ -35,20 +39,36 @@ export function NotebookProvider({
   children,
   notebookTracker
 }: INotebookProviderProps) {
-  const [contextValue, setContextValue] = useState<INotebookContext>({
+  const [contextValue, setContextValue] = useState<
+    Omit<INotebookContext, 'getNotebookJson'>
+  >({
     notebookName: '',
     notebookPath: '',
     activeCellIndex: -1
   });
 
   // Build context state snapshot from the tracker
-  const getTrackerState = useCallback((): INotebookContext => {
+  const getTrackerState = useCallback((): Omit<
+    INotebookContext,
+    'getNotebookJson'
+  > => {
     const panel = notebookTracker.currentWidget;
     const notebookName = panel?.title?.label ?? '';
     const notebookPath = panel?.context?.path ?? '';
     const activeCellIndex = panel?.content?.activeCellIndex ?? -1;
 
     return { notebookName, notebookPath, activeCellIndex };
+  }, [notebookTracker]);
+
+  // Function to serialize current notebook to JSON string
+  const getNotebookJson = useCallback(() => {
+    const model = notebookTracker.currentWidget?.content?.model;
+
+    if (!model?.toJSON) {
+      return '';
+    }
+
+    return JSON.stringify(model.toJSON());
   }, [notebookTracker]);
 
   useEffect(() => {
@@ -77,8 +97,14 @@ export function NotebookProvider({
     };
   }, [getTrackerState, notebookTracker]);
 
+  // Compose the full context (fields + function) for consumers
+  const fullContextValue: INotebookContext = {
+    ...contextValue,
+    getNotebookJson
+  };
+
   return (
-    <NotebookContext.Provider value={contextValue}>
+    <NotebookContext.Provider value={fullContextValue}>
       {children}
     </NotebookContext.Provider>
   );

@@ -6,7 +6,7 @@ import { getStudentEmailFromUrl, isProduction } from '@/utils';
 
 export interface IAskTutorParams {
   student_question: string;
-  notebook_json?: string;
+  notebook_json: string;
   prompt?: string;
   conversation_id?: string;
 }
@@ -56,7 +56,6 @@ export async function askTutor({
   conversation_id
 }: IAskTutorParams): Promise<ITutorResponse> {
   const url = 'https://slh-backend-v2-api-dev.slh.ucsd.edu/api/dsc10/ask';
-
   const studentEmail = getStudentEmailFromUrl();
 
   // In production (datahub), we DON'T use an authorization token since SLH
@@ -65,9 +64,7 @@ export async function askTutor({
   //
   // In development (local), we use a mock authorization token instead.
   const headers: Record<string, string> = isProduction()
-    ? {
-        'Content-Type': 'application/json'
-      }
+    ? { 'Content-Type': 'application/json' }
     : {
         'Content-Type': 'application/json',
         Authorization:

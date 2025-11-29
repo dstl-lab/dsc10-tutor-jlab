@@ -10,7 +10,7 @@ import NotebookInfo from './NotebookInfo';
 import { type IMessage } from './types';
 
 export default function Chat() {
-  const notebook = useNotebook();
+  const { notebookName, getNotebookJson } = useNotebook();
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | undefined>(
     undefined
@@ -23,7 +23,8 @@ export default function Chat() {
     try {
       const tutorMessage = await askTutor({
         student_question: text,
-        conversation_id: conversationId
+        conversation_id: conversationId,
+        notebook_json: getNotebookJson()
       });
       // Store the conversation ID from the first response
       if (tutorMessage.conversation_id && !conversationId) {
@@ -38,7 +39,7 @@ export default function Chat() {
     }
   };
 
-  if (!notebook.notebookName) {
+  if (!notebookName) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <ChatPlaceholder />

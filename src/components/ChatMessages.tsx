@@ -1,6 +1,7 @@
 import { cn } from '@/utils';
 import * as React from 'react';
 import { type IMessage } from './types';
+import Markdown from './Markdown';
 
 const messageClasses = {
   user: cn('max-w-[90%] self-end rounded-md bg-jp-brand-color1 p-2 text-white'),
@@ -37,7 +38,7 @@ export default function ChatMessages({
             key={index}
             className={cn('flex flex-col', messageClasses[message.author])}
           >
-            {message.text}
+            <Markdown text={message.text} />
           </div>
         );
       })}

@@ -58,6 +58,7 @@ export async function askTutor({
   const url = 'https://slh-backend-v2-api-dev.slh.ucsd.edu/api/dsc10/ask';
   const studentEmail = getStudentEmailFromUrl();
 
+  // In production (datahub), we DON'T use an authorization token since SLH
   // whitelists all datahub requests. Instead, we need to include a
   // student_email field in the request body.
   //

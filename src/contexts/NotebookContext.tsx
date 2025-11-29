@@ -39,7 +39,6 @@ export function NotebookProvider({
   children,
   notebookTracker
 }: INotebookProviderProps) {
-  // Keep local state just for the simple fields (no function here)
   const [contextValue, setContextValue] = useState<
     Omit<INotebookContext, 'getNotebookJson'>
   >({
@@ -62,16 +61,14 @@ export function NotebookProvider({
   }, [notebookTracker]);
 
   // Function to serialize current notebook to JSON string
-  const getNotebookJson = useCallback((): string => {
-    const panel = notebookTracker.currentWidget;
-    const docModel: INotebookModel | null | undefined =
-      panel?.context?.model ?? panel?.content?.model;
+  const getNotebookJson = useCallback(() => {
+    const model = notebookTracker.currentWidget?.content?.model;
 
-    if (!docModel || typeof docModel.toJSON !== 'function') {
+    if (!model?.toJSON) {
       return '';
     }
-    const notebookObject = docModel.toJSON() as INotebookContent;
-    return JSON.stringify(notebookObject);
+
+    return JSON.stringify(model.toJSON());
   }, [notebookTracker]);
 
   useEffect(() => {

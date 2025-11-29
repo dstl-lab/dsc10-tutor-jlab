@@ -10,8 +10,7 @@ import { type IMessage } from './types';
 import { askTutor } from '@/api';
 
 export default function Chat() {
-  const { notebookName, notebookPath, activeCellIndex, getNotebookJson } =
-    useNotebook();
+  const { notebookName, getNotebookJson } = useNotebook();
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | undefined>(
     undefined

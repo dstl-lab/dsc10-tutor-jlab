@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { cn } from '@/utils';
 import { type IMessage } from './types';
+import Markdown from './Markdown';
 
 const messageClasses = {
   user: cn('max-w-[90%] self-end rounded-md bg-jp-brand-color1 p-2 text-white'),
@@ -27,16 +28,14 @@ export default function ChatMessages({ messages }: IChatMessagesProps) {
 
   return (
     <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
-      {messages.map((message, index) => {
-        return (
-          <div
-            key={index}
-            className={cn('flex flex-col', messageClasses[message.author])}
-          >
-            {message.text}
-          </div>
-        );
-      })}
+      {messages.map((message, index) => (
+        <div
+          key={index}
+          className={cn('flex flex-col', messageClasses[message.author])}
+        >
+          <Markdown text={message.text} />
+        </div>
+      ))}
     </div>
   );
 }

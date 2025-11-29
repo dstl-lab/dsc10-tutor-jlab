@@ -77,8 +77,10 @@ export async function askTutor({
     question_id: 'ca000000-0000-0000-0004-000000000001',
     student_email: studentEmail,
     student_question: student_question,
-    notebook_json: notebook_json,
-    prompt: prompt || ''
+    notebook_json: notebook_json || '',
+    //prompt: prompt || ''
+    prompt:
+      'Always respond in Markdown. Use headers, bullet points, and code blocks where appropriate.'
   };
 
   if (conversation_id) {

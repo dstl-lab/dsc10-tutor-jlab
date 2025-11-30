@@ -124,33 +124,19 @@ export function NotebookProvider({
       // Set the source of the newly active cell
       const newCell = nb.activeCell as any;
       if (newCell && newCell.model) {
-        try {
-          const modelAny: any = newCell.model;
-          const shared = modelAny.sharedModel ?? modelAny._sharedModel ?? null;
+        const modelAny: any = newCell.model;
+        const shared = modelAny.sharedModel ?? modelAny._sharedModel ?? null;
 
-          if (shared) {
-            try {
-              shared.setSource(code);
-              console.debug('insertCode: wrote via sharedModel.setSource');
-            } catch (e) {
-              console.error('insertCode: sharedModel write failed', e);
-            }
-          } else {
-            // Log for debugging
-            console.warn(
-              'insertCode: unexpected failure inserting cell',
-              newCell.model
-            );
-          }
-        } catch (e) {
-          console.error(
-            'insertCode: failed to write code to new cell model',
-            e
-          );
+        if (shared) {
+          shared.setSource(code);
+          console.debug('insertCode: wrote via sharedModel.setSource');
+        } else {
+          // Log for debugging
+          console.warn('insertCode: sharedModel not found', newCell.model);
         }
       }
     } catch (e) {
-      console.error('Failed to insert code cell using NotebookActions:', e);
+      console.error('Failed to insert code cell', e);
     }
   };
 

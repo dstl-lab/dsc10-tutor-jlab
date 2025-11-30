@@ -16,8 +16,7 @@ import {
   useState
 } from 'react';
 
-import { INotebookTracker, INotebookModel } from '@jupyterlab/notebook';
-import { INotebookContent } from '@jupyterlab/nbformat';
+import { INotebookTracker, NotebookActions } from '@jupyterlab/notebook';
 
 export interface INotebookContext {
   notebookName: string;
@@ -26,6 +25,8 @@ export interface INotebookContext {
 
   // Returns serialized notebook JSON string
   getNotebookJson: () => string;
+  // Insert a code cell containing code below the currently active cell
+  insertCodeBelowActiveCell?: (code: string) => void;
 }
 
 const NotebookContext = createContext<INotebookContext | null>(null);
@@ -84,7 +85,6 @@ export function NotebookProvider({
     const handleActiveCellChanged = () => {
       const index =
         notebookTracker.currentWidget?.content?.activeCellIndex ?? -1;
-
       setContextValue(prev => ({ ...prev, activeCellIndex: index }));
     };
 
@@ -103,8 +103,65 @@ export function NotebookProvider({
     getNotebookJson
   };
 
+  // Add method to insert a code cell below the active cell using NotebookActions
+  const insertCodeBelowActiveCell = (code: string) => {
+    const panel = notebookTracker.currentWidget;
+    if (!panel) return;
+
+    const nb = panel.content as any;
+
+    try {
+      // Insert a new cell below the active one
+      NotebookActions.insertBelow(nb);
+
+      // Try to convert it to a code cell (may throw on some versions)
+      try {
+        NotebookActions.changeCellType(nb, 'code');
+      } catch (e) {
+        // ignore if not available
+      }
+
+      // Set the source of the newly active cell
+      const newCell = nb.activeCell as any;
+      if (newCell && newCell.model) {
+        try {
+          const modelAny: any = newCell.model;
+          const shared = modelAny.sharedModel ?? modelAny._sharedModel ?? null;
+
+          if (shared) {
+            try {
+              shared.setSource(code);
+              console.debug('insertCode: wrote via sharedModel.setSource');
+            } catch (e) {
+              console.error('insertCode: sharedModel write failed', e);
+            }
+          } else {
+            // Log for debugging
+            console.warn(
+              'insertCode: unexpected failure inserting cell',
+              newCell.model
+            );
+          }
+        } catch (e) {
+          console.error(
+            'insertCode: failed to write code to new cell model',
+            e
+          );
+        }
+      }
+    } catch (e) {
+      console.error('Failed to insert code cell using NotebookActions:', e);
+    }
+  };
+
+  // Extend fullContextValue with the new function
+  const extendedContextValue: INotebookContext = {
+    ...fullContextValue,
+    insertCodeBelowActiveCell
+  };
+
   return (
-    <NotebookContext.Provider value={fullContextValue}>
+    <NotebookContext.Provider value={extendedContextValue}>
       {children}
     </NotebookContext.Provider>
   );

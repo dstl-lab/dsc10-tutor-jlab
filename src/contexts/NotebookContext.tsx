@@ -106,7 +106,9 @@ export function NotebookProvider({
   // Add method to insert a code cell below the active cell using NotebookActions
   const insertCodeBelowActiveCell = (code: string) => {
     const panel = notebookTracker.currentWidget;
-    if (!panel) return;
+    if (!panel) {
+      return;
+    }
 
     const nb = panel.content as any;
 

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { useState } from 'react';
 
 import { askTutor } from '@/api';
+import { Button } from '@/components/ui/button';
 import { useNotebook } from '@/contexts/NotebookContext';
 import ChatMessageBox from './ChatMessageBox';
 import ChatMessages from './ChatMessages';
@@ -39,6 +40,18 @@ export default function Chat() {
     }
   };
 
+  const handleNewConversation = () => {
+    const ok = window.confirm(
+      'Start a new conversation? This will clear the current chat and reset the tutor context.'
+    );
+    if (!ok) {
+      return;
+    }
+    setMessages([]);
+    setConversationId(undefined);
+    setIsWaiting(false);
+  };
+
   if (!notebookName) {
     return (
       <div className="flex h-full w-full items-center justify-center">
@@ -49,6 +62,10 @@ export default function Chat() {
 
   return (
     <div className="flex h-full w-full flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <div />
+        <Button onClick={handleNewConversation}>New conversation</Button>
+      </div>
       <ChatMessages messages={messages} isWaiting={isWaiting} />
       <ChatMessageBox onSubmit={handleMessageSubmit} disabled={isWaiting} />
       <NotebookInfo />

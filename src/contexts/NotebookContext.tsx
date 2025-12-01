@@ -97,59 +97,62 @@ export function NotebookProvider({
     };
   }, [getTrackerState, notebookTracker]);
 
-  // Compose the full context (fields + function) for consumers
-  const fullContextValue: INotebookContext = {
+  // Compose the full context (fields + function)
+  let fullContextValue: INotebookContext = {
     ...contextValue,
     getNotebookJson
   };
 
   // Add method to insert a code cell below the active cell using NotebookActions
-  const insertCodeBelowActiveCell = (code: string) => {
-    const panel = notebookTracker.currentWidget;
-    if (!panel) {
-      return;
-    }
+  const insertCodeBelowActiveCell = useCallback(
+    (code: string) => {
+      const panel = notebookTracker.currentWidget;
+      if (!panel) {
+        return;
+      }
 
-    const nb = panel.content as any;
+      const nb = panel.content;
 
-    try {
-      // Insert a new cell below the active one
-      NotebookActions.insertBelow(nb);
-
-      // Try to convert it to a code cell (may throw on some versions)
       try {
-        NotebookActions.changeCellType(nb, 'code');
-      } catch (e) {
-        // ignore if not available
-      }
+        // Insert a new cell below the active one
+        NotebookActions.insertBelow(nb);
 
-      // Set the source of the newly active cell
-      const newCell = nb.activeCell as any;
-      if (newCell && newCell.model) {
-        const modelAny: any = newCell.model;
-        const shared = modelAny.sharedModel ?? modelAny._sharedModel ?? null;
-
-        if (shared) {
-          shared.setSource(code);
-          console.debug('insertCode: wrote via sharedModel.setSource');
-        } else {
-          // Log for debugging
-          console.warn('insertCode: sharedModel not found', newCell.model);
+        // Try to convert it to a code cell (may throw on some versions)
+        try {
+          NotebookActions.changeCellType(nb, 'code');
+        } catch (e) {
+          console.debug(
+            'changeCellType not available or failed, cell may not be converted to code type',
+            e
+          );
         }
-      }
-    } catch (e) {
-      console.error('Failed to insert code cell', e);
-    }
-  };
 
-  // Extend fullContextValue with the new function
-  const extendedContextValue: INotebookContext = {
-    ...fullContextValue,
-    insertCodeBelowActiveCell
-  };
+        // Set the source of the newly active cell
+        const newCell = nb.activeCell;
+        if (newCell && newCell.model) {
+          const modelAny = newCell.model;
+          const shared = modelAny.sharedModel ?? null;
+
+          if (shared) {
+            shared.setSource(code);
+            console.debug('insertCode: wrote via sharedModel.setSource');
+          } else {
+            // Log for debugging
+            console.warn('insertCode: sharedModel not found', newCell.model);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to insert code cell', e);
+      }
+    },
+    [notebookTracker]
+  );
+
+  // Attach the new cell to the existing notebook context
+  fullContextValue.insertCodeBelowActiveCell = insertCodeBelowActiveCell;
 
   return (
-    <NotebookContext.Provider value={extendedContextValue}>
+    <NotebookContext.Provider value={fullContextValue}>
       {children}
     </NotebookContext.Provider>
   );

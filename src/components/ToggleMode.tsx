@@ -2,12 +2,12 @@ import React from 'react';
 
 type Mode = 'append' | 'override';
 
-interface ToggleModeProps {
+interface IToggleModeProps {
   mode: Mode;
   setMode: (m: Mode) => void;
 }
 
-export default function ToggleMode({ mode, setMode }: ToggleModeProps) {
+export default function ToggleMode({ mode, setMode }: IToggleModeProps) {
   return (
     <div className="flex w-full justify-center">
       <div className="inline-flex items-center gap-0.5 rounded-full bg-blue-500 p-0.5">

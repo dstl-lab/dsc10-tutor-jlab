@@ -14,9 +14,13 @@ const messageClasses = {
 
 interface IChatMessagesProps {
   messages: IMessage[];
+  isWaiting?: boolean;
 }
 
-export default function ChatMessages({ messages }: IChatMessagesProps) {
+export default function ChatMessages({
+  messages,
+  isWaiting = false
+}: IChatMessagesProps) {
   const notebook = useNotebook();
   if (messages.length === 0) {
     return (
@@ -45,6 +49,30 @@ export default function ChatMessages({ messages }: IChatMessagesProps) {
           </div>
         );
       })}
+      {isWaiting && (
+        <div className={cn('flex flex-col', messageClasses.tutor)}>
+          <TutorTyping />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TutorTyping() {
+  return (
+    <div className="inline-flex items-center gap-1">
+      <span
+        className="inline-block h-2 w-2 animate-pulse rounded-full bg-current opacity-80"
+        style={{ animationDelay: '0s' }}
+      />
+      <span
+        className="inline-block h-2 w-2 animate-pulse rounded-full bg-current opacity-80"
+        style={{ animationDelay: '0.12s' }}
+      />
+      <span
+        className="inline-block h-2 w-2 animate-pulse rounded-full bg-current opacity-80"
+        style={{ animationDelay: '0.24s' }}
+      />
     </div>
   );
 }

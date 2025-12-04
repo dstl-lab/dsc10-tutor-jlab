@@ -98,7 +98,7 @@ export function NotebookProvider({
   }, [getTrackerState, notebookTracker]);
 
   // Compose the full context (fields + function)
-  let fullContextValue: INotebookContext = {
+  const fullContextValue: INotebookContext = {
     ...contextValue,
     getNotebookJson
   };

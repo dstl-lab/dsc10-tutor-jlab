@@ -1,4 +1,3 @@
-import { useNotebook } from '@/contexts/NotebookContext';
 import { cn } from '@/utils';
 import * as React from 'react';
 import Markdown from './Markdown';
@@ -21,7 +20,6 @@ export default function ChatMessages({
   messages,
   isWaiting = false
 }: IChatMessagesProps) {
-  const notebook = useNotebook();
   if (messages.length === 0) {
     return (
       <div className="flex flex-1 flex-col gap-2 overflow-y-auto">

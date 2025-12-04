@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useState } from 'react';
 
-import { askTutor, PromptMode } from '@/api';
+import { askTutor } from '@/api';
 import { useNotebook } from '@/contexts/NotebookContext';
 import ChatMessageBox from './ChatMessageBox';
 import ChatMessages from './ChatMessages';
@@ -19,7 +19,8 @@ export default function Chat() {
   const [isWaiting, setIsWaiting] = useState(false);
 
   // Prompt mode
-  const [mode, setMode] = useState<PromptMode>('append');
+  type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
+  const [mode, setMode] = useState<FrontendPromptMode>('tutor');
 
   const tutorInstruction =
     'Always respond in Markdown. Use headers, bullet points, and code blocks where appropriate.';
@@ -31,14 +32,17 @@ export default function Chat() {
     setIsWaiting(true);
     try {
       const promptToSend =
-        mode === 'append' ? tutorInstruction : chatgptOverride;
+        mode === 'tutor' ? tutorInstruction : chatgptOverride;
+
+      const backendPromptMode =
+        mode === 'tutor' ? 'append' : mode === 'chatgpt' ? 'override' : 'none';
 
       const tutorMessage = await askTutor({
         student_question: text,
         conversation_id: conversationId,
         notebook_json: getNotebookJson(),
         prompt: promptToSend,
-        prompt_mode: mode
+        prompt_mode: backendPromptMode
       });
 
       // Store the conversation ID from the first response
@@ -65,10 +69,7 @@ export default function Chat() {
   return (
     <div className="flex h-full w-full flex-col gap-2">
       <div className="px-2">
-        <ToggleMode
-          mode={mode === 'append' ? 'append' : 'override'}
-          setMode={setMode}
-        />
+        <ToggleMode mode={mode} setMode={setMode} />
       </div>
 
       <ChatMessages messages={messages} isWaiting={isWaiting} />

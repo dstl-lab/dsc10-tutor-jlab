@@ -4,6 +4,13 @@ import { ServerConnection } from '@jupyterlab/services';
 
 import { getStudentEmailFromUrl, isProduction } from '@/utils';
 
+/**
+ * Modes for how the assistant responds to the user's message.
+ *
+ * - 'append': Appends custom prompt response to DSC10-specific guidance.
+ * - 'override': Responds as ChatGPT without any DSC10-specific guidance.
+ * - 'none': Only Tutor's default behavior without any additional prompts.
+ */
 export type PromptMode = 'append' | 'none' | 'override';
 
 export interface IAskTutorParams {

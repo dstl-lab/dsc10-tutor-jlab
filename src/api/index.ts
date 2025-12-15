@@ -19,6 +19,7 @@ export interface IAskTutorParams {
   prompt?: string;
   prompt_mode?: PromptMode;
   conversation_id?: string;
+  reset_conversation?: boolean;
 }
 
 export interface ITutorResponse {
@@ -36,6 +37,7 @@ export interface ITutorRequest {
   prompt: string;
   prompt_mode?: PromptMode;
   conversation_id?: string;
+  reset_conversation?: boolean;
 }
 
 // curl -X POST https://slh-backend-v2-api-dev.slh.ucsd.edu/api/dsc10/ask \
@@ -66,7 +68,8 @@ export async function askTutor({
   notebook_json,
   prompt,
   prompt_mode,
-  conversation_id
+  conversation_id,
+  reset_conversation
 }: IAskTutorParams): Promise<ITutorResponse> {
   const url = 'https://slh-backend-v2-api-dev.slh.ucsd.edu/api/dsc10/ask';
   const studentEmail = getStudentEmailFromUrl();
@@ -97,6 +100,11 @@ export async function askTutor({
 
   if (conversation_id) {
     body.conversation_id = conversation_id;
+  }
+
+  // Include reset flag when requested
+  if (reset_conversation) {
+    body.reset_conversation = true;
   }
 
   const response = await fetch(url, {

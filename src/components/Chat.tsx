@@ -18,6 +18,7 @@ export default function Chat() {
     undefined
   );
   const [isWaiting, setIsWaiting] = useState(false);
+  const [shouldResetNext, setShouldResetNext] = useState(false);
 
   // Prompt mode
   type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
@@ -43,12 +44,17 @@ export default function Chat() {
         conversation_id: conversationId,
         notebook_json: getNotebookJson(),
         prompt: promptToSend,
-        prompt_mode: backendPromptMode
+        prompt_mode: backendPromptMode,
+        reset_conversation: shouldResetNext || undefined
       });
 
       // Store the conversation ID from the first response
       if (tutorMessage.conversation_id && !conversationId) {
         setConversationId(tutorMessage.conversation_id);
+      }
+      // Clear the one-shot reset flag after using it
+      if (shouldResetNext) {
+        setShouldResetNext(false);
       }
       setMessages(prev => [
         ...prev,
@@ -69,6 +75,8 @@ export default function Chat() {
     setMessages([]);
     setConversationId(undefined);
     setIsWaiting(false);
+    // Ensure the next message resets server-side context
+    setShouldResetNext(true);
   };
 
   if (!notebookName) {

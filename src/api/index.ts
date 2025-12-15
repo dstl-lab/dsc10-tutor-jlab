@@ -4,10 +4,20 @@ import { ServerConnection } from '@jupyterlab/services';
 
 import { getStudentEmailFromUrl, isProduction } from '@/utils';
 
+/**
+ * Modes for how the assistant responds to the user's message.
+ *
+ * - 'append': Appends custom prompt to DSC10-specific guidance.
+ * - 'override': Only uses custom prompt and ignores DSC10-specific guidance.
+ * - 'none': Only Tutor's default behavior without any additional prompts.
+ */
+export type PromptMode = 'append' | 'none' | 'override';
+
 export interface IAskTutorParams {
   student_question: string;
   notebook_json: string;
   prompt?: string;
+  prompt_mode?: PromptMode;
   conversation_id?: string;
 }
 
@@ -24,6 +34,7 @@ export interface ITutorRequest {
   student_question: string;
   notebook_json: string;
   prompt: string;
+  prompt_mode?: PromptMode;
   conversation_id?: string;
 }
 
@@ -46,6 +57,7 @@ export interface ITutorRequest {
  * @param params.student_question - The student's question to ask the tutor
  * @param params.notebook_json - Optional notebook JSON context
  * @param params.prompt - Optional system prompt for the LLM
+ * @param params.prompt_mode - 'append' | 'none' | 'override' (defaults to 'append')
  * @param params.conversation_id - Optional conversation ID to continue an existing conversation
  * @returns The response from the API
  */
@@ -53,6 +65,7 @@ export async function askTutor({
   student_question,
   notebook_json,
   prompt,
+  prompt_mode,
   conversation_id
 }: IAskTutorParams): Promise<ITutorResponse> {
   const url = 'https://slh-backend-v2-api-dev.slh.ucsd.edu/api/dsc10/ask';
@@ -78,9 +91,8 @@ export async function askTutor({
     student_email: studentEmail,
     student_question: student_question,
     notebook_json: notebook_json || '',
-    //prompt: prompt || ''
-    prompt:
-      'Always respond in Markdown. Use headers, bullet points, and code blocks where appropriate.'
+    prompt: prompt ?? '',
+    prompt_mode: prompt_mode ?? 'append'
   };
 
   if (conversation_id) {

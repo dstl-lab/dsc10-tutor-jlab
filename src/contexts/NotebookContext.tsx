@@ -16,8 +16,7 @@ import {
   useState
 } from 'react';
 
-import { INotebookTracker, INotebookModel } from '@jupyterlab/notebook';
-import { INotebookContent } from '@jupyterlab/nbformat';
+import { INotebookTracker, NotebookActions } from '@jupyterlab/notebook';
 
 export interface INotebookContext {
   notebookName: string;
@@ -26,6 +25,8 @@ export interface INotebookContext {
 
   // Returns serialized notebook JSON string
   getNotebookJson: () => string;
+  // Insert a code cell containing code below the currently active cell
+  insertCodeBelowActiveCell?: (code: string) => void;
 }
 
 const NotebookContext = createContext<INotebookContext | null>(null);
@@ -84,7 +85,6 @@ export function NotebookProvider({
     const handleActiveCellChanged = () => {
       const index =
         notebookTracker.currentWidget?.content?.activeCellIndex ?? -1;
-
       setContextValue(prev => ({ ...prev, activeCellIndex: index }));
     };
 
@@ -97,11 +97,59 @@ export function NotebookProvider({
     };
   }, [getTrackerState, notebookTracker]);
 
-  // Compose the full context (fields + function) for consumers
+  // Compose the full context (fields + function)
   const fullContextValue: INotebookContext = {
     ...contextValue,
     getNotebookJson
   };
+
+  // Add method to insert a code cell below the active cell using NotebookActions
+  const insertCodeBelowActiveCell = useCallback(
+    (code: string) => {
+      const panel = notebookTracker.currentWidget;
+      if (!panel) {
+        return;
+      }
+
+      const nb = panel.content;
+
+      try {
+        // Insert a new cell below the active one
+        NotebookActions.insertBelow(nb);
+
+        // Try to convert it to a code cell (may throw on some versions)
+        try {
+          NotebookActions.changeCellType(nb, 'code');
+        } catch (e) {
+          console.debug(
+            'changeCellType not available or failed, cell may not be converted to code type',
+            e
+          );
+        }
+
+        // Set the source of the newly active cell
+        const newCell = nb.activeCell;
+        if (newCell && newCell.model) {
+          const modelAny = newCell.model;
+          const shared = modelAny.sharedModel ?? null;
+
+          if (shared) {
+            shared.setSource(code);
+            console.debug('insertCode: wrote via sharedModel.setSource');
+          } else {
+            // Log for debugging
+            console.warn('insertCode: sharedModel not found', newCell.model);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to insert code cell', e);
+      }
+    },
+    [notebookTracker]
+  );
+
+  // Attach the new cell to the existing notebook context
+  fullContextValue.insertCodeBelowActiveCell = insertCodeBelowActiveCell;
 
   return (
     <NotebookContext.Provider value={fullContextValue}>

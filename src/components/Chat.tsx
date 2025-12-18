@@ -66,12 +66,6 @@ export default function Chat() {
   };
 
   const handleNewConversation = () => {
-    const ok = window.confirm(
-      'Start a new conversation? This will clear the current chat and reset the tutor context.'
-    );
-    if (!ok) {
-      return;
-    }
     setMessages([]);
     setConversationId(undefined);
     setIsWaiting(false);
@@ -89,13 +83,9 @@ export default function Chat() {
 
   return (
     <div className="flex h-full w-full flex-col gap-2">
-      <div className="px-2">
-        <ToggleMode mode={mode} setMode={setMode} />
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div />
+      <div className="flex items-center justify-between px-2">
         <Button onClick={handleNewConversation}>New conversation</Button>
+        <ToggleMode mode={mode} setMode={setMode} />
       </div>
       <ChatMessages messages={messages} isWaiting={isWaiting} />
       <ChatMessageBox onSubmit={handleMessageSubmit} disabled={isWaiting} />

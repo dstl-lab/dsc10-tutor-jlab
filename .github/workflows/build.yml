@@ -160,6 +160,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: jupyterlab/maintainer-tools/.github/actions/base-setup@v1
-      - uses: jupyterlab/maintainer-tools/.github/actions/check-links@v1
+      - name: Run check-links
+        uses: jupyterlab/maintainer-tools/.github/actions/check-links@v1
         env: 
           IGNORE_GLOB: "sams-notes.md example_notebooks/**"

@@ -4,7 +4,9 @@ import Markdown from './Markdown';
 import { type IMessage } from './types';
 
 const messageClasses = {
-  user: cn('max-w-[90%] self-end rounded-md bg-jp-brand-color1 p-2 text-white'),
+  user: cn(
+    'max-w-[90%] self-end rounded-md bg-jp-brand-color1 px-2 py-0.5 text-white'
+  ),
   tutor: cn('max-w-[90%] self-start'),
   system: cn(
     'max-w-[90%] self-start rounded-md border border-jp-border-color0 p-2'

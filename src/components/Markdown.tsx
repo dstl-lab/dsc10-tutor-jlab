@@ -44,6 +44,19 @@ export default function Markdown({
       notebook.insertCodeBelowActiveCell &&
       (language || '').toLowerCase().startsWith('py');
 
+    const isSingleLine =
+      typeof codeString === 'string' &&
+      !codeString.includes('\n') &&
+      codeString.length <= 20;
+
+    if (isSingleLine) {
+      return (
+        <code className="rounded bg-gray-200 px-1 py-0.5 text-sm">
+          {children}
+        </code>
+      );
+    }
+
     return (
       <div>
         <pre className="overflow-x-auto rounded-md bg-gray-900 p-3 text-white">

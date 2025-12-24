@@ -2,6 +2,7 @@ import * as React from 'react';
 import { useState } from 'react';
 
 import { askTutor } from '@/api';
+import { Button } from '@/components/ui/button';
 import { useNotebook } from '@/contexts/NotebookContext';
 import ChatMessageBox from './ChatMessageBox';
 import ChatMessages from './ChatMessages';
@@ -17,6 +18,7 @@ export default function Chat() {
     undefined
   );
   const [isWaiting, setIsWaiting] = useState(false);
+  const [shouldResetNext, setShouldResetNext] = useState(false);
 
   // Prompt mode
   type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
@@ -42,12 +44,17 @@ export default function Chat() {
         conversation_id: conversationId,
         notebook_json: getNotebookJson(),
         prompt: promptToSend,
-        prompt_mode: backendPromptMode
+        prompt_mode: backendPromptMode,
+        reset_conversation: shouldResetNext || undefined
       });
 
       // Store the conversation ID from the first response
       if (tutorMessage.conversation_id && !conversationId) {
         setConversationId(tutorMessage.conversation_id);
+      }
+      // Clear the one-shot reset flag after using it
+      if (shouldResetNext) {
+        setShouldResetNext(false);
       }
       setMessages(prev => [
         ...prev,
@@ -56,6 +63,16 @@ export default function Chat() {
     } finally {
       setIsWaiting(false);
     }
+  };
+
+  const handleNewConversation = () => {
+    setMessages([]);
+    setConversationId(undefined);
+    setIsWaiting(false);
+
+    // Flag reset for the next message submission
+    // (backend reset is deferred until next user input)
+    setShouldResetNext(true);
   };
 
   if (!notebookName) {
@@ -68,10 +85,16 @@ export default function Chat() {
 
   return (
     <div className="flex h-full w-full flex-col gap-2">
-      <div className="px-2">
-        <ToggleMode mode={mode} setMode={setMode} />
+      <div className="flex items-center justify-between gap-0.5 px-1">
+        <Button
+          className="w-45 !rounded-full px-2 py-0.5"
+          onClick={handleNewConversation}
+          disabled={isWaiting}
+        >
+          New Conversation
+        </Button>
+        <ToggleMode mode={mode} setMode={setMode} disabled={isWaiting} />
       </div>
-
       <ChatMessages messages={messages} isWaiting={isWaiting} />
       <ChatMessageBox onSubmit={handleMessageSubmit} disabled={isWaiting} />
       <NotebookInfo />

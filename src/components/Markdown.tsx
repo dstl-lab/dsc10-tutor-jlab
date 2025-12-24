@@ -44,6 +44,22 @@ export default function Markdown({
       notebook.insertCodeBelowActiveCell &&
       (language || '').toLowerCase().startsWith('py');
 
+    // Limiting to 20 chars reliably captures operators and simple examples (e.g. `+`, `np.log10`)
+    const INLINE_CODE_MAX_LENGTH = 20;
+
+    const isSingleLine =
+      typeof codeString === 'string' &&
+      !codeString.includes('\n') &&
+      codeString.length <= INLINE_CODE_MAX_LENGTH;
+
+    if (isSingleLine) {
+      return (
+        <code className="rounded bg-gray-200 px-1 py-0.5 text-sm">
+          {children}
+        </code>
+      );
+    }
+
     return (
       <div>
         <pre className="overflow-x-auto rounded-md bg-gray-900 p-3 text-white">

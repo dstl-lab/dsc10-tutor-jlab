@@ -163,4 +163,4 @@ jobs:
       - name: Run check-links
         uses: jupyterlab/maintainer-tools/.github/actions/check-links@v1
         with:
-          ignore_glob: 'sams-notes.md example_notebooks/**'
+          ignore_glob: "sams-notes.md example_notebooks/**"

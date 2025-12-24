@@ -69,7 +69,9 @@ export default function Chat() {
     setMessages([]);
     setConversationId(undefined);
     setIsWaiting(false);
-    // Ensure the next message resets server-side context
+
+    // Flag reset for the next message submission
+    // (backend reset is deferred until next user input)
     setShouldResetNext(true);
   };
 
@@ -83,9 +85,15 @@ export default function Chat() {
 
   return (
     <div className="flex h-full w-full flex-col gap-2">
-      <div className="flex items-center justify-between px-2">
-        <Button onClick={handleNewConversation}>New conversation</Button>
-        <ToggleMode mode={mode} setMode={setMode} />
+      <div className="flex items-center justify-between gap-0.5 px-1">
+        <Button
+          className="w-45 !rounded-full px-2 py-0.5"
+          onClick={handleNewConversation}
+          disabled={isWaiting}
+        >
+          New Conversation
+        </Button>
+        <ToggleMode mode={mode} setMode={setMode} disabled={isWaiting} />
       </div>
       <ChatMessages messages={messages} isWaiting={isWaiting} />
       <ChatMessageBox onSubmit={handleMessageSubmit} disabled={isWaiting} />

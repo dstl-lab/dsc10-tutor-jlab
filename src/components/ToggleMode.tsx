@@ -5,14 +5,20 @@ export type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
 interface IToggleModeProps {
   mode: FrontendPromptMode;
   setMode: (m: FrontendPromptMode) => void;
+  disabled?: boolean;
 }
 
-export default function ToggleMode({ mode, setMode }: IToggleModeProps) {
+export default function ToggleMode({
+  mode,
+  setMode,
+  disabled
+}: IToggleModeProps) {
   return (
     <div className="flex w-full justify-center">
       <div className="inline-flex items-center gap-0.5 rounded-full bg-blue-500 p-0.5">
         <button
           onClick={() => setMode('tutor')}
+          disabled={disabled}
           aria-pressed={mode === 'tutor'}
           style={{ borderRadius: '9999px' }}
           className={
@@ -27,6 +33,7 @@ export default function ToggleMode({ mode, setMode }: IToggleModeProps) {
 
         <button
           onClick={() => setMode('chatgpt')}
+          disabled={disabled}
           aria-pressed={mode === 'chatgpt'}
           style={{ borderRadius: '9999px' }}
           className={

@@ -28,7 +28,9 @@ dynamic = ["version", "description", "authors", "urls", "keywords"]
 
 [dependency-groups]
 dev = [
+    "babypandas>=1.0.0",
     "jupyterlab~=4.4.0",
+    "otter-grader>=6.1.6",
     "pandas~=2.3.3",
     "ruff~=0.13.3",
 ]

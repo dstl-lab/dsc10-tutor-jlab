@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { askTutor } from '@/api';
 import { Button } from '@/components/ui/button';
 import { useNotebook } from '@/contexts/NotebookContext';
+import { chatgptOverride, tutorInstruction } from '@/utils/prompts';
 import ChatMessageBox from './ChatMessageBox';
 import ChatMessages from './ChatMessages';
 import ChatPlaceholder from './ChatPlaceholder';
@@ -23,11 +24,6 @@ export default function Chat() {
   // Prompt mode
   type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
   const [mode, setMode] = useState<FrontendPromptMode>('tutor');
-
-  const tutorInstruction =
-    'Always respond in Markdown. Use headers, bullet points, and code blocks where appropriate.';
-  const chatgptOverride =
-    'You are a helpful assistant. Answer questions in markdown.';
 
   const handleMessageSubmit = async (text: string) => {
     setMessages(prev => [...prev, { author: 'user', text }]);

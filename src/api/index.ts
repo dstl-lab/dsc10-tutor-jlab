@@ -88,8 +88,11 @@ export async function askTutor({
       };
 
   const body: ITutorRequest = {
-    class_id: 'ca000000-0000-0000-0001-000000000001',
-    assignment_id: 'ca000000-0000-0000-0002-000000000001',
+    // get these UUIDs from https://course-assistant-v2.slh.ucsd.edu/
+    class_id: '0695ea15-532a-735c-8000-67bc3744d2a4',
+    assignment_id: isProduction()
+      ? '0695ea16-733f-7bfd-8000-b47e40290ff0' // dsc10-production
+      : '0695ea16-df80-7f31-8000-d310f60657a0', // dsc10-development
     question_id: 'ca000000-0000-0000-0004-000000000001',
     student_email: studentEmail,
     student_question: student_question,

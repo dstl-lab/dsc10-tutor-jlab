@@ -71,7 +71,7 @@ export async function askTutor({
   conversation_id,
   reset_conversation
 }: IAskTutorParams): Promise<ITutorResponse> {
-  const url = 'https://slh-backend-v2-api-dev.slh.ucsd.edu/api/dsc10/ask';
+  const url = 'https://slh-backend-v2-api.slh.ucsd.edu/api/dsc10/ask';
   const studentEmail = getStudentEmailFromUrl();
 
   // In production (datahub), we DON'T use an authorization token since SLH
@@ -93,7 +93,9 @@ export async function askTutor({
     assignment_id: isProduction()
       ? '0695ea16-733f-7bfd-8000-b47e40290ff0' // dsc10-production
       : '0695ea16-df80-7f31-8000-d310f60657a0', // dsc10-development
-    question_id: 'ca000000-0000-0000-0004-000000000001',
+    question_id: isProduction()
+      ? '0695f1ac-7447-7089-8000-f6ae068108d4' // dsc10-production
+      : '0695f216-2116-7592-8000-8de58ce2b501', // dsc10-development
     student_email: studentEmail,
     student_question: student_question,
     notebook_json: notebook_json || '',

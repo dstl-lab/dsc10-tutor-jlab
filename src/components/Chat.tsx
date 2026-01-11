@@ -46,7 +46,10 @@ export default function Chat() {
       console.log('📤 Sending to tutor API:', {
         active_cell_index: activeCellIndex >= 0 ? activeCellIndex : undefined,
         nearest_markdown_cell_index: nearestMarkdown?.cellIndex,
-        nearest_markdown_cell_text_preview: nearestMarkdown?.text?.substring(0, 100),
+        nearest_markdown_cell_text_preview: nearestMarkdown?.text?.substring(
+          0,
+          100
+        ),
         activeCellIndex_from_context: activeCellIndex
       });
 
@@ -55,14 +58,18 @@ export default function Chat() {
       let enhancedQuestion = text;
       if (nearestMarkdown?.text) {
         // Extract a brief question identifier from the markdown (e.g., "Question 5.1.1")
-        const questionMatch = nearestMarkdown.text.match(/(?:Question|Q)\s*(\d+\.\d+\.\d+)/i);
+        const questionMatch = nearestMarkdown.text.match(
+          /(?:Question|Q)\s*(\d+\.\d+\.\d+)/i
+        );
         if (questionMatch) {
           const questionId = questionMatch[0]; // e.g., "Question 5.1.1"
           // Prepend context to the question
           enhancedQuestion = `[Working on ${questionId}] ${text}`;
         } else {
           // If no question ID found, include a preview of the markdown context
-          const contextPreview = nearestMarkdown.text.substring(0, 150).replace(/\n/g, ' ');
+          const contextPreview = nearestMarkdown.text
+            .substring(0, 150)
+            .replace(/\n/g, ' ');
           enhancedQuestion = `[Context: ${contextPreview}...] ${text}`;
         }
       }

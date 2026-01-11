@@ -129,7 +129,10 @@ export async function askTutor({
     body.active_cell_index = active_cell_index;
   }
 
-  if (nearest_markdown_cell_index !== undefined && nearest_markdown_cell_index >= 0) {
+  if (
+    nearest_markdown_cell_index !== undefined &&
+    nearest_markdown_cell_index >= 0
+  ) {
     body.nearest_markdown_cell_index = nearest_markdown_cell_index;
   }
 
@@ -141,7 +144,8 @@ export async function askTutor({
   console.log('📡 API Request Body:', {
     active_cell_index: body.active_cell_index,
     nearest_markdown_cell_index: body.nearest_markdown_cell_index,
-    nearest_markdown_cell_text_preview: body.nearest_markdown_cell_text?.substring(0, 100),
+    nearest_markdown_cell_text_preview:
+      body.nearest_markdown_cell_text?.substring(0, 100),
     student_question: body.student_question
   });
 

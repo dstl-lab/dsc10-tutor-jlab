@@ -20,6 +20,9 @@ export interface IAskTutorParams {
   prompt_mode?: PromptMode;
   conversation_id?: string;
   reset_conversation?: boolean;
+  active_cell_index?: number;
+  nearest_markdown_cell_index?: number;
+  nearest_markdown_cell_text?: string;
 }
 
 export interface ITutorResponse {
@@ -38,6 +41,9 @@ export interface ITutorRequest {
   prompt_mode?: PromptMode;
   conversation_id?: string;
   reset_conversation?: boolean;
+  active_cell_index?: number;
+  nearest_markdown_cell_index?: number;
+  nearest_markdown_cell_text?: string;
 }
 
 // curl -X POST https://slh-backend-v2-api-dev.slh.ucsd.edu/api/dsc10/ask \
@@ -61,6 +67,9 @@ export interface ITutorRequest {
  * @param params.prompt - Optional system prompt for the LLM
  * @param params.prompt_mode - 'append' | 'none' | 'override' (defaults to 'append')
  * @param params.conversation_id - Optional conversation ID to continue an existing conversation
+ * @param params.active_cell_index - Optional index of the currently active cell
+ * @param params.nearest_markdown_cell_index - Optional index of the nearest markdown cell above the active cell
+ * @param params.nearest_markdown_cell_text - Optional text content of the nearest markdown cell above the active cell
  * @returns The response from the API
  */
 export async function askTutor({
@@ -69,7 +78,10 @@ export async function askTutor({
   prompt,
   prompt_mode,
   conversation_id,
-  reset_conversation
+  reset_conversation,
+  active_cell_index,
+  nearest_markdown_cell_index,
+  nearest_markdown_cell_text
 }: IAskTutorParams): Promise<ITutorResponse> {
   const url = 'https://slh-backend-v2-api.slh.ucsd.edu/api/dsc10/ask';
   const studentEmail = getStudentEmailFromUrl();
@@ -111,6 +123,27 @@ export async function askTutor({
   if (reset_conversation) {
     body.reset_conversation = true;
   }
+
+  // Add optional fields for active cell and nearest markdown cell
+  if (active_cell_index !== undefined && active_cell_index >= 0) {
+    body.active_cell_index = active_cell_index;
+  }
+
+  if (nearest_markdown_cell_index !== undefined && nearest_markdown_cell_index >= 0) {
+    body.nearest_markdown_cell_index = nearest_markdown_cell_index;
+  }
+
+  if (nearest_markdown_cell_text) {
+    body.nearest_markdown_cell_text = nearest_markdown_cell_text;
+  }
+
+  // Debug: Log the request body to verify what's being sent
+  console.log('📡 API Request Body:', {
+    active_cell_index: body.active_cell_index,
+    nearest_markdown_cell_index: body.nearest_markdown_cell_index,
+    nearest_markdown_cell_text_preview: body.nearest_markdown_cell_text?.substring(0, 100),
+    student_question: body.student_question
+  });
 
   const response = await fetch(url, {
     method: 'POST',

@@ -25,6 +25,8 @@ export interface INotebookContext {
 
   // Returns serialized notebook JSON string
   getNotebookJson: () => string;
+  // Get the nearest markdown cell above the active cell
+  getNearestMarkdownCell: () => { cellIndex: number; text: string } | null;
   // Insert a code cell containing code below the currently active cell
   insertCodeBelowActiveCell?: (code: string) => void;
 }
@@ -41,25 +43,63 @@ export function NotebookProvider({
   notebookTracker
 }: INotebookProviderProps) {
   const [contextValue, setContextValue] = useState<
-    Omit<INotebookContext, 'getNotebookJson'>
+    Omit<INotebookContext, 'getNotebookJson' | 'getNearestMarkdownCell'>
   >({
     notebookName: '',
     notebookPath: '',
     activeCellIndex: -1
   });
 
+  // Helper function to get the currently selected cell index (the one with blue border)
+  const getSelectedCellIndex = useCallback((): number => {
+    const panel = notebookTracker.currentWidget;
+    if (!panel) {
+      return -1;
+    }
+
+    const notebook = panel.content;
+    const activeCell = notebook.activeCell;
+    if (!activeCell) {
+      return -1;
+    }
+
+    // Find the index by iterating through widget children
+    // This ensures we get the correct visual index
+    const widgetCount = notebook.widgets.length;
+    for (let i = 0; i < widgetCount; i++) {
+      const widget = notebook.widgets[i];
+      if (widget === activeCell) {
+        return i;
+      }
+    }
+
+    // Fallback: try to find by model comparison
+    const model = notebook.model;
+    if (model) {
+      const cells = model.cells;
+      for (let i = 0; i < cells.length; i++) {
+        const cellModel = cells.get(i);
+        if (cellModel && cellModel === activeCell.model) {
+          return i;
+        }
+      }
+    }
+
+    return -1;
+  }, [notebookTracker]);
+
   // Build context state snapshot from the tracker
   const getTrackerState = useCallback((): Omit<
     INotebookContext,
-    'getNotebookJson'
+    'getNotebookJson' | 'getNearestMarkdownCell'
   > => {
     const panel = notebookTracker.currentWidget;
     const notebookName = panel?.title?.label ?? '';
     const notebookPath = panel?.context?.path ?? '';
-    const activeCellIndex = panel?.content?.activeCellIndex ?? -1;
+    const activeCellIndex = getSelectedCellIndex();
 
     return { notebookName, notebookPath, activeCellIndex };
-  }, [notebookTracker]);
+  }, [notebookTracker, getSelectedCellIndex]);
 
   // Function to serialize current notebook to JSON string
   const getNotebookJson = useCallback(() => {
@@ -72,6 +112,67 @@ export function NotebookProvider({
     return JSON.stringify(model.toJSON());
   }, [notebookTracker]);
 
+  // Function to get the nearest markdown cell above the active cell
+  const getNearestMarkdownCell = useCallback(() => {
+    const panel = notebookTracker.currentWidget;
+    if (!panel) {
+      return null;
+    }
+
+    const notebook = panel.content;
+    const model = notebook.model;
+    const activeIndex = getSelectedCellIndex();
+
+    if (!model || activeIndex < 0) {
+      return null;
+    }
+
+    // Use the model's cells directly to ensure index matching
+    const cells = model.cells;
+
+    // Scan backward from the active cell to find the nearest markdown cell
+    for (let i = activeIndex; i >= 0; i--) {
+      const cellModel = cells.get(i);
+      if (!cellModel) {
+        continue;
+      }
+
+      // Only check markdown cells
+      if (cellModel.type !== 'markdown') {
+        continue;
+      }
+
+      // Get the markdown source from the cell model
+      // Try sharedModel first (for newer JupyterLab versions)
+      const sharedModel = (cellModel as any).sharedModel;
+      let source: string | string[] = '';
+      
+      if (sharedModel && sharedModel.source !== undefined) {
+        source = sharedModel.source;
+      } else if ((cellModel as any).source !== undefined) {
+        source = (cellModel as any).source;
+      } else {
+        // Fallback: use toJSON to get the source
+        const cellJson = cellModel.toJSON();
+        source = (cellJson as any).source || '';
+      }
+
+      const markdownText = Array.isArray(source)
+        ? source.join('').trim()
+        : (source || '').trim();
+
+      // Return the first markdown cell we find above the active cell
+      if (markdownText.length > 0) {
+        return {
+          cellIndex: i,
+          text: markdownText
+        };
+      }
+    }
+
+    return null; // No markdown cell found above
+  }, [notebookTracker, getSelectedCellIndex]);
+
   useEffect(() => {
     // Initialize from current tracker state
     setContextValue(getTrackerState());
@@ -83,8 +184,7 @@ export function NotebookProvider({
 
     // Update only the active cell index when selection changes
     const handleActiveCellChanged = () => {
-      const index =
-        notebookTracker.currentWidget?.content?.activeCellIndex ?? -1;
+      const index = getSelectedCellIndex();
       setContextValue(prev => ({ ...prev, activeCellIndex: index }));
     };
 
@@ -95,12 +195,13 @@ export function NotebookProvider({
       notebookTracker.currentChanged.disconnect(handleCurrentChanged);
       notebookTracker.activeCellChanged.disconnect(handleActiveCellChanged);
     };
-  }, [getTrackerState, notebookTracker]);
+  }, [getTrackerState, getSelectedCellIndex, notebookTracker]);
 
   // Compose the full context (fields + function)
   const fullContextValue: INotebookContext = {
     ...contextValue,
-    getNotebookJson
+    getNotebookJson,
+    getNearestMarkdownCell
   };
 
   // Add method to insert a code cell below the active cell using NotebookActions

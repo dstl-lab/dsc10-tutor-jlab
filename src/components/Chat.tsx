@@ -12,7 +12,12 @@ import ToggleMode from './ToggleMode';
 import { type IMessage } from './types';
 
 export default function Chat() {
-  const { notebookName, getNotebookJson } = useNotebook();
+  const {
+    notebookName,
+    getNotebookJson,
+    getNearestMarkdownCell,
+    activeCellIndex
+  } = useNotebook();
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | undefined>(
     undefined
@@ -34,13 +39,44 @@ export default function Chat() {
       const backendPromptMode =
         mode === 'tutor' ? 'append' : mode === 'chatgpt' ? 'override' : 'none';
 
+      // Get the nearest markdown cell (which likely contains the question)
+      const nearestMarkdown = getNearestMarkdownCell();
+
+      // Debug: Log what we're sending to verify it matches the sidebar
+      console.log('📤 Sending to tutor API:', {
+        active_cell_index: activeCellIndex >= 0 ? activeCellIndex : undefined,
+        nearest_markdown_cell_index: nearestMarkdown?.cellIndex,
+        nearest_markdown_cell_text_preview: nearestMarkdown?.text?.substring(0, 100),
+        activeCellIndex_from_context: activeCellIndex
+      });
+
+      // Enhance the student question with context about which question they're working on
+      // This helps the backend LLM understand the context even if it doesn't use the separate fields
+      let enhancedQuestion = text;
+      if (nearestMarkdown?.text) {
+        // Extract a brief question identifier from the markdown (e.g., "Question 5.1.1")
+        const questionMatch = nearestMarkdown.text.match(/(?:Question|Q)\s*(\d+\.\d+\.\d+)/i);
+        if (questionMatch) {
+          const questionId = questionMatch[0]; // e.g., "Question 5.1.1"
+          // Prepend context to the question
+          enhancedQuestion = `[Working on ${questionId}] ${text}`;
+        } else {
+          // If no question ID found, include a preview of the markdown context
+          const contextPreview = nearestMarkdown.text.substring(0, 150).replace(/\n/g, ' ');
+          enhancedQuestion = `[Context: ${contextPreview}...] ${text}`;
+        }
+      }
+
       const tutorMessage = await askTutor({
-        student_question: text,
+        student_question: enhancedQuestion,
         conversation_id: conversationId,
         notebook_json: getNotebookJson(),
         prompt: promptToSend,
         prompt_mode: backendPromptMode,
-        reset_conversation: shouldResetNext || undefined
+        reset_conversation: shouldResetNext || undefined,
+        active_cell_index: activeCellIndex >= 0 ? activeCellIndex : undefined,
+        nearest_markdown_cell_index: nearestMarkdown?.cellIndex,
+        nearest_markdown_cell_text: nearestMarkdown?.text
       });
 
       // Store the conversation ID from the first response

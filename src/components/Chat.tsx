@@ -93,7 +93,6 @@ export default function Chat() {
       </div>
       <ChatMessages messages={messages} isWaiting={isWaiting} />
       <ChatMessageBox onSubmit={handleMessageSubmit} disabled={isWaiting} />
-      <NotebookInfo />
     </div>
   );
 }

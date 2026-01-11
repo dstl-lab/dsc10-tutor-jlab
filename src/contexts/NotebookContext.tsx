@@ -146,7 +146,7 @@ export function NotebookProvider({
       // Try sharedModel first (for newer JupyterLab versions)
       const sharedModel = (cellModel as any).sharedModel;
       let source: string | string[] = '';
-      
+
       if (sharedModel && sharedModel.source !== undefined) {
         source = sharedModel.source;
       } else if ((cellModel as any).source !== undefined) {

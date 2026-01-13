@@ -83,7 +83,7 @@ export default function Chat() {
     <div className="flex h-full w-full flex-col gap-2">
       <div className="flex items-center justify-between gap-0.5 px-1">
         <Button
-          className="w-45 !rounded-full px-2 py-0.5"
+          className="w-50 px-2 py-0.5 text-xs"
           onClick={handleNewConversation}
           disabled={isWaiting}
         >

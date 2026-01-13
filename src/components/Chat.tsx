@@ -8,7 +8,6 @@ import { chatgptOverride, tutorInstruction } from '@/utils/prompts';
 import ChatMessageBox from './ChatMessageBox';
 import ChatMessages from './ChatMessages';
 import ChatPlaceholder from './ChatPlaceholder';
-import NotebookInfo from './NotebookInfo';
 import ToggleMode from './ToggleMode';
 import { type IMessage } from './types';
 
@@ -93,7 +92,6 @@ export default function Chat() {
       </div>
       <ChatMessages messages={messages} isWaiting={isWaiting} />
       <ChatMessageBox onSubmit={handleMessageSubmit} disabled={isWaiting} />
-      <NotebookInfo />
     </div>
   );
 }

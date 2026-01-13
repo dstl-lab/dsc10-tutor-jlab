@@ -3,7 +3,6 @@ import { useNotebook } from '@/contexts/NotebookContext';
 
 export default function NotebookInfo() {
   const notebook = useNotebook();
-  const nearestMarkdown = notebook.getNearestMarkdownCell();
 
   return (
     <div>

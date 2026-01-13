@@ -12,11 +12,8 @@ import ToggleMode from './ToggleMode';
 import { type IMessage } from './types';
 
 export default function Chat() {
-  const {
-    notebookName,
-    getNotebookJson,
-    getNearestMarkdownCell
-  } = useNotebook();
+  const { notebookName, getNotebookJson, getNearestMarkdownCell } =
+    useNotebook();
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | undefined>(
     undefined
@@ -40,7 +37,6 @@ export default function Chat() {
 
       // Get the nearest markdown cell (which likely contains the question)
       const nearestMarkdown = getNearestMarkdownCell();
-      
 
       // Enhance the student question with context about which question they're working on
       // This helps the backend LLM understand the context even if it doesn't use the separate fields

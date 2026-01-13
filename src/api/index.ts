@@ -121,7 +121,6 @@ export async function askTutor({
     body.nearest_markdown_cell_text = nearest_markdown_cell_text;
   }
 
-
   const response = await fetch(url, {
     method: 'POST',
     headers,

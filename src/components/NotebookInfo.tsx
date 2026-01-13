@@ -13,17 +13,6 @@ export default function NotebookInfo() {
       <br />
       <small>Active Cell Index: {notebook.activeCellIndex}</small>
       <br />
-      {nearestMarkdown && (
-        <>
-          <small>
-            Nearest Markdown Cell Index: {nearestMarkdown.cellIndex}
-          </small>
-          <br />
-          <small>
-            Markdown Preview: {nearestMarkdown.text.substring(0, 50)}...
-          </small>
-        </>
-      )}
     </div>
   );
 }

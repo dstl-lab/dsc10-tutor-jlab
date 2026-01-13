@@ -15,8 +15,7 @@ export default function Chat() {
   const {
     notebookName,
     getNotebookJson,
-    getNearestMarkdownCell,
-    activeCellIndex
+    getNearestMarkdownCell
   } = useNotebook();
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | undefined>(
@@ -41,17 +40,7 @@ export default function Chat() {
 
       // Get the nearest markdown cell (which likely contains the question)
       const nearestMarkdown = getNearestMarkdownCell();
-
-      // Debug: Log what we're sending to verify it matches the sidebar
-      console.log('📤 Sending to tutor API:', {
-        active_cell_index: activeCellIndex >= 0 ? activeCellIndex : undefined,
-        nearest_markdown_cell_index: nearestMarkdown?.cellIndex,
-        nearest_markdown_cell_text_preview: nearestMarkdown?.text?.substring(
-          0,
-          100
-        ),
-        activeCellIndex_from_context: activeCellIndex
-      });
+      
 
       // Enhance the student question with context about which question they're working on
       // This helps the backend LLM understand the context even if it doesn't use the separate fields
@@ -81,8 +70,6 @@ export default function Chat() {
         prompt: promptToSend,
         prompt_mode: backendPromptMode,
         reset_conversation: shouldResetNext || undefined,
-        active_cell_index: activeCellIndex >= 0 ? activeCellIndex : undefined,
-        nearest_markdown_cell_index: nearestMarkdown?.cellIndex,
         nearest_markdown_cell_text: nearestMarkdown?.text
       });
 

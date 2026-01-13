@@ -143,19 +143,8 @@ export function NotebookProvider({
       }
 
       // Get the markdown source from the cell model
-      // Try sharedModel first (for newer JupyterLab versions)
       const sharedModel = (cellModel as any).sharedModel;
-      let source: string | string[] = '';
-
-      if (sharedModel && sharedModel.source !== undefined) {
-        source = sharedModel.source;
-      } else if ((cellModel as any).source !== undefined) {
-        source = (cellModel as any).source;
-      } else {
-        // Fallback: use toJSON to get the source
-        const cellJson = cellModel.toJSON();
-        source = (cellJson as any).source || '';
-      }
+      const source: string | string[] = sharedModel?.source || '';
 
       const markdownText = Array.isArray(source)
         ? source.join('').trim()

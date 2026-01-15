@@ -127,7 +127,6 @@ export function NotebookProvider({
       return null;
     }
 
-    // Use the model's cells directly to ensure index matching
     const cells = model.cells;
 
     // Scan backward from the active cell to find the nearest markdown cell
@@ -137,12 +136,10 @@ export function NotebookProvider({
         continue;
       }
 
-      // Only check markdown cells
       if (cellModel.type !== 'markdown') {
         continue;
       }
 
-      // Get the markdown source from the cell model
       const sharedModel = (cellModel as any).sharedModel;
       const source: string | string[] = sharedModel?.source || '';
 
@@ -150,7 +147,6 @@ export function NotebookProvider({
         ? source.join('').trim()
         : (source || '').trim();
 
-      // Return the first markdown cell we find above the active cell
       if (markdownText.length > 0) {
         return {
           cellIndex: i,
@@ -159,19 +155,16 @@ export function NotebookProvider({
       }
     }
 
-    return null; // No markdown cell found above
+    return null; 
   }, [notebookTracker, getSelectedCellIndex]);
 
   useEffect(() => {
-    // Initialize from current tracker state
     setContextValue(getTrackerState());
 
-    // Update when current notebook changes (open/close/switch)
     const handleCurrentChanged = () => {
       setContextValue(getTrackerState());
     };
 
-    // Update only the active cell index when selection changes
     const handleActiveCellChanged = () => {
       const index = getSelectedCellIndex();
       setContextValue(prev => ({ ...prev, activeCellIndex: index }));
@@ -186,7 +179,6 @@ export function NotebookProvider({
     };
   }, [getTrackerState, getSelectedCellIndex, notebookTracker]);
 
-  // Compose the full context (fields + function)
   const fullContextValue: INotebookContext = {
     ...contextValue,
     getNotebookJson,
@@ -204,10 +196,8 @@ export function NotebookProvider({
       const nb = panel.content;
 
       try {
-        // Insert a new cell below the active one
         NotebookActions.insertBelow(nb);
 
-        // Try to convert it to a code cell (may throw on some versions)
         try {
           NotebookActions.changeCellType(nb, 'code');
         } catch (e) {
@@ -217,7 +207,6 @@ export function NotebookProvider({
           );
         }
 
-        // Set the source of the newly active cell
         const newCell = nb.activeCell;
         if (newCell && newCell.model) {
           const modelAny = newCell.model;
@@ -227,7 +216,6 @@ export function NotebookProvider({
             shared.setSource(code);
             console.debug('insertCode: wrote via sharedModel.setSource');
           } else {
-            // Log for debugging
             console.warn('insertCode: sharedModel not found', newCell.model);
           }
         }
@@ -238,7 +226,6 @@ export function NotebookProvider({
     [notebookTracker]
   );
 
-  // Attach the new cell to the existing notebook context
   fullContextValue.insertCodeBelowActiveCell = insertCodeBelowActiveCell;
 
   return (

@@ -35,23 +35,19 @@ export default function Chat() {
       const backendPromptMode =
         mode === 'tutor' ? 'append' : mode === 'chatgpt' ? 'override' : 'none';
 
-      // Get the nearest markdown cell (which likely contains the question)
       const nearestMarkdown = getNearestMarkdownCell();
 
       // Enhance the student question with context about which question they're working on
       // This helps the backend LLM understand the context even if it doesn't use the separate fields
       let enhancedQuestion = text;
       if (nearestMarkdown?.text) {
-        // Extract a brief question identifier from the markdown (e.g., "Question 5.1.1")
         const questionMatch = nearestMarkdown.text.match(
           /(?:Question|Q)\s*(\d+\.\d+\.\d+)/i
         );
         if (questionMatch) {
-          const questionId = questionMatch[0]; // e.g., "Question 5.1.1"
-          // Prepend context to the question
+          const questionId = questionMatch[0]; 
           enhancedQuestion = `[Working on ${questionId}] ${text}`;
         } else {
-          // If no question ID found, include a preview of the markdown context
           const contextPreview = nearestMarkdown.text
             .substring(0, 150)
             .replace(/\n/g, ' ');
@@ -69,11 +65,9 @@ export default function Chat() {
         nearest_markdown_cell_text: nearestMarkdown?.text
       });
 
-      // Store the conversation ID from the first response
       if (tutorMessage.conversation_id && !conversationId) {
         setConversationId(tutorMessage.conversation_id);
       }
-      // Clear the one-shot reset flag after using it
       if (shouldResetNext) {
         setShouldResetNext(false);
       }

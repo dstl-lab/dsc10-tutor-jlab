@@ -116,7 +116,6 @@ export async function askTutor({
     body.reset_conversation = true;
   }
 
-  // Add optional field for nearest markdown cell text
   if (nearest_markdown_cell_text) {
     body.nearest_markdown_cell_text = nearest_markdown_cell_text;
   }

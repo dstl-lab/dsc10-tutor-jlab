@@ -18,7 +18,7 @@ import { NotebookProvider } from '@/contexts/NotebookContext';
 
 // set the min-width to be same as the other default jupyterlab right sidebar
 // widgets (the property inspector and debugger, as of this writing)
-const APP_MIN_WIDTH = '250px';
+const APP_MIN_WIDTH = '300px';
 
 function App() {
   return (

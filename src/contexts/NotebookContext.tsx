@@ -54,7 +54,6 @@ export function NotebookProvider({
     }
 
     const notebook = panel.content;
-    // JupyterLab already tracks the active cell index on the notebook widget
     return notebook?.activeCellIndex ?? -1;
   }, [notebookTracker]);
 

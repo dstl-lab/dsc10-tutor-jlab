@@ -54,31 +54,8 @@ export function NotebookProvider({
     }
 
     const notebook = panel.content;
-    const activeCell = notebook.activeCell;
-    if (!activeCell) {
-      return -1;
-    }
-
-    const widgetCount = notebook.widgets.length;
-    for (let i = 0; i < widgetCount; i++) {
-      const widget = notebook.widgets[i];
-      if (widget === activeCell) {
-        return i;
-      }
-    }
-
-    const model = notebook.model;
-    if (model) {
-      const cells = model.cells;
-      for (let i = 0; i < cells.length; i++) {
-        const cellModel = cells.get(i);
-        if (cellModel && cellModel === activeCell.model) {
-          return i;
-        }
-      }
-    }
-
-    return -1;
+    // JupyterLab already tracks the active cell index on the notebook widget
+    return notebook?.activeCellIndex ?? -1;
   }, [notebookTracker]);
 
   const getTrackerState = useCallback((): Omit<

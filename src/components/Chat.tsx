@@ -21,7 +21,6 @@ export default function Chat() {
   const [isWaiting, setIsWaiting] = useState(false);
   const [shouldResetNext, setShouldResetNext] = useState(false);
 
-  // Prompt mode
   type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
   const [mode, setMode] = useState<FrontendPromptMode>('tutor');
 

@@ -23,11 +23,8 @@ export interface INotebookContext {
   notebookPath: string;
   activeCellIndex: number;
 
-  // Returns serialized notebook JSON string
   getNotebookJson: () => string;
-  // Get the nearest markdown cell above the active cell
   getNearestMarkdownCell: () => { cellIndex: number; text: string } | null;
-  // Insert a code cell containing code below the currently active cell
   insertCodeBelowActiveCell?: (code: string) => void;
 }
 
@@ -50,7 +47,6 @@ export function NotebookProvider({
     activeCellIndex: -1
   });
 
-  // Helper function to get the currently selected cell index (the one with blue border)
   const getSelectedCellIndex = useCallback((): number => {
     const panel = notebookTracker.currentWidget;
     if (!panel) {
@@ -63,8 +59,6 @@ export function NotebookProvider({
       return -1;
     }
 
-    // Find the index by iterating through widget children
-    // This ensures we get the correct visual index
     const widgetCount = notebook.widgets.length;
     for (let i = 0; i < widgetCount; i++) {
       const widget = notebook.widgets[i];
@@ -73,7 +67,6 @@ export function NotebookProvider({
       }
     }
 
-    // Fallback: try to find by model comparison
     const model = notebook.model;
     if (model) {
       const cells = model.cells;
@@ -88,7 +81,6 @@ export function NotebookProvider({
     return -1;
   }, [notebookTracker]);
 
-  // Build context state snapshot from the tracker
   const getTrackerState = useCallback((): Omit<
     INotebookContext,
     'getNotebookJson' | 'getNearestMarkdownCell'
@@ -101,7 +93,6 @@ export function NotebookProvider({
     return { notebookName, notebookPath, activeCellIndex };
   }, [notebookTracker, getSelectedCellIndex]);
 
-  // Function to serialize current notebook to JSON string
   const getNotebookJson = useCallback(() => {
     const model = notebookTracker.currentWidget?.content?.model;
 
@@ -112,7 +103,6 @@ export function NotebookProvider({
     return JSON.stringify(model.toJSON());
   }, [notebookTracker]);
 
-  // Function to get the nearest markdown cell above the active cell
   const getNearestMarkdownCell = useCallback(() => {
     const panel = notebookTracker.currentWidget;
     if (!panel) {
@@ -129,7 +119,6 @@ export function NotebookProvider({
 
     const cells = model.cells;
 
-    // Scan backward from the active cell to find the nearest markdown cell
     for (let i = activeIndex; i >= 0; i--) {
       const cellModel = cells.get(i);
       if (!cellModel) {
@@ -185,7 +174,6 @@ export function NotebookProvider({
     getNearestMarkdownCell
   };
 
-  // Add method to insert a code cell below the active cell using NotebookActions
   const insertCodeBelowActiveCell = useCallback(
     (code: string) => {
       const panel = notebookTracker.currentWidget;

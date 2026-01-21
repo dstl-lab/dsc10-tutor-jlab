@@ -155,7 +155,7 @@ export function NotebookProvider({
       }
     }
 
-    return null; 
+    return null;
   }, [notebookTracker, getSelectedCellIndex]);
 
   useEffect(() => {

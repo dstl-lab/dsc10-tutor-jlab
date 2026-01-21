@@ -37,15 +37,13 @@ export default function Chat() {
 
       const nearestMarkdown = getNearestMarkdownCell();
 
-      // Enhance the student question with context about which question they're working on
-      // This helps the backend LLM understand the context even if it doesn't use the separate fields
       let enhancedQuestion = text;
       if (nearestMarkdown?.text) {
         const questionMatch = nearestMarkdown.text.match(
           /(?:Question|Q)\s*(\d+\.\d+\.\d+)/i
         );
         if (questionMatch) {
-          const questionId = questionMatch[0]; 
+          const questionId = questionMatch[0];
           enhancedQuestion = `[Working on ${questionId}] ${text}`;
         } else {
           const contextPreview = nearestMarkdown.text
@@ -85,8 +83,6 @@ export default function Chat() {
     setConversationId(undefined);
     setIsWaiting(false);
 
-    // Flag reset for the next message submission
-    // (backend reset is deferred until next user input)
     setShouldResetNext(true);
   };
 

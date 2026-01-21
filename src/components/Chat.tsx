@@ -12,7 +12,8 @@ import ToggleMode from './ToggleMode';
 import { type IMessage } from './types';
 
 export default function Chat() {
-  const { notebookName, getNotebookJson } = useNotebook();
+  const { notebookName, getNotebookJson, getNearestMarkdownCell } =
+    useNotebook();
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | undefined>(
     undefined
@@ -20,7 +21,6 @@ export default function Chat() {
   const [isWaiting, setIsWaiting] = useState(false);
   const [shouldResetNext, setShouldResetNext] = useState(false);
 
-  // Prompt mode
   type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
   const [mode, setMode] = useState<FrontendPromptMode>('tutor');
 
@@ -34,20 +34,37 @@ export default function Chat() {
       const backendPromptMode =
         mode === 'tutor' ? 'append' : mode === 'chatgpt' ? 'override' : 'none';
 
+      const nearestMarkdown = getNearestMarkdownCell();
+
+      let enhancedQuestion = text;
+      if (nearestMarkdown?.text) {
+        const questionMatch = nearestMarkdown.text.match(
+          /(?:Question|Q)\s*(\d+\.\d+\.\d+)/i
+        );
+        if (questionMatch) {
+          const questionId = questionMatch[0];
+          enhancedQuestion = `[Working on ${questionId}] ${text}`;
+        } else {
+          const contextPreview = nearestMarkdown.text
+            .substring(0, 150)
+            .replace(/\n/g, ' ');
+          enhancedQuestion = `[Context: ${contextPreview}...] ${text}`;
+        }
+      }
+
       const tutorMessage = await askTutor({
-        student_question: text,
+        student_question: enhancedQuestion,
         conversation_id: conversationId,
         notebook_json: getNotebookJson(),
         prompt: promptToSend,
         prompt_mode: backendPromptMode,
-        reset_conversation: shouldResetNext || undefined
+        reset_conversation: shouldResetNext || undefined,
+        nearest_markdown_cell_text: nearestMarkdown?.text
       });
 
-      // Store the conversation ID from the first response
       if (tutorMessage.conversation_id && !conversationId) {
         setConversationId(tutorMessage.conversation_id);
       }
-      // Clear the one-shot reset flag after using it
       if (shouldResetNext) {
         setShouldResetNext(false);
       }
@@ -65,8 +82,6 @@ export default function Chat() {
     setConversationId(undefined);
     setIsWaiting(false);
 
-    // Flag reset for the next message submission
-    // (backend reset is deferred until next user input)
     setShouldResetNext(true);
   };
 

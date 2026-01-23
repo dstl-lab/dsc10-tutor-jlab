@@ -2,9 +2,10 @@ import { ICellModel } from '@jupyterlab/cells';
 
 import { logAutograderEvent } from './autograderLogger';
 
-export function isAutograderExecution(
-  cell: ICellModel
-): { isGrader: boolean; graderId?: string } {
+export function isAutograderExecution(cell: ICellModel): {
+  isGrader: boolean;
+  graderId?: string;
+} {
   const source = cell.sharedModel?.source || '';
   const sourceStr = Array.isArray(source) ? source.join('') : source;
 
@@ -54,38 +55,42 @@ export function parseGraderOutput(output: any): {
     } else if (output._rawData) {
       actualOutput = output._rawData;
     }
-    
-    const outputType = output.type || actualOutput.output_type || actualOutput.type;
-    
+
+    const outputType =
+      output.type || actualOutput.output_type || actualOutput.type;
+
     if (outputType === 'error') {
       const errorName = actualOutput.ename || output.ename || '';
       const errorValue = actualOutput.evalue || output.evalue || '';
       const traceback = actualOutput.traceback || output.traceback || [];
-      
+
       if (Array.isArray(traceback) && traceback.length > 0) {
         outputText = traceback
-          .map((line: any) => (Array.isArray(line) ? line.join('') : String(line)))
+          .map((line: any) =>
+            Array.isArray(line) ? line.join('') : String(line)
+          )
           .join('\n');
       }
-      
+
       if (!outputText) {
         outputText = `${errorName}: ${errorValue}`;
       }
-      
+
       success = false;
-    }
-    else if (outputType === 'stream') {
-      const streamName = actualOutput.name || output.name || ''; 
-      outputText = arrayToString(actualOutput.text || output.text || output._text);
-      
+    } else if (outputType === 'stream') {
+      const streamName = actualOutput.name || output.name || '';
+      outputText = arrayToString(
+        actualOutput.text || output.text || output._text
+      );
+
       if (streamName === 'stderr' && outputText) {
         outputText = `[stderr] ${outputText}`;
       }
-      
+
       const outputLower = outputText.toLowerCase();
-      success = !outputLower.includes('error') && !outputLower.includes('failed');
-    }
-    else if (actualOutput.data || output.data) {
+      success =
+        !outputLower.includes('error') && !outputLower.includes('failed');
+    } else if (actualOutput.data || output.data) {
       const data = actualOutput.data || output.data;
       outputText =
         arrayToString(data['text/plain']) ||
@@ -93,7 +98,7 @@ export function parseGraderOutput(output: any): {
         arrayToString(data['text/markdown']) ||
         arrayToString(data['text/latex']) ||
         '';
-      
+
       const outputLower = outputText.toLowerCase();
       success =
         outputLower.includes('all tests passed') ||
@@ -103,10 +108,15 @@ export function parseGraderOutput(output: any): {
         (outputLower.includes('passed') &&
           !outputLower.includes('failed') &&
           !outputLower.includes('error'));
-    }
-    else if (output._text !== undefined || output.text !== undefined || actualOutput.text !== undefined) {
-      outputText = arrayToString(output._text || output.text || actualOutput.text);
-      
+    } else if (
+      output._text !== undefined ||
+      output.text !== undefined ||
+      actualOutput.text !== undefined
+    ) {
+      outputText = arrayToString(
+        output._text || output.text || actualOutput.text
+      );
+
       const outputLower = outputText.toLowerCase();
       success =
         outputLower.includes('all tests passed') ||
@@ -115,15 +125,14 @@ export function parseGraderOutput(output: any): {
         (!outputLower.includes('failed') &&
           !outputLower.includes('error') &&
           outputLower.includes('passed'));
-    }
-    else {
+    } else {
       try {
         const rawJson = output.toJSON ? output.toJSON() : actualOutput;
         outputText = JSON.stringify(rawJson, null, 2);
       } catch (e) {
         outputText = String(output);
       }
-      success = false; 
+      success = false;
     }
   } else if (typeof output === 'string') {
     outputText = output;
@@ -159,16 +168,16 @@ export async function handleAutograderExecution(
 
   let fullOutput = '';
   let hasError = false;
-  
+
   if (outputs.length === 0) {
     console.warn('⚠️ No outputs found in cell execution');
   }
-  
+
   for (let i = 0; i < outputs.length; i++) {
     const output = outputs[i];
-    
+
     const parsed = parseGraderOutput(output);
-    
+
     if (parsed.output) {
       fullOutput += parsed.output;
       if (i < outputs.length - 1) {

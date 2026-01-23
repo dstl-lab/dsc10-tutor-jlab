@@ -7,7 +7,7 @@ let firestore: Firestore | null = null;
 
 export function initializeFirebase(): void {
   if (firebaseApp) {
-    return; 
+    return;
   }
 
   try {

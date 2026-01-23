@@ -77,9 +77,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
         if (!cellModel || cellModel.type !== 'code') {
           return;
         }
-        
+
         const codeCellModel = cellModel as ICodeCellModel;
-        
+
         codeCellModel.outputs.changed.connect((sender, args) => {
           if (codeCellModel.outputs.length === 0) {
             return;
@@ -92,17 +92,14 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
           const lastProcessed = processedExecutions.get(codeCellModel) || -1;
           const currentExecCount = codeCellModel.executionCount;
-          
+
           const shouldProcess =
             currentExecCount === null ||
             currentExecCount === undefined ||
             currentExecCount > lastProcessed;
 
           if (shouldProcess) {
-            processedExecutions.set(
-              codeCellModel,
-              currentExecCount ?? 0
-            );
+            processedExecutions.set(codeCellModel, currentExecCount ?? 0);
 
             const outputs: any[] = [];
             for (let i = 0; i < codeCellModel.outputs.length; i++) {

@@ -5,13 +5,9 @@ import { firebaseConfig } from './firebaseConfig';
 let firebaseApp: FirebaseApp | null = null;
 let firestore: Firestore | null = null;
 
-/**
- * Initialize Firebase and Firestore
- * Safe to call multiple times (idempotent)
- */
 export function initializeFirebase(): void {
   if (firebaseApp) {
-    return; // Already initialized
+    return; 
   }
 
   try {
@@ -24,17 +20,10 @@ export function initializeFirebase(): void {
   }
 }
 
-/**
- * Get the Firestore instance
- * Returns null if Firebase is not initialized
- */
 export function getFirestoreInstance(): Firestore | null {
   return firestore;
 }
 
-/**
- * Check if Firebase is initialized
- */
 export function isFirebaseInitialized(): boolean {
   return firestore !== null;
 }

@@ -1,9 +1,3 @@
-/**
- * Firebase configuration for autograder event logging
- * 
- * IMPORTANT: Replace the values below with your actual Firebase config
- * from the Firebase Console.
- */
 export const firebaseConfig = {
     apiKey: "AIzaSyDiLkU2-9MaN6JHTACiBWFTUdznMtg3VPE",
     authDomain: "dsc10-tutor-jlab.firebaseapp.com",
@@ -14,9 +8,6 @@ export const firebaseConfig = {
     measurementId: "G-N67KK7RNX8"
   };
   
-  /**
-   * Initialize Firebase (call this once at app startup)
-   */
   export function getFirebaseConfig() {
     return firebaseConfig;
   }

@@ -10,7 +10,6 @@ import { ISettingRegistry } from '@jupyterlab/settingregistry';
 import { ICodeCellModel } from '@jupyterlab/cells';
 
 import { createAppWidget } from './AppWidget';
-import { initializeFirebase } from './utils/firebase';
 import {
   handleAutograderExecution,
   isAutograderExecution
@@ -28,7 +27,6 @@ const plugin: JupyterFrontEndPlugin<void> = {
     notebookTracker: INotebookTracker,
     settingRegistry: ISettingRegistry | null
   ) => {
-    initializeFirebase();
     console.log('JupyterLab extension dsc10-tutor-jlab-frontend is activated!');
 
     if (settingRegistry) {

@@ -3,6 +3,8 @@ import json
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 import tornado
+from .file_tools import ListFilesHandler, SearchFilesHandler
+
 
 class RouteHandler(APIHandler):
     # The following decorator should be present on all verb methods (head, get, post,
@@ -10,15 +12,28 @@ class RouteHandler(APIHandler):
     # Jupyter server
     @tornado.web.authenticated
     def get(self):
-        self.finish(json.dumps({
-            "data": "This is /dsc10-tutor-jlab-backend/get-example endpoint!"
-        }))
+        self.finish(
+            json.dumps(
+                {"data": "This is /dsc10-tutor-jlab-backend/get-example endpoint!"}
+            )
+        )
 
 
 def setup_handlers(web_app):
-    host_pattern = ".*$"
+    # Example
+    # route_pattern = url_path_join(base_url, "dsc10-tutor-jlab-backend", "get-example")
+    # handlers = [(route_pattern, RouteHandler)]
 
+    host_pattern = ".*$"
     base_url = web_app.settings["base_url"]
-    route_pattern = url_path_join(base_url, "dsc10-tutor-jlab-backend", "get-example")
-    handlers = [(route_pattern, RouteHandler)]
+    handlers = [
+        (
+            url_path_join(base_url, "dsc10-tutor-jlab-backend", "list-files"),
+            ListFilesHandler,
+        ),
+        (
+            url_path_join(base_url, "dsc10-tutor-jlab-backend", "search-files"),
+            SearchFilesHandler,
+        ),
+    ]
     web_app.add_handlers(host_pattern, handlers)

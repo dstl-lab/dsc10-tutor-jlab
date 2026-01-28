@@ -20,13 +20,13 @@ class RouteHandler(APIHandler):
 
 
 def setup_handlers(web_app):
-    # Example
-    # route_pattern = url_path_join(base_url, "dsc10-tutor-jlab-backend", "get-example")
-    # handlers = [(route_pattern, RouteHandler)]
-
     host_pattern = ".*$"
     base_url = web_app.settings["base_url"]
     handlers = [
+        (
+            url_path_join(base_url, "dsc10-tutor-jlab-backend", "get-example"),
+            RouteHandler,
+        ),
         (
             url_path_join(base_url, "dsc10-tutor-jlab-backend", "list-files"),
             ListFilesHandler,

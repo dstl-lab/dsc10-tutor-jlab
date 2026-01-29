@@ -43,33 +43,3 @@ export function getStudentEmailFromUrl(
 
   return defaultEmail;
 }
-
-
-export function detectFileReadRequests(message: string): string[] {
-  const filePaths: string[] = [];
-  
-  const fileExtensions = [
-    'ipynb',  
-    'py',    
-    'csv',  
-    'txt',    
-    'json',  
-    'md',    
-  ].join('|');
- 
-  
-  const filePattern = new RegExp(
-    `(?:^|\\s)(?:read|show|open|view|load|get|see|check|analyze|examine|look at|what is in|contents of|content of)\\s+(?:the\\s+)?([\\w\\-./]+\\.(?:${fileExtensions}))`,
-    'gi'
-  );
-  
-  let match;
-  while ((match = filePattern.exec(message)) !== null) {
-    const filePath = match[1].trim();
-    const cleanPath = filePath.replace(/^the\s+/i, '').replace(/[.,;:!?]+$/, '');
-    if (cleanPath && !filePaths.includes(cleanPath)) {
-      filePaths.push(cleanPath);
-    }
-  }
-  return filePaths;
-}

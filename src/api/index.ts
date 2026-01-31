@@ -20,6 +20,7 @@ export interface IAskTutorParams {
   prompt_mode?: PromptMode;
   conversation_id?: string;
   reset_conversation?: boolean;
+  nearest_markdown_cell_text?: string;
 }
 
 export interface ITutorResponse {
@@ -38,6 +39,7 @@ export interface ITutorRequest {
   prompt_mode?: PromptMode;
   conversation_id?: string;
   reset_conversation?: boolean;
+  nearest_markdown_cell_text?: string;
 }
 
 // curl -X POST https://slh-backend-v2-api-dev.slh.ucsd.edu/api/dsc10/ask \
@@ -61,6 +63,7 @@ export interface ITutorRequest {
  * @param params.prompt - Optional system prompt for the LLM
  * @param params.prompt_mode - 'append' | 'none' | 'override' (defaults to 'append')
  * @param params.conversation_id - Optional conversation ID to continue an existing conversation
+ * @param params.nearest_markdown_cell_text - Optional text content of the nearest markdown cell above the active cell
  * @returns The response from the API
  */
 export async function askTutor({
@@ -69,7 +72,8 @@ export async function askTutor({
   prompt,
   prompt_mode,
   conversation_id,
-  reset_conversation
+  reset_conversation,
+  nearest_markdown_cell_text
 }: IAskTutorParams): Promise<ITutorResponse> {
   const url = 'https://slh-backend-v2-api.slh.ucsd.edu/api/dsc10/ask';
   const studentEmail = getStudentEmailFromUrl();
@@ -110,6 +114,10 @@ export async function askTutor({
   // Include reset flag when requested
   if (reset_conversation) {
     body.reset_conversation = true;
+  }
+
+  if (nearest_markdown_cell_text) {
+    body.nearest_markdown_cell_text = nearest_markdown_cell_text;
   }
 
   const response = await fetch(url, {

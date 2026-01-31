@@ -5,6 +5,7 @@ import { askTutor } from '@/api';
 import { Button } from '@/components/ui/button';
 import { useNotebook } from '@/contexts/NotebookContext';
 import { chatgptOverride, tutorInstruction } from '@/utils/prompts';
+import { enhanceQuestion } from '@/utils/enhancedQuestionUtils';
 import ChatMessageBox from './ChatMessageBox';
 import ChatMessages from './ChatMessages';
 import ChatPlaceholder from './ChatPlaceholder';
@@ -12,7 +13,8 @@ import ToggleMode from './ToggleMode';
 import { type IMessage } from './types';
 
 export default function Chat() {
-  const { notebookName, getNotebookJson } = useNotebook();
+  const { notebookName, getNotebookJson, getNearestMarkdownCell } =
+    useNotebook();
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | undefined>(
     undefined
@@ -20,7 +22,6 @@ export default function Chat() {
   const [isWaiting, setIsWaiting] = useState(false);
   const [shouldResetNext, setShouldResetNext] = useState(false);
 
-  // Prompt mode
   type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
   const [mode, setMode] = useState<FrontendPromptMode>('tutor');
 
@@ -34,8 +35,11 @@ export default function Chat() {
       const backendPromptMode =
         mode === 'tutor' ? 'append' : mode === 'chatgpt' ? 'override' : 'none';
 
+      const nearestMarkdown = getNearestMarkdownCell();
+      const enhancedQuestion = enhanceQuestion(text, nearestMarkdown);
+
       const tutorMessage = await askTutor({
-        student_question: text,
+        student_question: enhancedQuestion,
         conversation_id: conversationId,
         notebook_json: getNotebookJson(),
         prompt: promptToSend,
@@ -43,11 +47,9 @@ export default function Chat() {
         reset_conversation: shouldResetNext || undefined
       });
 
-      // Store the conversation ID from the first response
       if (tutorMessage.conversation_id && !conversationId) {
         setConversationId(tutorMessage.conversation_id);
       }
-      // Clear the one-shot reset flag after using it
       if (shouldResetNext) {
         setShouldResetNext(false);
       }
@@ -65,8 +67,6 @@ export default function Chat() {
     setConversationId(undefined);
     setIsWaiting(false);
 
-    // Flag reset for the next message submission
-    // (backend reset is deferred until next user input)
     setShouldResetNext(true);
   };
 

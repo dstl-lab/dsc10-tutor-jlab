@@ -5,6 +5,7 @@ import { askTutor } from '@/api';
 import { Button } from '@/components/ui/button';
 import { useNotebook } from '@/contexts/NotebookContext';
 import { chatgptOverride, tutorInstruction } from '@/utils/prompts';
+import { enhanceQuestion } from '@/utils/enhancedQuestionUtils';
 import ChatMessageBox from './ChatMessageBox';
 import ChatMessages from './ChatMessages';
 import ChatPlaceholder from './ChatPlaceholder';
@@ -35,22 +36,7 @@ export default function Chat() {
         mode === 'tutor' ? 'append' : mode === 'chatgpt' ? 'override' : 'none';
 
       const nearestMarkdown = getNearestMarkdownCell();
-
-      let enhancedQuestion = text;
-      if (nearestMarkdown?.text) {
-        const questionMatch = nearestMarkdown.text.match(
-          /(?:Question|Q)\s*(\d+\.\d+\.\d+)/i
-        );
-        if (questionMatch) {
-          const questionId = questionMatch[0];
-          enhancedQuestion = `[Working on ${questionId}] ${text}`;
-        } else {
-          const contextPreview = nearestMarkdown.text
-            .substring(0, 150)
-            .replace(/\n/g, ' ');
-          enhancedQuestion = `[Context: ${contextPreview}...] ${text}`;
-        }
-      }
+      const enhancedQuestion = enhanceQuestion(text, nearestMarkdown);
 
       const tutorMessage = await askTutor({
         student_question: enhancedQuestion,
@@ -58,8 +44,7 @@ export default function Chat() {
         notebook_json: getNotebookJson(),
         prompt: promptToSend,
         prompt_mode: backendPromptMode,
-        reset_conversation: shouldResetNext || undefined,
-        nearest_markdown_cell_text: nearestMarkdown?.text
+        reset_conversation: shouldResetNext || undefined
       });
 
       if (tutorMessage.conversation_id && !conversationId) {

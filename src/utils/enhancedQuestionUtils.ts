@@ -1,11 +1,11 @@
-interface MarkdownCell {
+interface IMarkdownCell {
   cellIndex: number;
   text: string;
 }
 
 export function enhanceQuestion(
   text: string,
-  nearestMarkdown: MarkdownCell | null
+  nearestMarkdown: IMarkdownCell | null
 ): string {
   if (!nearestMarkdown?.text) {
     return text;

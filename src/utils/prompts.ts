@@ -1,5 +1,5 @@
 /**
- * Prompts for the DSC10 tutor
+ * Prompts for the DSC10 tutor.
  */
 
 export const babypandasDescription = `

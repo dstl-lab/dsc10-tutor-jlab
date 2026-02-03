@@ -72,9 +72,6 @@ class ReadFileHandler(APIHandler):
             try:
                 with open(resolved_path, 'r', encoding='utf-8', errors='replace') as f:
                     content = f.read()
-            except UnicodeDecodeError:
-                with open(resolved_path, 'rb') as f:
-                    content = f.read().decode('utf-8', errors='replace')
             except Exception as e:
                 self.set_status(500)
                 self.finish(json.dumps({

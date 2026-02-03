@@ -96,7 +96,9 @@ export function NotebookProvider({
 
     for (let i = 0; i < cellList.length; i++) {
       const cell = cellList.get(i);
-      if (!cell) continue;
+      if (!cell) {
+        continue;
+      }
 
       const cellJSON = cell.toJSON();
 

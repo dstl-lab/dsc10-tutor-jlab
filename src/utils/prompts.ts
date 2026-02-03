@@ -37,6 +37,8 @@ Available Series methods:
 - \`.str\` accessor for string operations
 
 IMPORTANT: Do NOT suggest pandas methods that are not listed above. If a student asks about a pandas method not in babypandas, explain that this course uses babypandas and suggest the appropriate babypandas alternative.
+
+Common pitfall: babypandas does NOT have a \`.rename()\` method. To rename a column, use \`.assign()\` to create a new column with the desired name, then \`.drop()\` the old column. For example: \`df.assign(new_name=df.get('old_name')).drop(columns=['old_name'])\`
 `.trim();
 
 export const tutorInstruction =

@@ -69,14 +69,66 @@ export function NotebookProvider({
     return { notebookName, notebookPath, activeCellIndex };
   }, [notebookTracker, getSelectedCellIndex]);
 
+  // const getNotebookJson = useCallback(() => {
+  //   const model = notebookTracker.currentWidget?.content?.model;
+
+  //   if (!model?.toJSON) {
+  //     return '';
+  //   }
+
+  //   return JSON.stringify(model.toJSON());
+  // }, [notebookTracker]);
   const getNotebookJson = useCallback(() => {
     const model = notebookTracker.currentWidget?.content?.model;
-
-    if (!model?.toJSON) {
+    if (!model?.cells) {
       return '';
     }
 
-    return JSON.stringify(model.toJSON());
+    // Temporary truncation limits
+    const MAX_CODE_CHARS_PER_CELL = 1000;
+    const MAX_MARKDOWN_CHARS_PER_CELL = 300;
+    const MAX_TOTAL_CHARS = 20_000;
+
+    let totalChars = 0;
+    const cells: { cell_type: string; source: string }[] = [];
+
+    const cellList = model.cells;
+
+    for (let i = 0; i < cellList.length; i++) {
+      const cell = cellList.get(i);
+      if (!cell) {
+        continue;
+      }
+
+      const cellJSON = cell.toJSON();
+
+      let source = Array.isArray(cellJSON.source)
+        ? cellJSON.source.join('')
+        : (cellJSON.source ?? '');
+
+      if (cellJSON.cell_type === 'markdown') {
+        source = source.slice(0, MAX_MARKDOWN_CHARS_PER_CELL);
+      } else if (cellJSON.cell_type === 'code') {
+        source = source.slice(0, MAX_CODE_CHARS_PER_CELL);
+      }
+
+      totalChars += source.length;
+
+      // Stop once we exceed global cap
+      if (totalChars > MAX_TOTAL_CHARS) {
+        break;
+      }
+
+      cells.push({
+        cell_type: cellJSON.cell_type,
+        source
+      });
+    }
+
+    return JSON.stringify({
+      notebookName: notebookTracker.currentWidget?.title?.label ?? '',
+      cells
+    });
   }, [notebookTracker]);
 
   const getNearestMarkdownCell = useCallback(() => {

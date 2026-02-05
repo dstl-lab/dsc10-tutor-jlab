@@ -1,9 +1,13 @@
 import json
+import os
+from pathlib import Path
 
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 import tornado
-from .file_tools import ListFilesHandler, SearchFilesHandler
+from .files_tool import ReadFileHandler, SearchFilesHandler
+from .files_tool import ListFilesHandler
+
 
 
 class RouteHandler(APIHandler):
@@ -22,18 +26,14 @@ class RouteHandler(APIHandler):
 def setup_handlers(web_app):
     host_pattern = ".*$"
     base_url = web_app.settings["base_url"]
+    route_pattern = url_path_join(base_url, "dsc10-tutor-jlab-backend", "get-example")
+    read_file_pattern = url_path_join(base_url, "dsc10-tutor-jlab-backend", "read-file")
+    search_files_pattern = url_path_join(base_url, "dsc10-tutor-jlab-backend", "search-files")
+    list_files_pattern = url_path_join(base_url, "dsc10-tutor-jlab-backend", "list-files")
     handlers = [
-        (
-            url_path_join(base_url, "dsc10-tutor-jlab-backend", "get-example"),
-            RouteHandler,
-        ),
-        (
-            url_path_join(base_url, "dsc10-tutor-jlab-backend", "list-files"),
-            ListFilesHandler,
-        ),
-        (
-            url_path_join(base_url, "dsc10-tutor-jlab-backend", "search-files"),
-            SearchFilesHandler,
-        ),
+        (route_pattern, RouteHandler),
+        (read_file_pattern, ReadFileHandler),
+        (search_files_pattern, SearchFilesHandler),
+        (list_files_pattern, ListFilesHandler)
     ]
     web_app.add_handlers(host_pattern, handlers)

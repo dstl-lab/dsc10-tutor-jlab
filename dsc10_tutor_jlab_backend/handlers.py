@@ -16,14 +16,15 @@ class RouteHandler(APIHandler):
     # Jupyter server
     @tornado.web.authenticated
     def get(self):
-        self.finish(json.dumps({
-            "data": "This is /dsc10-tutor-jlab-backend/get-example endpoint!"
-        }))
+        self.finish(
+            json.dumps(
+                {"data": "This is /dsc10-tutor-jlab-backend/get-example endpoint!"}
+            )
+        )
 
 
 def setup_handlers(web_app):
     host_pattern = ".*$"
-
     base_url = web_app.settings["base_url"]
     route_pattern = url_path_join(base_url, "dsc10-tutor-jlab-backend", "get-example")
     read_file_pattern = url_path_join(base_url, "dsc10-tutor-jlab-backend", "read-file")

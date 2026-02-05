@@ -132,3 +132,7 @@ dmypy.json
 
 # Yarn cache
 .yarn/
+
+# Jupyter untitled notebooks
+**/Untitled.ipynb
+Untitled.ipynb

@@ -29,13 +29,24 @@ async def test_read_file_success(jp_fetch, tmp_path):
         body=json.dumps({
             "file_path": str(test_file),
             "notebook_path": str(tmp_path / "notebook.ipynb")
-        })
+        }),
+    )
+    assert response.code == 200
+    payload = json.loads(response.body)
+    assert payload["file_path"] == str(test_file)
+    assert payload["content"] == test_content
+    assert payload["truncated"] is False
+    assert payload["file_size"] == len(test_content)
+    assert payload["content_length"] == len(test_content)
+
+
 async def test_list_files(jp_fetch):
     response = await jp_fetch("dsc10-tutor-jlab-backend", "list-files")
 
     assert response.code == 200
     payload = json.loads(response.body)
     assert "files" in payload
+    assert isinstance(payload["files"], list)
 
 
 async def test_search_files_empty(jp_fetch):
@@ -48,11 +59,8 @@ async def test_search_files_empty(jp_fetch):
 
     assert response.code == 200
     payload = json.loads(response.body)
-    assert payload["file_path"] == str(test_file)
-    assert payload["content"] == test_content
-    assert payload["truncated"] is False
-    assert payload["file_size"] == len(test_content)
-    assert payload["content_length"] == len(test_content)
+    assert "files" in payload
+    assert isinstance(payload["files"], list)
 
 
 async def test_read_file_relative_path(jp_fetch, tmp_path):
@@ -68,8 +76,11 @@ async def test_read_file_relative_path(jp_fetch, tmp_path):
         body=json.dumps({
             "file_path": "test.txt",
             "notebook_path": str(tmp_path / "notebook.ipynb")
-        })
-    assert "files" in payload
+        }),
+    )
+    assert response.code == 200
+    payload = json.loads(response.body)
+    assert payload["content"] == test_content
 
 
 async def test_search_files_finds_notebooks(jp_fetch):
@@ -82,7 +93,8 @@ async def test_search_files_finds_notebooks(jp_fetch):
 
     assert response.code == 200
     payload = json.loads(response.body)
-    assert payload["content"] == test_content
+    assert "files" in payload
+    assert isinstance(payload["files"], list)
 
 
 async def test_read_file_missing_path(jp_fetch):
@@ -120,8 +132,3 @@ async def test_read_file_not_found(jp_fetch, tmp_path):
     payload = json.loads(response.body)
     assert "error" in payload
     assert "not found" in payload["error"].lower()
-
-
-
-    assert "files" in payload
-    assert isinstance(payload["files"], list)

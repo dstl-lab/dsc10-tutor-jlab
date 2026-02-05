@@ -23,9 +23,8 @@ export interface INotebookContext {
   notebookPath: string;
   activeCellIndex: number;
 
-  // Returns serialized notebook JSON string
   getNotebookJson: () => string;
-  // Insert a code cell containing code below the currently active cell
+  getNearestMarkdownCell: () => { cellIndex: number; text: string } | null;
   insertCodeBelowActiveCell?: (code: string) => void;
 }
 
@@ -41,50 +40,150 @@ export function NotebookProvider({
   notebookTracker
 }: INotebookProviderProps) {
   const [contextValue, setContextValue] = useState<
-    Omit<INotebookContext, 'getNotebookJson'>
+    Omit<INotebookContext, 'getNotebookJson' | 'getNearestMarkdownCell'>
   >({
     notebookName: '',
     notebookPath: '',
     activeCellIndex: -1
   });
 
-  // Build context state snapshot from the tracker
+  const getSelectedCellIndex = useCallback((): number => {
+    const panel = notebookTracker.currentWidget;
+    if (!panel) {
+      return -1;
+    }
+
+    const notebook = panel.content;
+    return notebook?.activeCellIndex ?? -1;
+  }, [notebookTracker]);
+
   const getTrackerState = useCallback((): Omit<
     INotebookContext,
-    'getNotebookJson'
+    'getNotebookJson' | 'getNearestMarkdownCell'
   > => {
     const panel = notebookTracker.currentWidget;
     const notebookName = panel?.title?.label ?? '';
     const notebookPath = panel?.context?.path ?? '';
-    const activeCellIndex = panel?.content?.activeCellIndex ?? -1;
+    const activeCellIndex = getSelectedCellIndex();
 
     return { notebookName, notebookPath, activeCellIndex };
-  }, [notebookTracker]);
+  }, [notebookTracker, getSelectedCellIndex]);
 
-  // Function to serialize current notebook to JSON string
+  // const getNotebookJson = useCallback(() => {
+  //   const model = notebookTracker.currentWidget?.content?.model;
+
+  //   if (!model?.toJSON) {
+  //     return '';
+  //   }
+
+  //   return JSON.stringify(model.toJSON());
+  // }, [notebookTracker]);
   const getNotebookJson = useCallback(() => {
     const model = notebookTracker.currentWidget?.content?.model;
-
-    if (!model?.toJSON) {
+    if (!model?.cells) {
       return '';
     }
 
-    return JSON.stringify(model.toJSON());
+    // Temporary truncation limits
+    const MAX_CODE_CHARS_PER_CELL = 1000;
+    const MAX_MARKDOWN_CHARS_PER_CELL = 300;
+    const MAX_TOTAL_CHARS = 20_000;
+
+    let totalChars = 0;
+    const cells: { cell_type: string; source: string }[] = [];
+
+    const cellList = model.cells;
+
+    for (let i = 0; i < cellList.length; i++) {
+      const cell = cellList.get(i);
+      if (!cell) {
+        continue;
+      }
+
+      const cellJSON = cell.toJSON();
+
+      let source = Array.isArray(cellJSON.source)
+        ? cellJSON.source.join('')
+        : (cellJSON.source ?? '');
+
+      if (cellJSON.cell_type === 'markdown') {
+        source = source.slice(0, MAX_MARKDOWN_CHARS_PER_CELL);
+      } else if (cellJSON.cell_type === 'code') {
+        source = source.slice(0, MAX_CODE_CHARS_PER_CELL);
+      }
+
+      totalChars += source.length;
+
+      // Stop once we exceed global cap
+      if (totalChars > MAX_TOTAL_CHARS) {
+        break;
+      }
+
+      cells.push({
+        cell_type: cellJSON.cell_type,
+        source
+      });
+    }
+
+    return JSON.stringify({
+      notebookName: notebookTracker.currentWidget?.title?.label ?? '',
+      cells
+    });
   }, [notebookTracker]);
 
+  const getNearestMarkdownCell = useCallback(() => {
+    const panel = notebookTracker.currentWidget;
+    if (!panel) {
+      return null;
+    }
+
+    const notebook = panel.content;
+    const model = notebook.model;
+    const activeIndex = getSelectedCellIndex();
+
+    if (!model || activeIndex < 0) {
+      return null;
+    }
+
+    const cells = model.cells;
+
+    for (let i = activeIndex; i >= 0; i--) {
+      const cellModel = cells.get(i);
+      if (!cellModel) {
+        continue;
+      }
+
+      if (cellModel.type !== 'markdown') {
+        continue;
+      }
+
+      const sharedModel = (cellModel as any).sharedModel;
+      const source: string | string[] = sharedModel?.source || '';
+
+      const markdownText = Array.isArray(source)
+        ? source.join('').trim()
+        : (source || '').trim();
+
+      if (markdownText.length > 0) {
+        return {
+          cellIndex: i,
+          text: markdownText
+        };
+      }
+    }
+
+    return null;
+  }, [notebookTracker, getSelectedCellIndex]);
+
   useEffect(() => {
-    // Initialize from current tracker state
     setContextValue(getTrackerState());
 
-    // Update when current notebook changes (open/close/switch)
     const handleCurrentChanged = () => {
       setContextValue(getTrackerState());
     };
 
-    // Update only the active cell index when selection changes
     const handleActiveCellChanged = () => {
-      const index =
-        notebookTracker.currentWidget?.content?.activeCellIndex ?? -1;
+      const index = getSelectedCellIndex();
       setContextValue(prev => ({ ...prev, activeCellIndex: index }));
     };
 
@@ -95,15 +194,14 @@ export function NotebookProvider({
       notebookTracker.currentChanged.disconnect(handleCurrentChanged);
       notebookTracker.activeCellChanged.disconnect(handleActiveCellChanged);
     };
-  }, [getTrackerState, notebookTracker]);
+  }, [getTrackerState, getSelectedCellIndex, notebookTracker]);
 
-  // Compose the full context (fields + function)
   const fullContextValue: INotebookContext = {
     ...contextValue,
-    getNotebookJson
+    getNotebookJson,
+    getNearestMarkdownCell
   };
 
-  // Add method to insert a code cell below the active cell using NotebookActions
   const insertCodeBelowActiveCell = useCallback(
     (code: string) => {
       const panel = notebookTracker.currentWidget;
@@ -114,10 +212,8 @@ export function NotebookProvider({
       const nb = panel.content;
 
       try {
-        // Insert a new cell below the active one
         NotebookActions.insertBelow(nb);
 
-        // Try to convert it to a code cell (may throw on some versions)
         try {
           NotebookActions.changeCellType(nb, 'code');
         } catch (e) {
@@ -127,7 +223,6 @@ export function NotebookProvider({
           );
         }
 
-        // Set the source of the newly active cell
         const newCell = nb.activeCell;
         if (newCell && newCell.model) {
           const modelAny = newCell.model;
@@ -137,7 +232,6 @@ export function NotebookProvider({
             shared.setSource(code);
             console.debug('insertCode: wrote via sharedModel.setSource');
           } else {
-            // Log for debugging
             console.warn('insertCode: sharedModel not found', newCell.model);
           }
         }
@@ -148,7 +242,6 @@ export function NotebookProvider({
     [notebookTracker]
   );
 
-  // Attach the new cell to the existing notebook context
   fullContextValue.insertCodeBelowActiveCell = insertCodeBelowActiveCell;
 
   return (

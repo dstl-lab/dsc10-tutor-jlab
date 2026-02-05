@@ -65,6 +65,8 @@
         "@jupyterlab/notebook": "^4.5.1",
         "@jupyterlab/services": "^7.0.0",
         "@jupyterlab/settingregistry": "^4.0.0",
+        "firebase-admin": "^13.6.0",
+        "python-dotenv": "^0.0.1-security",
         "react-markdown": "^10.1.0",
         "remark-gfm": "^4.0.1"
     },

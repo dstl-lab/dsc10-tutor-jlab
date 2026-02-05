@@ -5,10 +5,15 @@ import {
 } from '@jupyterlab/application';
 
 import { MainAreaWidget } from '@jupyterlab/apputils';
-import { INotebookTracker } from '@jupyterlab/notebook';
+import { INotebookTracker, NotebookActions } from '@jupyterlab/notebook';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
+import { ICodeCellModel } from '@jupyterlab/cells';
 
 import { createAppWidget } from './AppWidget';
+import {
+  handleAutograderExecution,
+  isAutograderExecution
+} from './utils/autograderDetector';
 // import { requestAPI } from './handler';
 
 const plugin: JupyterFrontEndPlugin<void> = {
@@ -41,8 +46,6 @@ const plugin: JupyterFrontEndPlugin<void> = {
         });
     }
 
-    // Attach app to the right-hand sidebar!
-    // TODO: we should set a min-width so the sidebar can't be dragged to 0 width
     const widget = new MainAreaWidget({
       content: createAppWidget({ notebookTracker })
     });
@@ -54,6 +57,94 @@ const plugin: JupyterFrontEndPlugin<void> = {
     labShell.add(widget, 'right');
     labShell.activateById(widget.id);
     labShell.expandRight();
+
+    const setupAutograderMonitoring = () => {
+      const notebook = notebookTracker.currentWidget?.content;
+      if (!notebook) {
+        return;
+      }
+
+      const model = notebook.model;
+      if (!model) {
+        return;
+      }
+
+      const processedExecutions = new Map<ICodeCellModel, number>();
+
+      const connectCellOutputs = (cellModel: any) => {
+        if (!cellModel || cellModel.type !== 'code') {
+          return;
+        }
+
+        const codeCellModel = cellModel as ICodeCellModel;
+
+        codeCellModel.outputs.changed.connect((sender, args) => {
+          if (codeCellModel.outputs.length === 0) {
+            return;
+          }
+
+          const detection = isAutograderExecution(cellModel);
+          if (!detection.isGrader) {
+            return;
+          }
+
+          const lastProcessed = processedExecutions.get(codeCellModel) || -1;
+          const currentExecCount = codeCellModel.executionCount;
+
+          const shouldProcess =
+            currentExecCount === null ||
+            currentExecCount === undefined ||
+            currentExecCount > lastProcessed;
+
+          if (shouldProcess) {
+            processedExecutions.set(codeCellModel, currentExecCount ?? 0);
+
+            const outputs: any[] = [];
+            for (let i = 0; i < codeCellModel.outputs.length; i++) {
+              outputs.push(codeCellModel.outputs.get(i));
+            }
+
+            handleAutograderExecution(cellModel, outputs).catch(error => {
+              console.error('Error handling autograder execution:', error);
+            });
+          } else {
+            console.log('Skipping duplicate execution:', {
+              lastProcessed,
+              currentExecCount
+            });
+          }
+        });
+      };
+
+      for (let i = 0; i < model.cells.length; i++) {
+        const cell = model.cells.get(i);
+        if (cell) {
+          connectCellOutputs(cell);
+        }
+      }
+
+      model.cells.changed.connect((sender, args) => {
+        if (args.type === 'add' && args.newValues) {
+          args.newValues.forEach(cell => {
+            if (cell) {
+              connectCellOutputs(cell);
+            }
+          });
+        } else if (args.type === 'remove' && args.oldValues) {
+          args.oldValues.forEach(cell => {
+            if (cell && cell.type === 'code') {
+              processedExecutions.delete(cell as ICodeCellModel);
+            }
+          });
+        }
+      });
+    };
+
+    notebookTracker.currentChanged.connect(() => {
+      setupAutograderMonitoring();
+    });
+
+    setupAutograderMonitoring();
 
     // requestAPI<any>('get-example')
     //   .then(data => {

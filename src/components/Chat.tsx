@@ -2,6 +2,7 @@ import * as React from 'react';
 import { useState } from 'react';
 
 import { askTutor } from '@/api';
+import { logEvent } from '@/api/logger';
 import { Button } from '@/components/ui/button';
 import { useNotebook } from '@/contexts/NotebookContext';
 import { chatgptOverride, tutorInstruction } from '@/utils/prompts';
@@ -38,6 +39,16 @@ export default function Chat() {
       const nearestMarkdown = getNearestMarkdownCell();
       const enhancedQuestion = enhanceQuestion(text, nearestMarkdown);
 
+      logEvent({
+        event_type: 'tutor_query',
+        payload: {
+          question: text,
+          mode,
+          conversation_id: conversationId,
+          notebook: notebookName
+        }
+      });
+
       const tutorMessage = await askTutor({
         student_question: enhancedQuestion,
         conversation_id: conversationId,
@@ -53,6 +64,17 @@ export default function Chat() {
       if (shouldResetNext) {
         setShouldResetNext(false);
       }
+
+      logEvent({
+        event_type: 'tutor_response',
+        payload: {
+          conversation_id: tutorMessage.conversation_id,
+          response: tutorMessage.tutor_response,
+          mode,
+          notebook: notebookName
+        }
+      });
+
       setMessages(prev => [
         ...prev,
         { author: 'tutor', text: tutorMessage.tutor_response }

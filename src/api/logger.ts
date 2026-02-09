@@ -4,14 +4,14 @@ const LOG_API = isProduction()
   ? 'https://dsc10-tutor-logging-api.nrp-nautilus.io'
   : 'https://dsc10-tutor-logging-api-dev.nrp-nautilus.io';
 
-interface LogEvent {
+interface ILogEvent {
   event_type: string;
   user_email?: string;
   payload?: Record<string, unknown>;
 }
 
-export function logEvent(event: LogEvent): void {
-  const body: LogEvent = {
+export function logEvent(event: ILogEvent): void {
+  const body: ILogEvent = {
     ...event,
     user_email: event.user_email ?? getStudentEmailFromUrl()
   };

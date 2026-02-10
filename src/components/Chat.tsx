@@ -72,7 +72,6 @@ export default function Chat() {
         }
         setShouldResetNext(false);
       } else if (tutorMessage.conversation_id && !conversationId) {
-        // Normal case: set conversation_id if we don't have one yet
         setConversationId(tutorMessage.conversation_id);
       }
 
@@ -97,7 +96,6 @@ export default function Chat() {
         (!finalConversationId &&
           !hasLoggedNotebookJsonWithoutConversationIdRef.current);
 
-      // Log consolidated tutor_turn event with all required fields
       const turnPayload: Record<string, unknown> = {
         student_message: text,
         tutor_response: tutorMessage.tutor_response,
@@ -107,13 +105,10 @@ export default function Chat() {
         conversation_id: finalConversationId
       };
 
-      // Only include notebook JSON on the first turn of a conversation
       if (isFirstTurn) {
         turnPayload.initial_notebook_json = getNotebookJson();
-        // Track that we've logged notebook JSON for this conversation_id (once we have it)
         if (finalConversationId) {
           loggedNotebookJsonForConversationIdRef.current = finalConversationId;
-          // Clear the "logged without conversation_id" flag since we now have one
           hasLoggedNotebookJsonWithoutConversationIdRef.current = false;
         } else {
           hasLoggedNotebookJsonWithoutConversationIdRef.current = true;

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 import { askTutor } from '@/api';
 import { logEvent } from '@/api/logger';
@@ -22,6 +22,10 @@ export default function Chat() {
   );
   const [isWaiting, setIsWaiting] = useState(false);
   const [shouldResetNext, setShouldResetNext] = useState(false);
+  const loggedNotebookJsonForConversationIdRef = useRef<string | undefined>(
+    undefined
+  );
+  const hasLoggedNotebookJsonWithoutConversationIdRef = useRef(false);
 
   type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
   const [mode, setMode] = useState<FrontendPromptMode>('tutor');
@@ -61,8 +65,15 @@ export default function Chat() {
       if (tutorMessage.conversation_id && !conversationId) {
         setConversationId(tutorMessage.conversation_id);
       }
+
       if (shouldResetNext) {
+        if (tutorMessage.conversation_id) {
+          setConversationId(tutorMessage.conversation_id);
+        }
         setShouldResetNext(false);
+      } else if (tutorMessage.conversation_id && !conversationId) {
+        // Normal case: set conversation_id if we don't have one yet
+        setConversationId(tutorMessage.conversation_id);
       }
 
       logEvent({
@@ -73,6 +84,45 @@ export default function Chat() {
           mode,
           notebook: notebookName
         }
+      });
+
+      const finalConversationId =
+        tutorMessage.conversation_id || conversationId;
+
+      const isFirstTurn =
+        (finalConversationId &&
+          loggedNotebookJsonForConversationIdRef.current !==
+            finalConversationId &&
+          !hasLoggedNotebookJsonWithoutConversationIdRef.current) ||
+        (!finalConversationId &&
+          !hasLoggedNotebookJsonWithoutConversationIdRef.current);
+
+      // Log consolidated tutor_turn event with all required fields
+      const turnPayload: Record<string, unknown> = {
+        student_message: text,
+        tutor_response: tutorMessage.tutor_response,
+        prompt_mode: backendPromptMode,
+        toggle_mode: mode,
+        timestamp: new Date().toISOString(),
+        conversation_id: finalConversationId
+      };
+
+      // Only include notebook JSON on the first turn of a conversation
+      if (isFirstTurn) {
+        turnPayload.initial_notebook_json = getNotebookJson();
+        // Track that we've logged notebook JSON for this conversation_id (once we have it)
+        if (finalConversationId) {
+          loggedNotebookJsonForConversationIdRef.current = finalConversationId;
+          // Clear the "logged without conversation_id" flag since we now have one
+          hasLoggedNotebookJsonWithoutConversationIdRef.current = false;
+        } else {
+          hasLoggedNotebookJsonWithoutConversationIdRef.current = true;
+        }
+      }
+
+      logEvent({
+        event_type: 'tutor_notebook_info',
+        payload: turnPayload
       });
 
       setMessages(prev => [
@@ -88,6 +138,8 @@ export default function Chat() {
     setMessages([]);
     setConversationId(undefined);
     setIsWaiting(false);
+    loggedNotebookJsonForConversationIdRef.current = undefined;
+    hasLoggedNotebookJsonWithoutConversationIdRef.current = false;
 
     setShouldResetNext(true);
   };

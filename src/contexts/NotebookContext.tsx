@@ -17,6 +17,11 @@ import {
 } from 'react';
 
 import { INotebookTracker, NotebookActions } from '@jupyterlab/notebook';
+import {
+  isAutograderExecution,
+  parseGraderOutput
+} from '@/utils/autograderDetector';
+import { logAutograderEvent } from '@/utils/autograderLogger';
 
 export interface INotebookContext {
   notebookName: string;
@@ -195,6 +200,266 @@ export function NotebookProvider({
       notebookTracker.activeCellChanged.disconnect(handleActiveCellChanged);
     };
   }, [getTrackerState, getSelectedCellIndex, notebookTracker]);
+
+  useEffect(() => {
+    let cleanup: (() => void) | null = null;
+
+    const setupAutograderLogging = () => {
+      if (cleanup) {
+        cleanup();
+        cleanup = null;
+      }
+
+      const panel = notebookTracker.currentWidget;
+      if (!panel) {
+        return;
+      }
+
+      const notebook = panel.content;
+      const model = notebook.model;
+      if (!model) {
+        return;
+      }
+
+      const lastLoggedExecutionCount = new Map<number, number | null>();
+
+      const handleAutograderExecution = async (
+        cellModel: any,
+        cellIndex: number
+      ) => {
+        if (!cellModel || cellModel.type !== 'code') {
+          return;
+        }
+
+        const detection = isAutograderExecution(cellModel);
+        if (!detection.isGrader) {
+          return;
+        }
+
+        const executionCount = cellModel.executionCount;
+        if (!executionCount || executionCount === null) {
+          return;
+        }
+
+        const lastLogged = lastLoggedExecutionCount.get(cellIndex);
+        if (lastLogged === executionCount) {
+          return;
+        }
+
+        let outputs: any[] = [];
+        if (cellModel.outputs) {
+          const cellOutputs = cellModel.outputs;
+          if (cellOutputs.length !== undefined) {
+            for (let j = 0; j < cellOutputs.length; j++) {
+              outputs.push(
+                cellOutputs.get ? cellOutputs.get(j) : cellOutputs[j]
+              );
+            }
+          } else if (Array.isArray(cellOutputs)) {
+            outputs = cellOutputs;
+          }
+        }
+
+        if (outputs.length === 0) {
+          return;
+        }
+
+        let fullOutput = '';
+        let hasError = false;
+
+        for (let i = 0; i < outputs.length; i++) {
+          const output = outputs[i];
+          const parsed = parseGraderOutput(output);
+
+          if (parsed.output) {
+            fullOutput += parsed.output;
+            if (i < outputs.length - 1) {
+              fullOutput += '\n';
+            }
+          }
+
+          if (!parsed.success) {
+            hasError = true;
+          }
+        }
+
+        const overallSuccess = !hasError && fullOutput.length > 0;
+        const graderId = detection.graderId || 'unknown';
+
+        lastLoggedExecutionCount.set(cellIndex, executionCount);
+
+        console.log(
+          `[Autograder Logger] ✅ Logging autograder info for cell ${cellIndex}:`,
+          {
+            grader_id: graderId,
+            success: overallSuccess
+          }
+        );
+
+        await logAutograderEvent({
+          grader_id: graderId,
+          output: fullOutput.trim(),
+          success: overallSuccess,
+          notebook: panel.title?.label || ''
+        });
+      };
+
+      const cells = model.cells;
+      for (let i = 0; i < cells.length; i++) {
+        const cell = cells.get(i);
+        if (cell) {
+          handleAutograderExecution(cell, i);
+        }
+      }
+
+      const handleCellsChanged = (
+        sender: any,
+        args: {
+          type: string;
+          newValues?: any[];
+          oldValues?: any[];
+          newIndex?: number;
+        }
+      ) => {
+        if (
+          args.type === 'add' &&
+          args.newValues &&
+          args.newIndex !== undefined
+        ) {
+          for (let i = 0; i < args.newValues.length; i++) {
+            const cell = args.newValues[i];
+            const cellIndex = args.newIndex + i;
+            handleAutograderExecution(cell, cellIndex);
+          }
+        } else if (args.type === 'set' && args.newValues) {
+          setTimeout(() => {
+            for (let i = 0; i < cells.length; i++) {
+              const cell = cells.get(i);
+              if (cell) {
+                handleAutograderExecution(cell, i);
+              }
+            }
+          }, 100);
+        }
+      };
+
+      const handleExecutionStateChanged = () => {
+        setTimeout(() => {
+          for (let i = 0; i < cells.length; i++) {
+            const cell = cells.get(i);
+            if (cell) {
+              handleAutograderExecution(cell, i);
+            }
+          }
+        }, 200);
+      };
+
+      const setupCellExecutionListeners = () => {
+        const cellConnections: Array<{ disconnect: () => void }> = [];
+        let listenersSetup = 0;
+
+        for (let i = 0; i < cells.length; i++) {
+          const cell = cells.get(i);
+          if (cell && cell.type === 'code') {
+            if ((cell as any).stateChanged) {
+              const handler = () => {
+                setTimeout(() => {
+                  handleAutograderExecution(cell, i);
+                }, 200);
+              };
+              (cell as any).stateChanged.connect(handler);
+              cellConnections.push({
+                disconnect: () => (cell as any).stateChanged.disconnect(handler)
+              });
+              listenersSetup++;
+            }
+
+            if ((cell as any).outputsChanged) {
+              const outputHandler = () => {
+                setTimeout(() => {
+                  handleAutograderExecution(cell, i);
+                }, 100);
+              };
+              (cell as any).outputsChanged.connect(outputHandler);
+              cellConnections.push({
+                disconnect: () =>
+                  (cell as any).outputsChanged.disconnect(outputHandler)
+              });
+              listenersSetup++;
+            }
+          }
+        }
+
+        return cellConnections;
+      };
+
+      const connections: Array<{ disconnect: () => void }> = [];
+      let cellConnections: Array<{ disconnect: () => void }> = [];
+
+      const enhancedHandleCellsChanged = (
+        sender: any,
+        args: {
+          type: string;
+          newValues?: any[];
+          oldValues?: any[];
+          newIndex?: number;
+        }
+      ) => {
+        handleCellsChanged(sender, args);
+        cellConnections.forEach(conn => conn.disconnect());
+        cellConnections = setupCellExecutionListeners();
+      };
+
+      if (model.cells.changed) {
+        model.cells.changed.connect(enhancedHandleCellsChanged);
+        connections.push({
+          disconnect: () =>
+            model.cells.changed.disconnect(enhancedHandleCellsChanged)
+        });
+      }
+
+      const executionStateChanged = (notebook as any).executionStateChanged;
+      if (executionStateChanged) {
+        executionStateChanged.connect(handleExecutionStateChanged);
+        connections.push({
+          disconnect: () =>
+            executionStateChanged.disconnect(handleExecutionStateChanged)
+        });
+      }
+
+      cellConnections = setupCellExecutionListeners();
+
+      const intervalId = setInterval(() => {
+        for (let i = 0; i < cells.length; i++) {
+          const cell = cells.get(i);
+          if (cell) {
+            handleAutograderExecution(cell, i);
+          }
+        }
+      }, 5000);
+
+      cleanup = () => {
+        connections.forEach(conn => conn.disconnect());
+        cellConnections.forEach(conn => conn.disconnect());
+        clearInterval(intervalId);
+      };
+    };
+
+    setupAutograderLogging();
+
+    const handleNotebookChanged = () => {
+      setupAutograderLogging();
+    };
+
+    notebookTracker.currentChanged.connect(handleNotebookChanged);
+
+    return () => {
+      notebookTracker.currentChanged.disconnect(handleNotebookChanged);
+      if (cleanup) {
+        cleanup();
+      }
+    };
+  }, [notebookTracker]);
 
   const fullContextValue: INotebookContext = {
     ...contextValue,

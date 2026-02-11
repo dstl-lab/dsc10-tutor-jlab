@@ -2,7 +2,7 @@ import { URLExt } from '@jupyterlab/coreutils';
 
 import { ServerConnection } from '@jupyterlab/services';
 
-import { getStudentEmailFromUrl, isProduction } from '@/utils';
+// import { getStudentEmailFromUrl, isProduction } from '@/utils';
 
 /**
  * Modes for how the assistant responds to the user's message.
@@ -42,18 +42,6 @@ export interface ITutorRequest {
   nearest_markdown_cell_text?: string;
 }
 
-// curl -X POST https://slh-backend-v2-api-dev.slh.ucsd.edu/api/dsc10/ask \
-//   -H "Content-Type: application/json" \
-//   -H "Authorization: mock:dsc10:student@university.edu:DSC10 Student" \
-//   -d '{
-//     "class_id": "ca000000-0000-0000-0001-000000000001",
-//     "assignment_id": "ca000000-0000-0000-0002-000000000001",
-//     "question_id": "ca000000-0000-0000-0004-000000000001",
-//     "student_question": "What is a DataFrame in pandas?",
-//     "notebook_json": "",
-//     "prompt": ""
-//   }'
-
 /**
  * Ask a question to the DSC10 tutor API
  *
@@ -75,64 +63,19 @@ export async function askTutor({
   reset_conversation,
   nearest_markdown_cell_text
 }: IAskTutorParams): Promise<ITutorResponse> {
-  const url = 'https://slh-backend-v2-api.slh.ucsd.edu/api/dsc10/ask';
-  const studentEmail = getStudentEmailFromUrl();
-
-  // In production (datahub), we DON'T use an authorization token since SLH
-  // whitelists all datahub requests. Instead, we need to include a
-  // student_email field in the request body.
-  //
-  // In development (local), we use a mock authorization token instead.
-  const headers: Record<string, string> = isProduction()
-    ? { 'Content-Type': 'application/json' }
-    : {
-        'Content-Type': 'application/json',
-        Authorization:
-          'Bearer mock:dsc10:alice.johnson@example.edu:Alice Johnson'
-      };
-
-  const body: ITutorRequest = {
-    // get these UUIDs from https://course-assistant-v2.slh.ucsd.edu/
-    class_id: '0695ea15-532a-735c-8000-67bc3744d2a4',
-    assignment_id: isProduction()
-      ? '0695ea16-733f-7bfd-8000-b47e40290ff0' // dsc10-production
-      : '0695ea16-df80-7f31-8000-d310f60657a0', // dsc10-development
-    question_id: isProduction()
-      ? '0695f1ac-7447-7089-8000-f6ae068108d4' // dsc10-production
-      : '0695f216-2116-7592-8000-8de58ce2b501', // dsc10-development
-    student_email: studentEmail,
-    student_question: student_question,
-    notebook_json: notebook_json || '',
-    prompt: prompt ?? '',
-    prompt_mode: prompt_mode ?? 'append'
-  };
-
-  if (conversation_id) {
-    body.conversation_id = conversation_id;
-  }
-
-  // Include reset flag when requested
-  if (reset_conversation) {
-    body.reset_conversation = true;
-  }
-
-  if (nearest_markdown_cell_text) {
-    body.nearest_markdown_cell_text = nearest_markdown_cell_text;
-  }
-
-  const response = await fetch(url, {
+  return await requestAPI<ITutorResponse>('ask', {
     method: 'POST',
-    headers,
-    body: JSON.stringify(body)
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      student_question,
+      notebook_json,
+      prompt,
+      prompt_mode,
+      conversation_id,
+      reset_conversation,
+      nearest_markdown_cell_text
+    })
   });
-
-  if (!response.ok) {
-    throw new Error(
-      `API request failed: ${response.status} ${response.statusText}`
-    );
-  }
-
-  return await response.json();
 }
 
 /**
@@ -179,3 +122,84 @@ export async function requestAPI<T>(
 
   return data;
 }
+
+/* ===========================
+   SLH implementation
+   ===========================
+
+// curl -X POST https://slh-backend-v2-api-dev.slh.ucsd.edu/api/dsc10/ask \
+//   -H "Content-Type: application/json" \
+//   -H "Authorization: mock:dsc10:student@university.edu:DSC10 Student" \
+//   -d '{
+//     "class_id": "ca000000-0000-0000-0001-000000000001",
+//     "assignment_id": "ca000000-0000-0000-0002-000000000001",
+//     "question_id": "ca000000-0000-0000-0004-000000000001",
+//     "student_question": "What is a DataFrame in pandas?",
+//     "notebook_json": "",
+//     "prompt": ""
+//   }'
+
+// const url = 'https://slh-backend-v2-api.slh.ucsd.edu/api/dsc10/ask';
+// const studentEmail = getStudentEmailFromUrl();
+
+// In production (datahub), we DON'T use an authorization token since SLH
+// whitelists all datahub requests. Instead, we need to include a
+// student_email field in the request body.
+//
+// In development (local), we use a mock authorization token instead.
+// const headers: Record<string, string> = isProduction()
+//   ? { 'Content-Type': 'application/json' }
+//   : {
+//       'Content-Type': 'application/json',
+//       Authorization:
+//         'Bearer mock:dsc10:alice.johnson@example.edu:Alice Johnson'
+//     };
+
+// const body: ITutorRequest = {
+//   // get these UUIDs from https://course-assistant-v2.slh.ucsd.edu/
+//   // class_id: '0695ea15-532a-735c-8000-67bc3744d2a4',
+//   // assignment_id: isProduction()
+//   //   ? '0695ea16-733f-7bfd-8000-b47e40290ff0' // dsc10-production
+//   //   : '0695ea16-df80-7f31-8000-d310f60657a0', // dsc10-development
+//   // question_id: isProduction()
+//   //   ? '0695f1ac-7447-7089-8000-f6ae068108d4' // dsc10-production
+//   //   : '0695f216-2116-7592-8000-8de58ce2b501', // dsc10-development
+//   // student_email: studentEmail,
+//   student_question: student_question,
+//   notebook_json: notebook_json || '',
+//   prompt: prompt ?? '',
+//   prompt_mode: prompt_mode ?? 'append',
+//   conversation_id,
+//   reset_conversation,
+//   nearest_markdown_cell_text
+// };
+
+// if (conversation_id) {
+//   body.conversation_id = conversation_id;
+// }
+
+// // Include reset flag when requested
+// if (reset_conversation) {
+//   body.reset_conversation = true;
+// }
+
+// if (nearest_markdown_cell_text) {
+//   body.nearest_markdown_cell_text = nearest_markdown_cell_text;
+// }
+
+// const response = await fetch(url, {
+//   method: 'POST',
+//   headers,
+//   body: JSON.stringify(body)
+// });
+
+//   if (!response.ok) {
+//     throw new Error(
+//       `API request failed: ${response.status} ${response.statusText}`
+//     );
+//   }
+
+//   return await response.json();
+// }
+
+============================*/

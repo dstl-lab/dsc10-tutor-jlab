@@ -25,7 +25,6 @@ export default function Chat() {
   const loggedNotebookJsonForConversationIdRef = useRef<string | undefined>(
     undefined
   );
-  const hasLoggedNotebookJsonWithoutConversationIdRef = useRef(false);
 
   type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
   const [mode, setMode] = useState<FrontendPromptMode>('tutor');
@@ -42,6 +41,7 @@ export default function Chat() {
 
       const nearestMarkdown = getNearestMarkdownCell();
       const enhancedQuestion = enhanceQuestion(text, nearestMarkdown);
+      const notebookJson = getNotebookJson();
 
       logEvent({
         event_type: 'tutor_query',
@@ -56,22 +56,17 @@ export default function Chat() {
       const tutorMessage = await askTutor({
         student_question: enhancedQuestion,
         conversation_id: conversationId,
-        notebook_json: getNotebookJson(),
+        notebook_json: notebookJson,
         prompt: promptToSend,
         prompt_mode: backendPromptMode,
         reset_conversation: shouldResetNext || undefined
       });
 
-      if (tutorMessage.conversation_id && !conversationId) {
-        setConversationId(tutorMessage.conversation_id);
+      if (shouldResetNext) {
+        setShouldResetNext(false);
       }
 
-      if (shouldResetNext) {
-        if (tutorMessage.conversation_id) {
-          setConversationId(tutorMessage.conversation_id);
-        }
-        setShouldResetNext(false);
-      } else if (tutorMessage.conversation_id && !conversationId) {
+      if (tutorMessage.conversation_id) {
         setConversationId(tutorMessage.conversation_id);
       }
 
@@ -89,12 +84,8 @@ export default function Chat() {
         tutorMessage.conversation_id || conversationId;
 
       const isFirstTurn =
-        (finalConversationId &&
-          loggedNotebookJsonForConversationIdRef.current !==
-            finalConversationId &&
-          !hasLoggedNotebookJsonWithoutConversationIdRef.current) ||
-        (!finalConversationId &&
-          !hasLoggedNotebookJsonWithoutConversationIdRef.current);
+        !!finalConversationId &&
+        loggedNotebookJsonForConversationIdRef.current !== finalConversationId;
 
       const turnPayload: Record<string, unknown> = {
         student_message: text,
@@ -106,13 +97,8 @@ export default function Chat() {
       };
 
       if (isFirstTurn) {
-        turnPayload.initial_notebook_json = getNotebookJson();
-        if (finalConversationId) {
-          loggedNotebookJsonForConversationIdRef.current = finalConversationId;
-          hasLoggedNotebookJsonWithoutConversationIdRef.current = false;
-        } else {
-          hasLoggedNotebookJsonWithoutConversationIdRef.current = true;
-        }
+        turnPayload.initial_notebook_json = notebookJson;
+        loggedNotebookJsonForConversationIdRef.current = finalConversationId;
       }
 
       logEvent({
@@ -144,7 +130,6 @@ export default function Chat() {
     setConversationId(undefined);
     setIsWaiting(false);
     loggedNotebookJsonForConversationIdRef.current = undefined;
-    hasLoggedNotebookJsonWithoutConversationIdRef.current = false;
 
     setShouldResetNext(true);
   };

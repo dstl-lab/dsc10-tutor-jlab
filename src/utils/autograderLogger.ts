@@ -1,6 +1,6 @@
 import { logEvent } from '@/api/logger';
 
-export interface AutograderEvent {
+export interface IAutograderEvent {
   grader_id: string;
   output: string;
   success: boolean;
@@ -8,7 +8,7 @@ export interface AutograderEvent {
 }
 
 export async function logAutograderEvent(
-  event: AutograderEvent
+  event: IAutograderEvent
 ): Promise<void> {
   logEvent({
     event_type: 'autograder_info',

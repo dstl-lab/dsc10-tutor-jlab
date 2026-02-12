@@ -308,7 +308,6 @@ export function NotebookProvider({
 
       const setupCellExecutionListeners = () => {
         const cellConnections: Array<{ disconnect: () => void }> = [];
-        let listenersSetup = 0;
 
         for (let i = 0; i < cells.length; i++) {
           const cell = cells.get(i);
@@ -323,7 +322,6 @@ export function NotebookProvider({
               cellConnections.push({
                 disconnect: () => (cell as any).stateChanged.disconnect(handler)
               });
-              listenersSetup++;
             }
 
             if ((cell as any).outputsChanged) {
@@ -337,7 +335,6 @@ export function NotebookProvider({
                 disconnect: () =>
                   (cell as any).outputsChanged.disconnect(outputHandler)
               });
-              listenersSetup++;
             }
           }
         }

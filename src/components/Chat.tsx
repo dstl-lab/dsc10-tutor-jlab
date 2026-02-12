@@ -79,6 +79,16 @@ export default function Chat() {
         ...prev,
         { author: 'tutor', text: tutorMessage.tutor_response }
       ]);
+    } catch (error) {
+      console.error('Error asking tutor:', error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'An error occurred while contacting the tutor. Please try again.';
+      setMessages(prev => [
+        ...prev,
+        { author: 'tutor', text: `Error: ${errorMessage}` }
+      ]);
     } finally {
       setIsWaiting(false);
     }

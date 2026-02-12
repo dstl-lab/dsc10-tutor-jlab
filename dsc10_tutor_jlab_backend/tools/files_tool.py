@@ -102,91 +102,90 @@ class SearchFilesHandler(APIHandler):
         self.finish(json.dumps({"files": files}))
 
 
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+MAX_CONTENT_LENGTH = 1024 * 1024  # 1MB
 
-
-MAX_FILE_SIZE = 10 * 1024 * 1024 #10MB
-MAX_CONTENT_LENGTH = 1024 * 1024 #1MB
 
 class ReadFileHandler(APIHandler):
     @tornado.web.authenticated
     def post(self):
         try:
-            data = json.loads(self.request.body.decode('utf-8'))
-            file_path = data.get('file_path', '')
+            data = json.loads(self.request.body.decode("utf-8"))
+            file_path = data.get("file_path", "")
 
             if not file_path:
                 self.set_status(400)
-                self.finish(json.dumps({
-                    "error": "file_path parameter is required"
-                }))
+                self.finish(json.dumps({"error": "file_path parameter is required"}))
                 return
 
-            notebook_path = data.get('notebook_path', '')
+            notebook_path = data.get("notebook_path", "")
             safe_base_dir = self._get_safe_base_directory(notebook_path)
             resolved_path = self._resolve_and_validate_path(file_path, safe_base_dir)
-            
+
             if resolved_path is None:
                 self.set_status(403)
-                self.finish(json.dumps({
-                    "error": f"Access denied: File path must be within allowed directories"
-                }))
+                self.finish(
+                    json.dumps(
+                        {
+                            "error": "Access denied: File path must be within allowed directories"
+                        }
+                    )
+                )
                 return
 
             if not os.path.exists(resolved_path):
                 self.set_status(404)
-                self.finish(json.dumps({
-                    "error": f"File not found: {file_path}"
-                }))
+                self.finish(json.dumps({"error": f"File not found: {file_path}"}))
                 return
 
             if not os.path.isfile(resolved_path):
                 self.set_status(400)
-                self.finish(json.dumps({
-                    "error": f"Path is not a file: {file_path}"
-                }))
+                self.finish(json.dumps({"error": f"Path is not a file: {file_path}"}))
                 return
 
             file_size = os.path.getsize(resolved_path)
             if file_size > MAX_FILE_SIZE:
                 self.set_status(413)
-                self.finish(json.dumps({
-                    "error": f"File too large: {file_size} bytes (max {MAX_FILE_SIZE} bytes)"
-                }))
+                self.finish(
+                    json.dumps(
+                        {
+                            "error": f"File too large: {file_size} bytes (max {MAX_FILE_SIZE} bytes)"
+                        }
+                    )
+                )
                 return
 
             try:
-                with open(resolved_path, 'r', encoding='utf-8', errors='replace') as f:
+                with open(resolved_path, "r", encoding="utf-8", errors="replace") as f:
                     content = f.read()
             except Exception as e:
                 self.set_status(500)
-                self.finish(json.dumps({
-                    "error": f"Error reading file: {str(e)}"
-                }))
+                self.finish(json.dumps({"error": f"Error reading file: {str(e)}"}))
                 return
 
             truncated = False
             if len(content) > MAX_CONTENT_LENGTH:
                 content = content[:MAX_CONTENT_LENGTH]
                 truncated = True
-            self.finish(json.dumps({
-                "file_path": file_path,
-                "resolved_path": str(resolved_path),
-                "content": content,
-                "truncated": truncated,
-                "file_size": file_size,
-                "content_length": len(content)
-            }))
+            self.finish(
+                json.dumps(
+                    {
+                        "file_path": file_path,
+                        "resolved_path": str(resolved_path),
+                        "content": content,
+                        "truncated": truncated,
+                        "file_size": file_size,
+                        "content_length": len(content),
+                    }
+                )
+            )
 
         except json.JSONDecodeError:
             self.set_status(400)
-            self.finish(json.dumps({
-                "error": "Invalid JSON in request body"
-            }))
+            self.finish(json.dumps({"error": "Invalid JSON in request body"}))
         except Exception as e:
             self.set_status(500)
-            self.finish(json.dumps({
-                "error": f"Internal server error: {str(e)}"
-            }))
+            self.finish(json.dumps({"error": f"Internal server error: {str(e)}"}))
 
     def _get_safe_base_directory(self, notebook_path: str) -> Path:
         """
@@ -205,7 +204,7 @@ class ReadFileHandler(APIHandler):
                 pass
 
         try:
-            root_dir = self.settings.get('server_root_dir', '.')
+            root_dir = self.settings.get("server_root_dir", ".")
             root_path = Path(root_dir).resolve()
             if root_path.exists() and root_path.is_dir():
                 return root_path
@@ -214,7 +213,9 @@ class ReadFileHandler(APIHandler):
 
         return Path.cwd().resolve()
 
-    def _resolve_and_validate_path(self, file_path: str, safe_base_dir: Path) -> Path | None:
+    def _resolve_and_validate_path(
+        self, file_path: str, safe_base_dir: Path
+    ) -> Path | None:
         """
         Resolve the file path and validate it's within the safe base directory.
         Returns the resolved Path if valid, None otherwise.

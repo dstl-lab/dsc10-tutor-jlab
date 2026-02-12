@@ -305,54 +305,6 @@ export function NotebookProvider({
       };
 
       const cells = model.cells;
-      for (let i = 0; i < cells.length; i++) {
-        const cell = cells.get(i);
-        if (cell) {
-          handleAutograderExecution(cell, i);
-        }
-      }
-
-      const handleCellsChanged = (
-        sender: any,
-        args: {
-          type: string;
-          newValues?: any[];
-          oldValues?: any[];
-          newIndex?: number;
-        }
-      ) => {
-        if (
-          args.type === 'add' &&
-          args.newValues &&
-          args.newIndex !== undefined
-        ) {
-          for (let i = 0; i < args.newValues.length; i++) {
-            const cell = args.newValues[i];
-            const cellIndex = args.newIndex + i;
-            handleAutograderExecution(cell, cellIndex);
-          }
-        } else if (args.type === 'set' && args.newValues) {
-          setTimeout(() => {
-            for (let i = 0; i < cells.length; i++) {
-              const cell = cells.get(i);
-              if (cell) {
-                handleAutograderExecution(cell, i);
-              }
-            }
-          }, 100);
-        }
-      };
-
-      const handleExecutionStateChanged = () => {
-        setTimeout(() => {
-          for (let i = 0; i < cells.length; i++) {
-            const cell = cells.get(i);
-            if (cell) {
-              handleAutograderExecution(cell, i);
-            }
-          }
-        }, 200);
-      };
 
       const setupCellExecutionListeners = () => {
         const cellConnections: Array<{ disconnect: () => void }> = [];
@@ -396,7 +348,7 @@ export function NotebookProvider({
       const connections: Array<{ disconnect: () => void }> = [];
       let cellConnections: Array<{ disconnect: () => void }> = [];
 
-      const enhancedHandleCellsChanged = (
+      const handleCellsChanged = (
         sender: any,
         args: {
           type: string;
@@ -405,43 +357,23 @@ export function NotebookProvider({
           newIndex?: number;
         }
       ) => {
-        handleCellsChanged(sender, args);
+        // Re-setup cell execution listeners when cells are added/changed
         cellConnections.forEach(conn => conn.disconnect());
         cellConnections = setupCellExecutionListeners();
       };
 
       if (model.cells.changed) {
-        model.cells.changed.connect(enhancedHandleCellsChanged);
+        model.cells.changed.connect(handleCellsChanged);
         connections.push({
-          disconnect: () =>
-            model.cells.changed.disconnect(enhancedHandleCellsChanged)
-        });
-      }
-
-      const executionStateChanged = (notebook as any).executionStateChanged;
-      if (executionStateChanged) {
-        executionStateChanged.connect(handleExecutionStateChanged);
-        connections.push({
-          disconnect: () =>
-            executionStateChanged.disconnect(handleExecutionStateChanged)
+          disconnect: () => model.cells.changed.disconnect(handleCellsChanged)
         });
       }
 
       cellConnections = setupCellExecutionListeners();
 
-      const intervalId = setInterval(() => {
-        for (let i = 0; i < cells.length; i++) {
-          const cell = cells.get(i);
-          if (cell) {
-            handleAutograderExecution(cell, i);
-          }
-        }
-      }, 5000);
-
       cleanup = () => {
         connections.forEach(conn => conn.disconnect());
         cellConnections.forEach(conn => conn.disconnect());
-        clearInterval(intervalId);
       };
     };
 

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 import { askTutor } from '@/api';
 import { logEvent } from '@/api/logger';
@@ -22,6 +22,9 @@ export default function Chat() {
   );
   const [isWaiting, setIsWaiting] = useState(false);
   const [shouldResetNext, setShouldResetNext] = useState(false);
+  const loggedNotebookJsonForConversationIdRef = useRef<string | undefined>(
+    undefined
+  );
 
   type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
   const [mode, setMode] = useState<FrontendPromptMode>('tutor');
@@ -38,6 +41,7 @@ export default function Chat() {
 
       const nearestMarkdown = getNearestMarkdownCell();
       const enhancedQuestion = enhanceQuestion(text, nearestMarkdown);
+      const notebookJson = getNotebookJson();
 
       logEvent({
         event_type: 'tutor_query',
@@ -52,17 +56,18 @@ export default function Chat() {
       const tutorMessage = await askTutor({
         student_question: enhancedQuestion,
         conversation_id: conversationId,
-        notebook_json: getNotebookJson(),
+        notebook_json: notebookJson,
         prompt: promptToSend,
         prompt_mode: backendPromptMode,
         reset_conversation: shouldResetNext || undefined
       });
 
-      if (tutorMessage.conversation_id && !conversationId) {
-        setConversationId(tutorMessage.conversation_id);
-      }
       if (shouldResetNext) {
         setShouldResetNext(false);
+      }
+
+      if (tutorMessage.conversation_id) {
+        setConversationId(tutorMessage.conversation_id);
       }
 
       logEvent({
@@ -73,6 +78,32 @@ export default function Chat() {
           mode,
           notebook: notebookName
         }
+      });
+
+      const finalConversationId =
+        tutorMessage.conversation_id || conversationId;
+
+      const isFirstTurn =
+        !!finalConversationId &&
+        loggedNotebookJsonForConversationIdRef.current !== finalConversationId;
+
+      const turnPayload: Record<string, unknown> = {
+        student_message: text,
+        tutor_response: tutorMessage.tutor_response,
+        prompt_mode: backendPromptMode,
+        toggle_mode: mode,
+        timestamp: new Date().toISOString(),
+        conversation_id: finalConversationId
+      };
+
+      if (isFirstTurn) {
+        turnPayload.initial_notebook_json = notebookJson;
+        loggedNotebookJsonForConversationIdRef.current = finalConversationId;
+      }
+
+      logEvent({
+        event_type: 'tutor_notebook_info',
+        payload: turnPayload
       });
 
       setMessages(prev => [
@@ -98,6 +129,7 @@ export default function Chat() {
     setMessages([]);
     setConversationId(undefined);
     setIsWaiting(false);
+    loggedNotebookJsonForConversationIdRef.current = undefined;
 
     setShouldResetNext(true);
   };

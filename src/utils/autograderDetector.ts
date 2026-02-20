@@ -7,11 +7,11 @@ export function isAutograderExecution(cell: ICellModel): {
   const source = cell.sharedModel?.source || '';
   const sourceStr = Array.isArray(source) ? source.join('') : source;
 
-  const otterPattern = /otter\.check\(['"]([^'"]+)['"]\)/;
-  const otterMatch = sourceStr.match(otterPattern);
-  if (otterMatch) {
-    return { isGrader: true, graderId: otterMatch[1] };
-  }
+  // const otterPattern = /otter\.check\(['"]([^'"]+)['"]\)/;
+  // const otterMatch = sourceStr.match(otterPattern);
+  // if (otterMatch) {
+  //   return { isGrader: true, graderId: otterMatch[1] };
+  // }
 
   const graderPattern = /grader\.check\(['"]([^'"]+)['"]\)/;
   const graderMatch = sourceStr.match(graderPattern);
@@ -24,11 +24,11 @@ export function isAutograderExecution(cell: ICellModel): {
     return { isGrader: true, graderId: 'check_all' };
   }
 
-  const okPattern = /ok\.grade\(['"]([^'"]+)['"]\)/;
-  const okMatch = sourceStr.match(okPattern);
-  if (okMatch) {
-    return { isGrader: true, graderId: okMatch[1] };
-  }
+  // const okPattern = /ok\.grade\(['"]([^'"]+)['"]\)/;
+  // const okMatch = sourceStr.match(okPattern);
+  // if (okMatch) {
+  //   return { isGrader: true, graderId: okMatch[1] };
+  // }
 
   return { isGrader: false };
 }

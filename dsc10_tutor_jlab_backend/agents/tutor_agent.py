@@ -4,6 +4,7 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from ..gemini_client import get_gemini_model
+from ..llm_response_utils import extract_followup_questions, parse_llm_response
 from ..prompts import PROMPT_MAP
 
 # from ..tools.tools import TOOL_LIST
@@ -73,9 +74,13 @@ Student question:
 
     text = "".join(response_parts)
 
-    append_message(conversation_id, student_question, text)
+    tutor_response, followup_block = parse_llm_response(text)
+    questions = extract_followup_questions(followup_block)
+
+    append_message(conversation_id, student_question, tutor_response)
 
     return {
-        "tutor_response": text,
+        "tutor_response": tutor_response,
+        "follow_up_questions": questions,
         "conversation_id": conversation_id,
     }

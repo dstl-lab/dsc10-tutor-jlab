@@ -22,6 +22,8 @@ export default function Chat() {
   );
   const [isWaiting, setIsWaiting] = useState(false);
   const [shouldResetNext, setShouldResetNext] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [isCollapsing, setIsCollapsing] = useState(false);
   const loggedNotebookJsonForConversationIdRef = useRef<string | undefined>(
     undefined
   );
@@ -106,6 +108,7 @@ export default function Chat() {
         payload: turnPayload
       });
 
+      setSuggestions(tutorMessage.follow_up_questions ?? []);
       setMessages(prev => [
         ...prev,
         { author: 'tutor', text: tutorMessage.tutor_response }
@@ -125,10 +128,21 @@ export default function Chat() {
     }
   };
 
+  const handleSuggestionClick = (question: string) => {
+    setIsCollapsing(true);
+    setTimeout(() => {
+      handleMessageSubmit(question);
+      setSuggestions([]);
+      setIsCollapsing(false);
+    }, 250);
+  };
+
   const handleNewConversation = () => {
     setMessages([]);
     setConversationId(undefined);
     setIsWaiting(false);
+    setSuggestions([]);
+    setIsCollapsing(false);
     loggedNotebookJsonForConversationIdRef.current = undefined;
 
     setShouldResetNext(true);
@@ -155,6 +169,24 @@ export default function Chat() {
         <ToggleMode mode={mode} setMode={setMode} disabled={isWaiting} />
       </div>
       <ChatMessages messages={messages} isWaiting={isWaiting} />
+      {suggestions.length > 0 && (
+        <div
+          className={`flex flex-wrap gap-2 mb-2 transition-all duration-[250ms] ease-out ${
+            isCollapsing ? 'opacity-0 scale-95' : ''
+          }`}
+        >
+          {suggestions.map((q, index) => (
+            <button
+              key={index}
+              type="button"
+              className="rounded-full border border-[#cdd8ff] bg-[#f0f4ff] px-3 py-2 text-[13px] cursor-pointer transition-all duration-200 ease-out hover:bg-[#e0eaff] hover:-translate-y-px"
+              onClick={() => handleSuggestionClick(q)}
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
       <ChatMessageBox onSubmit={handleMessageSubmit} disabled={isWaiting} />
     </div>
   );

@@ -169,22 +169,27 @@ export default function Chat() {
         <ToggleMode mode={mode} setMode={setMode} disabled={isWaiting} />
       </div>
       <ChatMessages messages={messages} isWaiting={isWaiting} />
-      {suggestions.length > 0 && (
+      {suggestions.length === 4 && (
         <div
-          className={`flex flex-wrap gap-2 mb-2 transition-all duration-[250ms] ease-out ${
+          className={`rounded-lg border border-[#CFE3FF] bg-[#F3F8FF] px-2.5 py-1.5 mt-4 transition-all duration-[250ms] ease-out ${
             isCollapsing ? 'opacity-0 scale-95' : ''
           }`}
         >
-          {suggestions.map((q, index) => (
-            <button
-              key={index}
-              type="button"
-              className="rounded-full border border-[#cdd8ff] bg-[#f0f4ff] px-3 py-2 text-[13px] cursor-pointer transition-all duration-200 ease-out hover:bg-[#e0eaff] hover:-translate-y-px"
-              onClick={() => handleSuggestionClick(q)}
-            >
-              {q}
-            </button>
-          ))}
+          <h3 className="font-semibold text-[0.8rem] text-[#1E3A8A] mb-1">
+            💡 Follow-up questions:
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            {suggestions.map((q, index) => (
+              <button
+                key={index}
+                type="button"
+                className="w-full rounded-lg border border-[#D6E6FF] bg-white px-2 py-1.5 text-left text-[0.8rem] leading-tight transition-all duration-200 ease-out hover:border-[#4F8DF7] hover:bg-[#F8FBFF] hover:cursor-pointer"
+                onClick={() => handleSuggestionClick(q)}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
         </div>
       )}
       <ChatMessageBox onSubmit={handleMessageSubmit} disabled={isWaiting} />

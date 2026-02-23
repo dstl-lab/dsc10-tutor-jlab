@@ -45,6 +45,7 @@ export default function ChatMessages({
             <Markdown
               text={message.text}
               enableInsertForPython={enableInsertForPython}
+              isUserMessage={message.author === 'user'}
             />
           </div>
         );

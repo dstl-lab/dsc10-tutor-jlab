@@ -7,11 +7,14 @@ type MarkdownProps = {
   text: string;
   // If true, Markdown will render an "Insert code below"
   enableInsertForPython?: boolean;
+  // If true, use lighter inline code styling (for user bubbles with dark background)
+  isUserMessage?: boolean;
 };
 
 export default function Markdown({
   text,
-  enableInsertForPython = false
+  enableInsertForPython = false,
+  isUserMessage = false
 }: MarkdownProps) {
   const notebook = useNotebook();
   // Code block & inline code renderer which can render optional actions
@@ -26,7 +29,13 @@ export default function Markdown({
   }) {
     if (inline) {
       return (
-        <code className="rounded bg-gray-200 px-1 py-0.5 text-sm">
+        <code
+          className={`rounded px-1 py-0.5 text-sm ${
+            isUserMessage
+              ? 'bg-gray-200 text-gray-900'
+              : 'bg-gray-200'
+          }`}
+        >
           {children}
         </code>
       );
@@ -54,7 +63,11 @@ export default function Markdown({
 
     if (isSingleLine) {
       return (
-        <code className="rounded bg-gray-200 px-1 py-0.5 text-sm">
+        <code
+          className={`rounded px-1 py-0.5 text-sm ${
+            isUserMessage ? 'bg-gray-200 text-gray-900' : 'bg-gray-200'
+          }`}
+        >
           {children}
         </code>
       );

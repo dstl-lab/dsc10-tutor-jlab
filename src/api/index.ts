@@ -22,7 +22,7 @@ export interface IAskTutorParams {
   nearest_markdown_cell_text?: string;
 }
 
-export interface LectureCell {
+export interface ILectureCell {
   lecture: string;
   path: string;
   cell_index: number;
@@ -34,7 +34,7 @@ export interface LectureCell {
 export interface ITutorResponse {
   conversation_id: string;
   tutor_response: string;
-  relevant_lectures?: LectureCell[];
+  relevant_lectures?: ILectureCell[];
 }
 
 export interface ITutorRequest {

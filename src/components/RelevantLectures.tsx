@@ -1,12 +1,12 @@
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
-import { type LectureCell } from '@/api';
+import { type ILectureCell } from '@/api';
 import { cn } from '@/utils';
 import { useNotebook } from '@/contexts/NotebookContext';
 import Markdown from './Markdown';
 
 interface IRelevantLecturesProps {
-  lectures: LectureCell[];
+  lectures: ILectureCell[];
 }
 
 export default function RelevantLectures({ lectures }: IRelevantLecturesProps) {
@@ -29,7 +29,7 @@ export default function RelevantLectures({ lectures }: IRelevantLecturesProps) {
     setExpandedIndices(newSet);
   };
 
-  const openLectureCell = async (lecture: LectureCell) => {
+  const openILectureCell = async (lecture: ILectureCell) => {
     if (!commands) {
       console.error('JupyterLab commands not available');
       return;
@@ -109,7 +109,7 @@ export default function RelevantLectures({ lectures }: IRelevantLecturesProps) {
                 </div>
                 <Button
                   className="w-full py-1 text-xs"
-                  onClick={() => openLectureCell(lecture)}
+                  onClick={() => openILectureCell(lecture)}
                 >
                   Open in Notebook
                 </Button>

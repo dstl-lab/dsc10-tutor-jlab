@@ -1,7 +1,11 @@
 import { useNotebook } from '@/contexts/NotebookContext';
 import React from 'react';
 import ReactMarkdown, { Components } from 'react-markdown';
+import rehypeKatex from 'rehype-katex';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
 
 type MarkdownProps = {
   text: string;
@@ -105,11 +109,18 @@ export default function Markdown({
   /**
    * ReactMarkdown escapes HTML by default (safe). We include remark-gfm for richer features.
    * Uses remark-gfm so tables, task-lists, and other GFM are supported.
+   * Uses remark-math + rehype-katex for LaTeX math rendering ($...$ and $$...$$).
+   * Uses rehype-raw + rehype-sanitize to render raw HTML (e.g. <details>/<summary>)
+   * while preventing XSS.
    * ReactMarkdown Doc: https://github.com/remarkjs/react-markdown
    * remark-gfm Doc: https://github.com/remarkjs/remark-gfm
    */
   return (
-    <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm, remarkMath]}
+      rehypePlugins={[rehypeRaw, rehypeSanitize, rehypeKatex]}
+      components={components}
+    >
       {text}
     </ReactMarkdown>
   );

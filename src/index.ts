@@ -44,7 +44,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     // Attach app to the right-hand sidebar!
     // TODO: we should set a min-width so the sidebar can't be dragged to 0 width
     const widget = new MainAreaWidget({
-      content: createAppWidget({ notebookTracker })
+      content: createAppWidget({ notebookTracker, commands: app.commands })
     });
     widget.id = 'chatbot-widget';
     widget.title.label = 'AI Tutor';

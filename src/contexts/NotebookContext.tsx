@@ -16,6 +16,7 @@ import {
   useState
 } from 'react';
 
+import { CommandRegistry } from '@lumino/commands';
 import { INotebookTracker, NotebookActions } from '@jupyterlab/notebook';
 
 export interface INotebookContext {
@@ -26,6 +27,7 @@ export interface INotebookContext {
   getNotebookJson: () => string;
   getNearestMarkdownCell: () => { cellIndex: number; text: string } | null;
   insertCodeBelowActiveCell?: (code: string) => void;
+  commands?: CommandRegistry;
 }
 
 const NotebookContext = createContext<INotebookContext | null>(null);
@@ -33,11 +35,13 @@ const NotebookContext = createContext<INotebookContext | null>(null);
 interface INotebookProviderProps {
   children: React.ReactNode;
   notebookTracker: INotebookTracker;
+  commands?: CommandRegistry;
 }
 
 export function NotebookProvider({
   children,
-  notebookTracker
+  notebookTracker,
+  commands
 }: INotebookProviderProps) {
   const [contextValue, setContextValue] = useState<
     Omit<INotebookContext, 'getNotebookJson' | 'getNearestMarkdownCell'>
@@ -69,15 +73,6 @@ export function NotebookProvider({
     return { notebookName, notebookPath, activeCellIndex };
   }, [notebookTracker, getSelectedCellIndex]);
 
-  // const getNotebookJson = useCallback(() => {
-  //   const model = notebookTracker.currentWidget?.content?.model;
-
-  //   if (!model?.toJSON) {
-  //     return '';
-  //   }
-
-  //   return JSON.stringify(model.toJSON());
-  // }, [notebookTracker]);
   const getNotebookJson = useCallback(() => {
     const model = notebookTracker.currentWidget?.content?.model;
     if (!model?.cells) {
@@ -199,7 +194,8 @@ export function NotebookProvider({
   const fullContextValue: INotebookContext = {
     ...contextValue,
     getNotebookJson,
-    getNearestMarkdownCell
+    getNearestMarkdownCell,
+    commands
   };
 
   const insertCodeBelowActiveCell = useCallback(

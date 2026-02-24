@@ -42,10 +42,17 @@ export default function Chat() {
       return;
     }
 
-    // Wait for notebook to fully load before capturing
-    const timer = setTimeout(() => {
-      // Get sanitized notebook snapshot
+    // Keep trying until notebook is fully loaded
+    const checkNotebook = () => {
       const sanitized = getSanitizedNotebook();
+
+      // Wait for notebook to fully load (ensure more than 1 cell)
+      if (sanitized.cells.length <= 1) {
+        // Retry after 100ms
+        setTimeout(checkNotebook, 100);
+        return;
+      }
+
       const sanitizedJson = JSON.stringify(sanitized);
 
       // Store the initial snapshot
@@ -75,9 +82,9 @@ export default function Chat() {
           large_outputs_removed: sanitized.largeOutputsRemoved
         }
       });
-    }, 500); // Wait 500ms for notebook to fully load
+    };
 
-    return () => clearTimeout(timer);
+    checkNotebook();
   }, [notebookName, notebookLoaded, getSanitizedNotebook]);
 
   const handleMessageSubmit = async (text: string) => {

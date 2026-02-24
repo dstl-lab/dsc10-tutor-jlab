@@ -16,6 +16,13 @@ import {
   useState
 } from 'react';
 
+import {
+  buildStructuredContext,
+  sanitizeNotebook,
+  type ActiveCellInfo,
+  type SanitizedNotebook,
+  type StructuredContext
+} from '@/utils/notebookSanitizer';
 import { INotebookTracker, NotebookActions } from '@jupyterlab/notebook';
 
 export interface INotebookContext {
@@ -24,6 +31,10 @@ export interface INotebookContext {
   activeCellIndex: number;
 
   getNotebookJson: () => string;
+  getFullNotebookJson: () => any;
+  getSanitizedNotebook: () => SanitizedNotebook;
+  getStructuredContext: () => StructuredContext | null;
+  getActiveCellInfo: () => ActiveCellInfo | null;
   getNearestMarkdownCell: () => { cellIndex: number; text: string } | null;
   insertCodeBelowActiveCell?: (code: string) => void;
 }
@@ -40,7 +51,15 @@ export function NotebookProvider({
   notebookTracker
 }: INotebookProviderProps) {
   const [contextValue, setContextValue] = useState<
-    Omit<INotebookContext, 'getNotebookJson' | 'getNearestMarkdownCell'>
+    Omit<
+      INotebookContext,
+      | 'getNotebookJson'
+      | 'getFullNotebookJson'
+      | 'getSanitizedNotebook'
+      | 'getStructuredContext'
+      | 'getActiveCellInfo'
+      | 'getNearestMarkdownCell'
+    >
   >({
     notebookName: '',
     notebookPath: '',
@@ -57,10 +76,11 @@ export function NotebookProvider({
     return notebook?.activeCellIndex ?? -1;
   }, [notebookTracker]);
 
-  const getTrackerState = useCallback((): Omit<
-    INotebookContext,
-    'getNotebookJson' | 'getNearestMarkdownCell'
-  > => {
+  const getTrackerState = useCallback((): {
+    notebookName: string;
+    notebookPath: string;
+    activeCellIndex: number;
+  } => {
     const panel = notebookTracker.currentWidget;
     const notebookName = panel?.title?.label ?? '';
     const notebookPath = panel?.context?.path ?? '';
@@ -131,6 +151,67 @@ export function NotebookProvider({
     });
   }, [notebookTracker]);
 
+  // Get the full notebook JSON including outputs (for initial sanitized snapshot)
+  const getFullNotebookJson = useCallback(() => {
+    const model = notebookTracker.currentWidget?.content?.model;
+    if (!model?.cells) {
+      return null;
+    }
+
+    const cells: any[] = [];
+    const cellList = model.cells;
+
+    for (let i = 0; i < cellList.length; i++) {
+      const cell = cellList.get(i);
+      if (!cell) {
+        continue;
+      }
+
+      const cellJSON = cell.toJSON();
+      cells.push(cellJSON);
+    }
+
+    return {
+      notebookName: notebookTracker.currentWidget?.title?.label ?? '',
+      cells
+    };
+  }, [notebookTracker]);
+
+  // Get sanitized notebook (removes images, plots, large outputs)
+  const getSanitizedNotebook = useCallback((): SanitizedNotebook => {
+    const fullNotebook = getFullNotebookJson();
+    if (!fullNotebook) {
+      return {
+        notebookName: 'Untitled',
+        cells: [],
+        imagesRemoved: 0,
+        plotsRemoved: 0,
+        largeOutputsRemoved: 0
+      };
+    }
+
+    return sanitizeNotebook(fullNotebook);
+  }, [getFullNotebookJson]);
+
+  // Get active cell information
+  const getActiveCellInfo = useCallback((): ActiveCellInfo | null => {
+    const sanitized = getSanitizedNotebook();
+    const activeCellIndex = getSelectedCellIndex();
+
+    if (activeCellIndex < 0 || activeCellIndex >= sanitized.cells.length) {
+      return null;
+    }
+
+    const cell = sanitized.cells[activeCellIndex];
+    return {
+      index: activeCellIndex,
+      type: cell.cell_type,
+      source: cell.source,
+      execution_count: cell.execution_count,
+      outputs: cell.outputs
+    };
+  }, [getSanitizedNotebook, getSelectedCellIndex]);
+
   const getNearestMarkdownCell = useCallback(() => {
     const panel = notebookTracker.currentWidget;
     if (!panel) {
@@ -175,6 +256,15 @@ export function NotebookProvider({
     return null;
   }, [notebookTracker, getSelectedCellIndex]);
 
+  // Get structured context for a request
+  const getStructuredContext = useCallback((): StructuredContext | null => {
+    const sanitized = getSanitizedNotebook();
+    const activeCellIndex = getSelectedCellIndex();
+    const nearestMarkdown = getNearestMarkdownCell();
+
+    return buildStructuredContext(sanitized, activeCellIndex, nearestMarkdown);
+  }, [getSanitizedNotebook, getSelectedCellIndex, getNearestMarkdownCell]);
+
   useEffect(() => {
     setContextValue(getTrackerState());
 
@@ -199,6 +289,10 @@ export function NotebookProvider({
   const fullContextValue: INotebookContext = {
     ...contextValue,
     getNotebookJson,
+    getFullNotebookJson,
+    getSanitizedNotebook,
+    getStructuredContext,
+    getActiveCellInfo,
     getNearestMarkdownCell
   };
 

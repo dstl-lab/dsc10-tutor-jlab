@@ -3,11 +3,10 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
+# from ..tools.tools import TOOL_LIST
+from ..conversation_store import append_message, get_history, reset_history
 from ..gemini_client import get_gemini_model
 from ..prompts import PROMPT_MAP
-
-# from ..tools.tools import TOOL_LIST
-from ..conversation_store import get_history, append_message, reset_history
 
 
 async def ask_tutor(
@@ -17,6 +16,8 @@ async def ask_tutor(
     conversation_id: str | None = None,
     nearest_markdown_cell_text: str | None = None,
     reset_conversation: bool = False,
+    structured_context: dict | None = None,
+    initial_notebook_snapshot: dict | None = None,
 ):
     if reset_conversation:
         conversation_id = reset_history(conversation_id)
@@ -32,12 +33,61 @@ async def ask_tutor(
         # tools=TOOL_LIST,
     )
 
-    user_input = f"""
+    # Build structured user input with initial snapshot if this is the first turn
+    if initial_notebook_snapshot:
+        # First turn: send sanitized notebook snapshot for context
+        user_input = f"""
+=== NOTEBOOK SNAPSHOT (SESSION START) ===
+The student's notebook has been analyzed and sanitized for optimal performance.
+Notebook: {initial_notebook_snapshot.get('notebookName', 'Untitled')}
+Total cells: {len(initial_notebook_snapshot.get('cells', []))}
+Images removed: {initial_notebook_snapshot.get('imagesRemoved', 0)}
+Plots removed: {initial_notebook_snapshot.get('plotsRemoved', 0)}
+Large outputs truncated: {initial_notebook_snapshot.get('largeOutputsRemoved', 0)}
+
+FULL SANITIZED NOTEBOOK:
+{initial_notebook_snapshot}
+
+=== END NOTEBOOK SNAPSHOT ===
+
 Conversation so far:
 {history}
 
-Notebook context:
-{notebook_json}
+Student question:
+{student_question}
+"""
+    else:
+        # Subsequent turns: send structured context with active cell and instructions
+        markdown_instructions = ""
+        active_cell_info = ""
+        
+        if structured_context:
+            # Extract markdown instructions from context
+            if structured_context.get("markdownInstructions"):
+                markdown_instructions = "\n".join(
+                    structured_context["markdownInstructions"]
+                )
+            
+            # Extract active cell information
+            if structured_context.get("activeCell"):
+                active_cell = structured_context["activeCell"]
+                active_cell_info = f"""
+ACTIVE CELL (Index: {active_cell.get('index', 'N/A')}):
+- Type: {active_cell.get('type', 'unknown')}
+- Source:
+{active_cell.get('source', '')}
+- Execution count: {active_cell.get('execution_count', 'N/A')}
+- Outputs: {len(active_cell.get('outputs', []))} outputs present
+"""
+        
+        user_input = f"""
+Conversation so far:
+{history}
+
+Notebook Instructions:
+{markdown_instructions or "No instructions available"}
+
+{active_cell_info}
 
 Nearest markdown cell:
 {nearest_markdown_cell_text or ""}

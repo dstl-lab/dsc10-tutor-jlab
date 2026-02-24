@@ -21,6 +21,9 @@ export interface IAskTutorParams {
   conversation_id?: string;
   reset_conversation?: boolean;
   nearest_markdown_cell_text?: string;
+  // New structured context parameters
+  structured_context?: string;
+  initial_notebook_snapshot?: string;
 }
 
 export interface ITutorResponse {
@@ -40,6 +43,8 @@ export interface ITutorRequest {
   conversation_id?: string;
   reset_conversation?: boolean;
   nearest_markdown_cell_text?: string;
+  structured_context?: string;
+  initial_notebook_snapshot?: string;
 }
 
 /**
@@ -52,6 +57,8 @@ export interface ITutorRequest {
  * @param params.prompt_mode - 'append' | 'none' | 'override' (defaults to 'append')
  * @param params.conversation_id - Optional conversation ID to continue an existing conversation
  * @param params.nearest_markdown_cell_text - Optional text content of the nearest markdown cell above the active cell
+ * @param params.structured_context - Optional structured context JSON with active cell and markdown instructions
+ * @param params.initial_notebook_snapshot - Optional sanitized notebook snapshot from session start
  * @returns The response from the API
  */
 export async function askTutor({
@@ -61,7 +68,9 @@ export async function askTutor({
   prompt_mode,
   conversation_id,
   reset_conversation,
-  nearest_markdown_cell_text
+  nearest_markdown_cell_text,
+  structured_context,
+  initial_notebook_snapshot
 }: IAskTutorParams): Promise<ITutorResponse> {
   return await requestAPI<ITutorResponse>('ask', {
     method: 'POST',
@@ -73,7 +82,9 @@ export async function askTutor({
       prompt_mode,
       conversation_id,
       reset_conversation,
-      nearest_markdown_cell_text
+      nearest_markdown_cell_text,
+      structured_context,
+      initial_notebook_snapshot
     })
   });
 }

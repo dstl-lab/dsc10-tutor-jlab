@@ -33,11 +33,33 @@ async def ask_tutor(
         # tools=TOOL_LIST,
     )
 
-    # Build structured user input with initial snapshot if this is the first turn
+    # Build structured user input with full notebook and active cell info in every request
+    markdown_instructions = ""
+    active_cell_info = ""
+    
+    if structured_context:
+        # Extract markdown instructions from context
+        if structured_context.get("markdownInstructions"):
+            markdown_instructions = "\n".join(
+                structured_context["markdownInstructions"]
+            )
+        
+        # Extract active cell information
+        if structured_context.get("activeCell"):
+            active_cell = structured_context["activeCell"]
+            active_cell_info = f"""
+ACTIVE CELL (Index: {active_cell.get('index', 'N/A')}):
+- Type: {active_cell.get('type', 'unknown')}
+- Source:
+{active_cell.get('source', '')}
+- Execution count: {active_cell.get('execution_count', 'N/A')}
+- Outputs: {len(active_cell.get('outputs', []))} outputs present
+"""
+    
+    # Build user input with notebook snapshot and active cell info
     if initial_notebook_snapshot:
-        # First turn: send sanitized notebook snapshot for context
         user_input = f"""
-=== NOTEBOOK SNAPSHOT (SESSION START) ===
+=== NOTEBOOK SNAPSHOT ===
 The student's notebook has been analyzed and sanitized for optimal performance.
 Notebook: {initial_notebook_snapshot.get('notebookName', 'Untitled')}
 Total cells: {len(initial_notebook_snapshot.get('cells', []))}
@@ -53,33 +75,18 @@ FULL SANITIZED NOTEBOOK:
 Conversation so far:
 {history}
 
+Notebook Instructions:
+{markdown_instructions or "No instructions available"}
+
+{active_cell_info}
+
+Nearest markdown cell:
+{nearest_markdown_cell_text or ""}
+
 Student question:
 {student_question}
 """
     else:
-        # Subsequent turns: send structured context with active cell and instructions
-        markdown_instructions = ""
-        active_cell_info = ""
-        
-        if structured_context:
-            # Extract markdown instructions from context
-            if structured_context.get("markdownInstructions"):
-                markdown_instructions = "\n".join(
-                    structured_context["markdownInstructions"]
-                )
-            
-            # Extract active cell information
-            if structured_context.get("activeCell"):
-                active_cell = structured_context["activeCell"]
-                active_cell_info = f"""
-ACTIVE CELL (Index: {active_cell.get('index', 'N/A')}):
-- Type: {active_cell.get('type', 'unknown')}
-- Source:
-{active_cell.get('source', '')}
-- Execution count: {active_cell.get('execution_count', 'N/A')}
-- Outputs: {len(active_cell.get('outputs', []))} outputs present
-"""
-        
         user_input = f"""
 Conversation so far:
 {history}

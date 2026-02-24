@@ -42,37 +42,42 @@ export default function Chat() {
       return;
     }
 
-    // Get sanitized notebook snapshot
-    const sanitized = getSanitizedNotebook();
-    const sanitizedJson = JSON.stringify(sanitized);
+    // Wait for notebook to fully load before capturing
+    const timer = setTimeout(() => {
+      // Get sanitized notebook snapshot
+      const sanitized = getSanitizedNotebook();
+      const sanitizedJson = JSON.stringify(sanitized);
 
-    // Store the initial snapshot
-    initialNotebookSnapshotRef.current = sanitizedJson;
+      // Store the initial snapshot
+      initialNotebookSnapshotRef.current = sanitizedJson;
 
-    // Create confirmation message
-    const confirmationMessage = `📓 **Notebook: ${sanitized.notebookName}**
+      // Create confirmation message
+      const confirmationMessage = `📓 **Notebook: ${sanitized.notebookName}**
         ${sanitized.cells.length} cells loaded. I'm ready to help you with your code!`;
 
-    setMessages([
-      {
-        author: 'tutor',
-        text: confirmationMessage
-      }
-    ]);
+      setMessages([
+        {
+          author: 'tutor',
+          text: confirmationMessage
+        }
+      ]);
 
-    setNotebookLoaded(true);
+      setNotebookLoaded(true);
 
-    // Log the session start
-    logEvent({
-      event_type: 'session_start',
-      payload: {
-        notebook: sanitized.notebookName,
-        cell_count: sanitized.cells.length,
-        images_removed: sanitized.imagesRemoved,
-        plots_removed: sanitized.plotsRemoved,
-        large_outputs_removed: sanitized.largeOutputsRemoved
-      }
-    });
+      // Log the session start
+      logEvent({
+        event_type: 'session_start',
+        payload: {
+          notebook: sanitized.notebookName,
+          cell_count: sanitized.cells.length,
+          images_removed: sanitized.imagesRemoved,
+          plots_removed: sanitized.plotsRemoved,
+          large_outputs_removed: sanitized.largeOutputsRemoved
+        }
+      });
+    }, 500); // Wait 500ms for notebook to fully load
+
+    return () => clearTimeout(timer);
   }, [notebookName, notebookLoaded, getSanitizedNotebook]);
 
   const handleMessageSubmit = async (text: string) => {
@@ -109,9 +114,8 @@ export default function Chat() {
         structured_context: structuredContext
           ? JSON.stringify(structuredContext)
           : undefined,
-        initial_notebook_snapshot: isFirstTurn
-          ? initialNotebookSnapshotRef.current
-          : undefined,
+        initial_notebook_snapshot:
+          initialNotebookSnapshotRef.current || undefined,
         prompt: promptToSend,
         prompt_mode: backendPromptMode,
         reset_conversation: shouldResetNext || undefined

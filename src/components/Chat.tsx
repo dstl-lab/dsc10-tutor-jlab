@@ -171,19 +171,19 @@ export default function Chat() {
       <ChatMessages messages={messages} isWaiting={isWaiting} />
       {suggestions.length === 4 && (
         <div
-          className={`rounded-lg border border-[#CFE3FF] bg-[#F3F8FF] px-2.5 py-1.5 mt-4 transition-all duration-[250ms] ease-out ${
-            isCollapsing ? 'opacity-0 scale-95' : ''
+          className={`mt-4 rounded-lg border border-[#CFE3FF] bg-[#F3F8FF] px-2.5 py-1.5 transition-all duration-[250ms] ease-out ${
+            isCollapsing ? 'scale-95 opacity-0' : ''
           }`}
         >
-          <h3 className="font-semibold text-[0.8rem] text-[#1E3A8A] mb-1">
+          <h3 className="mb-1 text-[0.8rem] font-semibold text-[#1E3A8A]">
             💡 Follow-up questions:
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
             {suggestions.map((q, index) => (
               <button
                 key={index}
                 type="button"
-                className="w-full rounded-lg border border-[#D6E6FF] bg-white px-2 py-1.5 text-left text-[0.8rem] leading-tight transition-all duration-200 ease-out hover:border-[#4F8DF7] hover:bg-[#F8FBFF] hover:cursor-pointer"
+                className="w-full rounded-lg border border-[#D6E6FF] bg-white px-2 py-1.5 text-left text-[0.8rem] leading-tight transition-all duration-200 ease-out hover:cursor-pointer hover:border-[#4F8DF7] hover:bg-[#F8FBFF]"
                 onClick={() => handleSuggestionClick(q)}
               >
                 {q}

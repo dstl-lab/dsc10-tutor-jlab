@@ -31,9 +31,7 @@ export default function Markdown({
       return (
         <code
           className={`rounded px-1 py-0.5 text-sm ${
-            isUserMessage
-              ? 'bg-gray-200 text-gray-900'
-              : 'bg-gray-200'
+            isUserMessage ? 'bg-gray-200 text-gray-900' : 'bg-gray-200'
           }`}
         >
           {children}

@@ -54,7 +54,7 @@ export default function Chat() {
       initialNotebookSnapshotRef.current = sanitizedJson;
 
       const confirmationMessage = `📓 **Notebook: ${sanitized.notebookName}**
-        ${sanitized.cells.length} cells loaded. I'm ready to help you with your code!`;
+        ${sanitized.cells.length} cells loaded. I'm ready to help!`;
 
       setMessages([
         {

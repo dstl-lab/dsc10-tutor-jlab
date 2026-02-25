@@ -7,6 +7,7 @@ import tornado
 from .tools.files_tool import ReadFileHandler, SearchFilesHandler
 from .tools.files_tool import ListFilesHandler
 from .agents.tutor_agent import ask_tutor
+from .practice_problems.handler import PracticeProblemsHandler
 
 
 class RouteHandler(APIHandler):
@@ -64,11 +65,15 @@ def setup_handlers(web_app):
         base_url, "dsc10-tutor-jlab-backend", "list-files"
     )
     ask_pattern = url_path_join(base_url, "dsc10-tutor-jlab-backend", "ask")
+    practice_problems_pattern = url_path_join(
+        base_url, "dsc10-tutor-jlab-backend", "practice-problems"
+    )
     handlers = [
         (route_pattern, RouteHandler),
         (read_file_pattern, ReadFileHandler),
         (search_files_pattern, SearchFilesHandler),
         (list_files_pattern, ListFilesHandler),
         (ask_pattern, AskHandler),
+        (practice_problems_pattern, PracticeProblemsHandler),
     ]
     web_app.add_handlers(host_pattern, handlers)

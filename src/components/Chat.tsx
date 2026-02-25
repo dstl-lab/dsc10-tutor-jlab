@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useState } from 'react';
 
-import { askTutor } from '@/api';
+import { askTutor, getPracticeProblems } from '@/api';
 import { logEvent } from '@/api/logger';
 import { Button } from '@/components/ui/button';
 import { useNotebook } from '@/contexts/NotebookContext';
@@ -26,10 +26,63 @@ export default function Chat() {
   type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
   const [mode, setMode] = useState<FrontendPromptMode>('tutor');
 
+  const isPracticeRequest = (
+    query: string
+  ): { isPractice: boolean; topic?: string } => {
+    const lower = query.toLowerCase().trim();
+    const patterns = [
+      /practice\s+(?:on|with|for|about)\s+(.+)/i,
+      /problems?\s+(?:on|with|for|about|regarding)\s+(.+)/i,
+      /give\s+me\s+(?:practice\s+)?problems?\s+(?:on|about|for)\s+(.+)/i,
+      /i\s+want\s+(?:practice|problems?)\s+(?:on|about|for)\s+(.+)/i,
+      /i\s+need\s+(?:practice|problems?)\s+(?:on|about|for)\s+(.+)/i,
+      /help\s+me\s+practice\s+(.+)/i,
+      /more\s+practice\s+(?:on|with|for|about)\s+(.+)/i,
+      /exercises?\s+(?:on|about|for)\s+(.+)/i
+    ];
+
+    for (const pattern of patterns) {
+      const match = query.match(pattern);
+      if (match && match[1]) {
+        const topic = match[1].trim();
+        if (topic.length > 2) {
+          return { isPractice: true, topic };
+        }
+      }
+    }
+
+    return { isPractice: false };
+  };
+
   const handleMessageSubmit = async (text: string) => {
     setMessages(prev => [...prev, { author: 'user', text }]);
     setIsWaiting(true);
     try {
+      const practiceCheck = isPracticeRequest(text);
+
+      if (practiceCheck.isPractice && practiceCheck.topic) {
+        console.log(
+          '[Practice Problems] Frontend: Requesting problems for topic:',
+          practiceCheck.topic
+        );
+
+        const practiceResponse = await getPracticeProblems({
+          topic_query: practiceCheck.topic
+        });
+
+        console.log(
+          '[Practice Problems] Frontend: Received',
+          practiceResponse.count,
+          'problems'
+        );
+
+        setMessages(prev => [
+          ...prev,
+          { author: 'tutor', text: practiceResponse.formatted_response }
+        ]);
+        return;
+      }
+
       const promptToSend =
         mode === 'tutor' ? tutorInstruction : chatgptOverride;
 

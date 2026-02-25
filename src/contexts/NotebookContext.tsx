@@ -19,9 +19,9 @@ import {
 import {
   buildStructuredContext,
   sanitizeNotebook,
-  type ActiveCellInfo,
-  type SanitizedNotebook,
-  type StructuredContext
+  type IActiveCellInfo,
+  type ISanitizedNotebook,
+  type IStructuredContext
 } from '@/utils/notebookSanitizer';
 import { INotebookTracker, NotebookActions } from '@jupyterlab/notebook';
 
@@ -32,9 +32,9 @@ export interface INotebookContext {
 
   getNotebookJson: () => string;
   getFullNotebookJson: () => any;
-  getSanitizedNotebook: () => SanitizedNotebook;
-  getStructuredContext: () => StructuredContext | null;
-  getActiveCellInfo: () => ActiveCellInfo | null;
+  getSanitizedNotebook: () => ISanitizedNotebook;
+  getStructuredContext: () => IStructuredContext | null;
+  getActiveCellInfo: () => IActiveCellInfo | null;
   getNearestMarkdownCell: () => { cellIndex: number; text: string } | null;
   insertCodeBelowActiveCell?: (code: string) => void;
 }
@@ -178,7 +178,7 @@ export function NotebookProvider({
   }, [notebookTracker]);
 
   // Get sanitized notebook (removes images, plots, large outputs)
-  const getSanitizedNotebook = useCallback((): SanitizedNotebook => {
+  const getSanitizedNotebook = useCallback((): ISanitizedNotebook => {
     const fullNotebook = getFullNotebookJson();
     if (!fullNotebook) {
       return {
@@ -194,7 +194,7 @@ export function NotebookProvider({
   }, [getFullNotebookJson]);
 
   // Get active cell information
-  const getActiveCellInfo = useCallback((): ActiveCellInfo | null => {
+  const getActiveCellInfo = useCallback((): IActiveCellInfo | null => {
     const sanitized = getSanitizedNotebook();
     const activeCellIndex = getSelectedCellIndex();
 
@@ -257,7 +257,7 @@ export function NotebookProvider({
   }, [notebookTracker, getSelectedCellIndex]);
 
   // Get structured context for a request
-  const getStructuredContext = useCallback((): StructuredContext | null => {
+  const getStructuredContext = useCallback((): IStructuredContext | null => {
     const sanitized = getSanitizedNotebook();
     const activeCellIndex = getSelectedCellIndex();
     const nearestMarkdown = getNearestMarkdownCell();

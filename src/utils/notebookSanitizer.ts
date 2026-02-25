@@ -3,22 +3,22 @@
  * while preserving the core structure and code/markdown content.
  */
 
-export interface SanitizedNotebook {
+export interface ISanitizedNotebook {
   notebookName: string;
-  cells: SanitizedCell[];
+  cells: ISanitizedCell[];
   imagesRemoved: number;
   plotsRemoved: number;
   largeOutputsRemoved: number;
 }
 
-export interface SanitizedCell {
+export interface ISanitizedCell {
   cell_type: 'code' | 'markdown';
   source: string;
   execution_count?: number | null;
-  outputs?: SanitizedOutput[];
+  outputs?: ISanitizedOutput[];
 }
 
-export interface SanitizedOutput {
+export interface ISanitizedOutput {
   output_type: 'stream' | 'display_data' | 'execute_result' | 'error';
   text?: string;
   name?: string;
@@ -27,13 +27,13 @@ export interface SanitizedOutput {
   traceback?: string[];
 }
 
-interface RawNotebook {
+interface IRawNotebook {
   notebookName?: string;
   cells?: any[];
   metadata?: any;
 }
 
-interface RawCell {
+interface IRawCell {
   cell_type: string;
   source: string | string[];
   outputs?: any[];
@@ -41,7 +41,7 @@ interface RawCell {
   metadata?: any;
 }
 
-interface RawOutput {
+interface IRawOutput {
   output_type: string;
   data?: Record<string, unknown>;
   metadata?: any;
@@ -71,7 +71,7 @@ const BLOCKED_MIME_TYPES = new Set([
 /**
  * Removes large outputs and blocked MIME types from output data
  */
-function sanitizeOutput(output: RawOutput): SanitizedOutput | null {
+function sanitizeOutput(output: IRawOutput): ISanitizedOutput | null {
   // Remove outputs with blocked MIME types
   if (output.data) {
     for (const mimeType of Object.keys(output.data)) {
@@ -82,7 +82,7 @@ function sanitizeOutput(output: RawOutput): SanitizedOutput | null {
   }
 
   // Sanitize based on output type
-  const sanitized: SanitizedOutput = {
+  const sanitized: ISanitizedOutput = {
     output_type: output.output_type as
       | 'stream'
       | 'display_data'
@@ -146,8 +146,12 @@ function sanitizeOutput(output: RawOutput): SanitizedOutput | null {
       break;
 
     case 'error':
-      if (output.ename) sanitized.ename = output.ename;
-      if (output.evalue) sanitized.evalue = output.evalue;
+      if (output.ename) {
+        sanitized.ename = output.ename;
+      }
+      if (output.evalue) {
+        sanitized.evalue = output.evalue;
+      }
       if (output.traceback) {
         sanitized.traceback = output.traceback;
       }
@@ -160,8 +164,8 @@ function sanitizeOutput(output: RawOutput): SanitizedOutput | null {
 /**
  * Sanitizes a single cell, removing large outputs and blocked MIME types
  */
-function sanitizeCell(cell: RawCell): SanitizedCell {
-  const sanitized: SanitizedCell = {
+function sanitizeCell(cell: IRawCell): ISanitizedCell {
+  const sanitized: ISanitizedCell = {
     cell_type: cell.cell_type as 'code' | 'markdown',
     source:
       typeof cell.source === 'string'
@@ -195,12 +199,12 @@ function sanitizeCell(cell: RawCell): SanitizedCell {
  * Removes images, plots, and other large outputs
  * Returns metadata about what was removed
  */
-export function sanitizeNotebook(notebook: RawNotebook): SanitizedNotebook {
+export function sanitizeNotebook(notebook: IRawNotebook): ISanitizedNotebook {
   let imagesRemoved = 0;
   let plotsRemoved = 0;
   let largeOutputsRemoved = 0;
 
-  const sanitized: SanitizedNotebook = {
+  const sanitized: ISanitizedNotebook = {
     notebookName: notebook.notebookName || 'Untitled',
     cells: [],
     imagesRemoved: 0,
@@ -210,7 +214,9 @@ export function sanitizeNotebook(notebook: RawNotebook): SanitizedNotebook {
 
   if (notebook.cells && Array.isArray(notebook.cells)) {
     for (const cell of notebook.cells) {
-      if (!cell) continue;
+      if (!cell) {
+        continue;
+      }
 
       const original = cell;
       const sanitizedCell = sanitizeCell(cell);
@@ -258,18 +264,18 @@ export function sanitizeNotebook(notebook: RawNotebook): SanitizedNotebook {
 /**
  * Gets the active cell info from a notebook
  */
-export interface ActiveCellInfo {
+export interface IActiveCellInfo {
   index: number;
   type: 'code' | 'markdown';
   source: string;
   execution_count?: number | null;
-  outputs?: SanitizedOutput[];
+  outputs?: ISanitizedOutput[];
 }
 
 export function getActiveCellInfo(
-  notebook: SanitizedNotebook,
+  notebook: ISanitizedNotebook,
   activeCellIndex: number
-): ActiveCellInfo | null {
+): IActiveCellInfo | null {
   if (activeCellIndex < 0 || activeCellIndex >= notebook.cells.length) {
     return null;
   }
@@ -287,10 +293,10 @@ export function getActiveCellInfo(
 /**
  * Builds structured context for a user request
  */
-export interface StructuredContext {
+export interface IStructuredContext {
   notebookName: string;
   markdownInstructions: string[];
-  activeCell: ActiveCellInfo;
+  activeCell: IActiveCellInfo;
   removedContent: {
     imagesRemoved: number;
     plotsRemoved: number;
@@ -299,10 +305,10 @@ export interface StructuredContext {
 }
 
 export function buildStructuredContext(
-  notebook: SanitizedNotebook,
+  notebook: ISanitizedNotebook,
   activeCellIndex: number,
   nearestMarkdownCell?: { cellIndex: number; text: string } | null
-): StructuredContext | null {
+): IStructuredContext | null {
   const activeCell = getActiveCellInfo(notebook, activeCellIndex);
   if (!activeCell) {
     return null;

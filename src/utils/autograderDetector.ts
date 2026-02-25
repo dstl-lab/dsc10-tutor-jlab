@@ -22,14 +22,19 @@ export function isAutograderExecution(cell: ICellModel): {
 }
 
 function toStr(val: unknown): string {
-  if (Array.isArray(val)) return val.join('');
+  if (Array.isArray(val)) {
+    return val.join('');
+  }
   return String(val ?? '');
 }
 
-/** Extract a single string from Jupyter-style cell output (common shapes only). */
 function outputToText(output: unknown): string {
-  if (output == null) return '';
-  if (typeof output === 'string') return output;
+  if (output === null || output === undefined) {
+    return '';
+  }
+  if (typeof output === 'string') {
+    return output;
+  }
 
   const o = output as Record<string, unknown>;
   const raw = o._raw ?? o._rawData ?? output;
@@ -41,22 +46,22 @@ function outputToText(output: unknown): string {
     return tb.map(line => toStr(line)).join('\n');
   }
   if (
-    obj.ename != null ||
-    obj.evalue != null ||
-    o.ename != null ||
-    o.evalue != null
+    (obj.ename !== null && obj.ename !== undefined) ||
+    (obj.evalue !== null && obj.evalue !== undefined) ||
+    (o.ename !== null && o.ename !== undefined) ||
+    (o.evalue !== null && o.evalue !== undefined)
   ) {
     const ename = obj.ename ?? o.ename ?? '';
     const evalue = obj.evalue ?? o.evalue ?? '';
     return `${ename}: ${evalue}`;
   }
 
-  // Stream or display: text or data
   const text = toStr(obj.text ?? o.text ?? o._text ?? obj._text);
-  if (text)
+  if (text) {
     return obj.name === 'stderr' || o.name === 'stderr'
       ? `[stderr] ${text}`
       : text;
+  }
 
   const data = (obj.data ?? o.data) as Record<string, unknown> | undefined;
   if (data) {

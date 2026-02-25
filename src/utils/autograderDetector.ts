@@ -7,12 +7,6 @@ export function isAutograderExecution(cell: ICellModel): {
   const source = cell.sharedModel?.source || '';
   const sourceStr = Array.isArray(source) ? source.join('') : source;
 
-  // const otterPattern = /otter\.check\(['"]([^'"]+)['"]\)/;
-  // const otterMatch = sourceStr.match(otterPattern);
-  // if (otterMatch) {
-  //   return { isGrader: true, graderId: otterMatch[1] };
-  // }
-
   const graderPattern = /grader\.check\(['"]([^'"]+)['"]\)/;
   const graderMatch = sourceStr.match(graderPattern);
   if (graderMatch) {
@@ -24,136 +18,65 @@ export function isAutograderExecution(cell: ICellModel): {
     return { isGrader: true, graderId: 'check_all' };
   }
 
-  // const okPattern = /ok\.grade\(['"]([^'"]+)['"]\)/;
-  // const okMatch = sourceStr.match(okPattern);
-  // if (okMatch) {
-  //   return { isGrader: true, graderId: okMatch[1] };
-  // }
-
   return { isGrader: false };
 }
 
-export function parseGraderOutput(output: any): {
+function toStr(val: unknown): string {
+  if (Array.isArray(val)) return val.join('');
+  return String(val ?? '');
+}
+
+/** Extract a single string from Jupyter-style cell output (common shapes only). */
+function outputToText(output: unknown): string {
+  if (output == null) return '';
+  if (typeof output === 'string') return output;
+
+  const o = output as Record<string, unknown>;
+  const raw = o._raw ?? o._rawData ?? output;
+  const obj = raw as Record<string, unknown>;
+
+  // Error: traceback or ename/evalue
+  const tb = (obj.traceback ?? o.traceback) as unknown[] | undefined;
+  if (Array.isArray(tb) && tb.length > 0) {
+    return tb.map(line => toStr(line)).join('\n');
+  }
+  if (
+    obj.ename != null ||
+    obj.evalue != null ||
+    o.ename != null ||
+    o.evalue != null
+  ) {
+    const ename = obj.ename ?? o.ename ?? '';
+    const evalue = obj.evalue ?? o.evalue ?? '';
+    return `${ename}: ${evalue}`;
+  }
+
+  // Stream or display: text or data
+  const text = toStr(obj.text ?? o.text ?? o._text ?? obj._text);
+  if (text)
+    return obj.name === 'stderr' || o.name === 'stderr'
+      ? `[stderr] ${text}`
+      : text;
+
+  const data = (obj.data ?? o.data) as Record<string, unknown> | undefined;
+  if (data) {
+    return toStr(data['text/plain']) || toStr(data['text/html']) || '';
+  }
+
+  return String(output);
+}
+
+export function parseGraderOutput(output: unknown): {
   output: string;
   success: boolean;
 } {
-  let outputText = '';
-  let success = false;
-
-  if (!output) {
-    return { output: '', success: false };
-  }
-
-  const arrayToString = (val: any): string => {
-    if (Array.isArray(val)) {
-      return val.join('');
-    }
-    return String(val || '');
-  };
-
-  if (typeof output === 'object') {
-    let actualOutput = output;
-    if (output._raw) {
-      actualOutput = output._raw;
-    } else if (output._rawData) {
-      actualOutput = output._rawData;
-    }
-
-    const outputType =
-      output.type || actualOutput.output_type || actualOutput.type;
-
-    if (outputType === 'error') {
-      const errorName = actualOutput.ename || output.ename || '';
-      const errorValue = actualOutput.evalue || output.evalue || '';
-      const traceback = actualOutput.traceback || output.traceback || [];
-
-      if (Array.isArray(traceback) && traceback.length > 0) {
-        outputText = traceback
-          .map((line: any) =>
-            Array.isArray(line) ? line.join('') : String(line)
-          )
-          .join('\n');
-      }
-
-      if (!outputText) {
-        outputText = `${errorName}: ${errorValue}`;
-      }
-
-      success = false;
-    } else if (outputType === 'stream') {
-      const streamName = actualOutput.name || output.name || '';
-      outputText = arrayToString(
-        actualOutput.text || output.text || output._text
-      );
-
-      if (streamName === 'stderr' && outputText) {
-        outputText = `[stderr] ${outputText}`;
-      }
-
-      const outputLower = outputText.toLowerCase();
-      success =
-        !outputLower.includes('error') && !outputLower.includes('failed');
-    } else if (actualOutput.data || output.data) {
-      const data = actualOutput.data || output.data;
-      outputText =
-        arrayToString(data['text/plain']) ||
-        arrayToString(data['text/html']) ||
-        arrayToString(data['text/markdown']) ||
-        arrayToString(data['text/latex']) ||
-        '';
-
-      const outputLower = outputText.toLowerCase();
-      success =
-        outputLower.includes('all tests passed') ||
-        outputLower.includes('test passed') ||
-        outputLower.includes('passed!') ||
-        outputLower.includes('✓') ||
-        (outputLower.includes('passed') &&
-          !outputLower.includes('failed') &&
-          !outputLower.includes('error'));
-    } else if (
-      output._text !== undefined ||
-      output.text !== undefined ||
-      actualOutput.text !== undefined
-    ) {
-      outputText = arrayToString(
-        output._text || output.text || actualOutput.text
-      );
-
-      const outputLower = outputText.toLowerCase();
-      success =
-        outputLower.includes('all tests passed') ||
-        outputLower.includes('test passed') ||
-        outputLower.includes('passed!') ||
-        (!outputLower.includes('failed') &&
-          !outputLower.includes('error') &&
-          outputLower.includes('passed'));
-    } else {
-      try {
-        const rawJson = output.toJSON ? output.toJSON() : actualOutput;
-        outputText = JSON.stringify(rawJson, null, 2);
-      } catch (e) {
-        outputText = String(output);
-      }
-      success = false;
-    }
-  } else if (typeof output === 'string') {
-    outputText = output;
-    const outputLower = outputText.toLowerCase();
-    success =
-      outputLower.includes('all tests passed') ||
-      outputLower.includes('test passed') ||
-      outputLower.includes('passed!') ||
-      (!outputLower.includes('failed') &&
-        !outputLower.includes('error') &&
-        outputLower.includes('passed'));
-  } else {
-    outputText = String(output);
-    success = false;
-  }
-
+  const text = outputToText(output).trim();
+  const lower = text.toLowerCase();
   return {
-    output: outputText.trim(),
-    success
+    output: text,
+    success:
+      lower.includes('passed') &&
+      !lower.includes('failed') &&
+      !lower.includes('error')
   };
 }

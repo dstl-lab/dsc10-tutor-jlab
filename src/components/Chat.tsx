@@ -36,29 +36,23 @@ export default function Chat() {
   type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
   const [mode, setMode] = useState<FrontendPromptMode>('tutor');
 
-  // Detect session start: when notebook is opened and send initial sanitized snapshot
   useEffect(() => {
     if (!notebookName || notebookLoaded) {
       return;
     }
 
-    // Keep trying until notebook is fully loaded
     const checkNotebook = () => {
       const sanitized = getSanitizedNotebook();
 
-      // Wait for notebook to fully load (ensure more than 1 cell)
       if (sanitized.cells.length <= 1) {
-        // Retry after 100ms
         setTimeout(checkNotebook, 100);
         return;
       }
 
       const sanitizedJson = JSON.stringify(sanitized);
 
-      // Store the initial snapshot
       initialNotebookSnapshotRef.current = sanitizedJson;
 
-      // Create confirmation message
       const confirmationMessage = `📓 **Notebook: ${sanitized.notebookName}**
         ${sanitized.cells.length} cells loaded. I'm ready to help you with your code!`;
 
@@ -71,7 +65,6 @@ export default function Chat() {
 
       setNotebookLoaded(true);
 
-      // Log the session start
       logEvent({
         event_type: 'session_start',
         payload: {
@@ -111,9 +104,6 @@ export default function Chat() {
         }
       });
 
-      // For the first turn, send the initial notebook snapshot
-      const isFirstTurn = !conversationId && initialNotebookSnapshotRef.current;
-
       const tutorMessage = await askTutor({
         student_question: enhancedQuestion,
         conversation_id: conversationId,
@@ -121,8 +111,6 @@ export default function Chat() {
         structured_context: structuredContext
           ? JSON.stringify(structuredContext)
           : undefined,
-        initial_notebook_snapshot:
-          initialNotebookSnapshotRef.current || undefined,
         prompt: promptToSend,
         prompt_mode: backendPromptMode,
         reset_conversation: shouldResetNext || undefined
@@ -196,7 +184,6 @@ export default function Chat() {
     setConversationId(undefined);
     setIsWaiting(false);
     loggedNotebookJsonForConversationIdRef.current = undefined;
-    // Reset notebook loaded state so confirmation message and snapshot are sent again
     setNotebookLoaded(false);
 
     setShouldResetNext(true);

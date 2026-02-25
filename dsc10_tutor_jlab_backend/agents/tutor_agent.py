@@ -17,7 +17,6 @@ async def ask_tutor(
     nearest_markdown_cell_text: str | None = None,
     reset_conversation: bool = False,
     structured_context: dict | None = None,
-    initial_notebook_snapshot: dict | None = None,
 ):
     if reset_conversation:
         conversation_id = reset_history(conversation_id)
@@ -33,18 +32,15 @@ async def ask_tutor(
         # tools=TOOL_LIST,
     )
 
-    # Build structured user input with full notebook and active cell info in every request
     markdown_instructions = ""
     active_cell_info = ""
     
     if structured_context:
-        # Extract markdown instructions from context
         if structured_context.get("markdownInstructions"):
             markdown_instructions = "\n".join(
                 structured_context["markdownInstructions"]
             )
         
-        # Extract active cell information
         if structured_context.get("activeCell"):
             active_cell = structured_context["activeCell"]
             active_cell_info = f"""
@@ -56,19 +52,18 @@ ACTIVE CELL (Index: {active_cell.get('index', 'N/A')}):
 - Outputs: {len(active_cell.get('outputs', []))} outputs present
 """
     
-    # Build user input with notebook snapshot and active cell info
-    if initial_notebook_snapshot:
+    if notebook_json:
         user_input = f"""
 === NOTEBOOK SNAPSHOT ===
 The student's notebook has been analyzed and sanitized for optimal performance.
-Notebook: {initial_notebook_snapshot.get('notebookName', 'Untitled')}
-Total cells: {len(initial_notebook_snapshot.get('cells', []))}
-Images removed: {initial_notebook_snapshot.get('imagesRemoved', 0)}
-Plots removed: {initial_notebook_snapshot.get('plotsRemoved', 0)}
-Large outputs truncated: {initial_notebook_snapshot.get('largeOutputsRemoved', 0)}
+Notebook: {notebook_json.get('notebookName', 'Untitled')}
+Total cells: {len(notebook_json.get('cells', []))}
+Images removed: {notebook_json.get('imagesRemoved', 0)}
+Plots removed: {notebook_json.get('plotsRemoved', 0)}
+Large outputs truncated: {notebook_json.get('largeOutputsRemoved', 0)}
 
 FULL SANITIZED NOTEBOOK:
-{initial_notebook_snapshot}
+{notebook_json}
 
 === END NOTEBOOK SNAPSHOT ===
 

@@ -44,16 +44,6 @@ class AskHandler(APIHandler):
                 except json.JSONDecodeError:
                     structured_context = None
 
-            # Parse initial_notebook_snapshot if provided
-            initial_notebook_snapshot = body.get("initial_notebook_snapshot")
-            if isinstance(initial_notebook_snapshot, str):
-                try:
-                    initial_notebook_snapshot = json.loads(
-                        initial_notebook_snapshot
-                    )
-                except json.JSONDecodeError:
-                    initial_notebook_snapshot = None
-
             result = await ask_tutor(
                 student_question=body["student_question"],
                 notebook_json=notebook_json,
@@ -64,7 +54,6 @@ class AskHandler(APIHandler):
                 ),
                 reset_conversation=body.get("reset_conversation", False),
                 structured_context=structured_context,
-                initial_notebook_snapshot=initial_notebook_snapshot,
             )
 
             self.finish(json.dumps(result))

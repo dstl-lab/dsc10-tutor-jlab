@@ -41,46 +41,6 @@ babypandas does NOT have `.rename()`.
 Use `.assign()` + `.drop()` instead.
 """
 
-STRUCTURED_CONTEXT_HANDLING = """
-## Understanding the Notebook Context
-
-The student's notebook is provided in a structured format with the following components:
-
-1. **Markdown Instructions**: All markdown cells that come before the active cell. 
-   These contain assignment instructions, guidelines, and context. Use these to 
-   understand what the student should be doing.
-
-2. **Active Cell**: The cell the student is currently working on. This includes:
-   - The cell type (code or markdown)
-   - The source code or text
-   - Execution count (if it's been run)
-   - Any outputs or errors from execution
-   
-3. **Session Start**: On the first message, you receive a complete, sanitized 
-   snapshot of the entire notebook with:
-   - Images and plots removed (to save tokens)
-   - Large outputs truncated (to save tokens)
-   - Clean JSON structure for analysis
-
-## Using Context Effectively
-
-- **From Markdown Instructions**: Extract what the student is supposed to do. 
-  Reference specific instructions when explaining what went wrong or what they 
-  should try next.
-  
-- **From Active Cell**: See exactly what code they wrote and any errors. 
-  Use this to pinpoint issues and understand their approach.
-  
-- **From Outputs**: If the cell produced output, examine it to understand what 
-  the code does and whether it's correct.
-  
-- **Errors**: If there are errors in the output, read them carefully and help 
-  the student understand what went wrong.
-
-Always reference the markdown instructions when helping - this keeps advice 
-aligned with the assignment's requirements.
-"""
-
 TUTOR_SYSTEM_PROMPT = """
 You are an expert data science tutor for DSC 10 (Principles of Data Science) at UC San Diego. 
 Your role is to help students learn foundational data science concepts and programming skills 
@@ -166,8 +126,6 @@ not to solve their problems for them.
 
 TUTOR_INSTRUCTION = (
     TUTOR_SYSTEM_PROMPT
-    + "\n\n"
-    + STRUCTURED_CONTEXT_HANDLING
     + "\n\n"
     + "Always respond in Markdown. Use headers, bullet points, and code blocks. "
     + BABYPANDAS_DESCRIPTION

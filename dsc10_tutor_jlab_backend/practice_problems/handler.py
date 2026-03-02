@@ -1,5 +1,3 @@
-"""API handler for practice problems."""
-
 import json
 import logging
 import traceback
@@ -14,11 +12,9 @@ logger = logging.getLogger(__name__)
 
 
 class PracticeProblemsHandler(APIHandler):
-    """Handler for practice problems requests."""
-    
+        
     @tornado.web.authenticated
     async def post(self):
-        """Handle POST request for practice problems."""
         try:
             body = json.loads(self.request.body)
             topic_query = body.get("topic_query", "").strip()
@@ -30,18 +26,13 @@ class PracticeProblemsHandler(APIHandler):
                 }))
                 return
             
-            logger.info(f"[Practice Problems] Request received for: '{topic_query}'")
-            
             problems = get_practice_problems(
                 topic_query=topic_query,
                 max_problems=5,
                 use_gemini_fallback=True,
                 rank_by_relevance=True 
             )
-            
-            logger.info(f"[Practice Problems] Returning {len(problems)} problems")
-            
-            # Format response
+                        
             formatted_response = format_problems_response(problems, topic_query)
             
             result = {

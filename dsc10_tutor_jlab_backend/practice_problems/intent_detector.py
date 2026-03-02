@@ -15,6 +15,7 @@ PRACTICE_PATTERNS = [
     r"exercises?\s+(?:on|about|for)\s+(.+)",
     r"i\s+want\s+to\s+practice\s+(.+)",
     r"can\s+you\s+give\s+me\s+(?:practice\s+)?problems?\s+(?:on|about|for)\s+(.+)",
+    r"/i\s+want\s+(.+)\s+practice\b/i"
 ]
 
 

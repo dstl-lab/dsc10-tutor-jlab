@@ -41,7 +41,8 @@ export default function Chat() {
       /i\s+need\s+(?:practice|problems?)\s+(?:on|about|for)\s+(.+)/i,
       /help\s+me\s+practice\s+(.+)/i,
       /more\s+practice\s+(?:on|with|for|about)\s+(.+)/i,
-      /exercises?\s+(?:on|about|for)\s+(.+)/i
+      /exercises?\s+(?:on|about|for)\s+(.+)/i,
+      /i\s+want\s+(.+)\s+practice\b/i
     ];
 
     for (const pattern of patterns) {

@@ -229,7 +229,6 @@ export default function Chat() {
               <div className="flex items-center justify-center gap-1 pt-0.5">
                 {suggestions.map((_, index) => (
                   <span
-                    // eslint-disable-next-line react/no-array-index-key
                     key={index}
                     className={`h-1.5 w-1.5 rounded-full ${
                       index === currentSuggestionIndex

@@ -189,7 +189,7 @@ export default function Chat() {
             <div className="flex overflow-hidden rounded-lg border border-[#D6E6FF] bg-white">
               <button
                 type="button"
-                className="flex items-center justify-center px-3 bg-[#D4E4FF] text-sm font-semibold text-[#1D4ED8] transition-colors hover:bg-[#C0D6FF]"
+                className="flex items-center justify-center bg-[#D4E4FF] px-3 text-sm font-semibold text-[#1D4ED8] transition-colors hover:bg-[#C0D6FF]"
                 onClick={() =>
                   setCurrentSuggestionIndex(prev =>
                     suggestions.length === 0
@@ -212,7 +212,7 @@ export default function Chat() {
               </button>
               <button
                 type="button"
-                className="flex items-center justify-center px-3 bg-[#D4E4FF] text-sm font-semibold text-[#1D4ED8] transition-colors hover:bg-[#C0D6FF]"
+                className="flex items-center justify-center bg-[#D4E4FF] px-3 text-sm font-semibold text-[#1D4ED8] transition-colors hover:bg-[#C0D6FF]"
                 onClick={() =>
                   setCurrentSuggestionIndex(prev =>
                     suggestions.length === 0

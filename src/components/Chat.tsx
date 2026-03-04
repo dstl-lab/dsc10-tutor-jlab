@@ -24,6 +24,8 @@ export default function Chat() {
   const [shouldResetNext, setShouldResetNext] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isCollapsing, setIsCollapsing] = useState(false);
+  const [currentSuggestionIndex, setCurrentSuggestionIndex] = useState(0);
+  const [messageToPrefill, setMessageToPrefill] = useState<string | null>(null);
   const loggedNotebookJsonForConversationIdRef = useRef<string | undefined>(
     undefined
   );
@@ -108,7 +110,11 @@ export default function Chat() {
         payload: turnPayload
       });
 
-      setSuggestions(tutorMessage.follow_up_questions ?? []);
+      const followUps = tutorMessage.follow_up_questions ?? [];
+      setSuggestions(followUps);
+      if (followUps.length > 0) {
+        setCurrentSuggestionIndex(0);
+      }
       setMessages(prev => [
         ...prev,
         { author: 'tutor', text: tutorMessage.tutor_response }
@@ -131,8 +137,9 @@ export default function Chat() {
   const handleSuggestionClick = (question: string) => {
     setIsCollapsing(true);
     setTimeout(() => {
-      handleMessageSubmit(question);
+      setMessageToPrefill(question);
       setSuggestions([]);
+      setCurrentSuggestionIndex(0);
       setIsCollapsing(false);
     }, 250);
   };
@@ -169,30 +176,79 @@ export default function Chat() {
         <ToggleMode mode={mode} setMode={setMode} disabled={isWaiting} />
       </div>
       <ChatMessages messages={messages} isWaiting={isWaiting} />
-      {suggestions.length === 4 && (
+      {suggestions.length > 0 && (
         <div
-          className={`mt-4 rounded-lg border border-[#CFE3FF] bg-[#F3F8FF] px-2.5 py-1.5 transition-all duration-[250ms] ease-out ${
+          className={`rounded-lg border border-[#CFE3FF] bg-[#F3F8FF] px-2.5 py-1.5 transition-all duration-[250ms] ease-out ${
             isCollapsing ? 'scale-95 opacity-0' : ''
           }`}
         >
           <h3 className="mb-1 text-[0.8rem] font-semibold text-[#1E3A8A]">
             💡 Follow-up questions:
           </h3>
-          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-            {suggestions.map((q, index) => (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex overflow-hidden rounded-lg border border-[#D6E6FF] bg-white">
               <button
-                key={index}
                 type="button"
-                className="w-full rounded-lg border border-[#D6E6FF] bg-white px-2 py-1.5 text-left text-[0.8rem] leading-tight transition-all duration-200 ease-out hover:cursor-pointer hover:border-[#4F8DF7] hover:bg-[#F8FBFF]"
-                onClick={() => handleSuggestionClick(q)}
+                className="flex items-center justify-center px-3 bg-[#D4E4FF] text-sm font-semibold text-[#1D4ED8] transition-colors hover:bg-[#C0D6FF]"
+                onClick={() =>
+                  setCurrentSuggestionIndex(prev =>
+                    suggestions.length === 0
+                      ? 0
+                      : (prev - 1 + suggestions.length) % suggestions.length
+                  )
+                }
+                aria-label="Previous follow-up question"
               >
-                {q}
+                ‹
               </button>
-            ))}
+              <button
+                type="button"
+                className="flex-1 px-3 py-1.5 text-left text-[0.8rem] leading-tight transition-colors duration-200 ease-out hover:cursor-pointer hover:bg-[#F8FBFF]"
+                onClick={() =>
+                  handleSuggestionClick(suggestions[currentSuggestionIndex])
+                }
+              >
+                {suggestions[currentSuggestionIndex]}
+              </button>
+              <button
+                type="button"
+                className="flex items-center justify-center px-3 bg-[#D4E4FF] text-sm font-semibold text-[#1D4ED8] transition-colors hover:bg-[#C0D6FF]"
+                onClick={() =>
+                  setCurrentSuggestionIndex(prev =>
+                    suggestions.length === 0
+                      ? 0
+                      : (prev + 1) % suggestions.length
+                  )
+                }
+                aria-label="Next follow-up question"
+              >
+                ›
+              </button>
+            </div>
+            {suggestions.length > 1 && (
+              <div className="flex items-center justify-center gap-1 pt-0.5">
+                {suggestions.map((_, index) => (
+                  <span
+                    // eslint-disable-next-line react/no-array-index-key
+                    key={index}
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      index === currentSuggestionIndex
+                        ? 'bg-[#4F8DF7]'
+                        : 'bg-[#D6E6FF]'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
-      <ChatMessageBox onSubmit={handleMessageSubmit} disabled={isWaiting} />
+      <ChatMessageBox
+        onSubmit={handleMessageSubmit}
+        disabled={isWaiting}
+        prefillMessage={messageToPrefill}
+        onPrefillApplied={() => setMessageToPrefill(null)}
+      />
     </div>
   );
 }

@@ -22,7 +22,7 @@ export default function ChatMessageBox({
 
   React.useEffect(() => {
     if (
-      prefillMessage != null &&
+      prefillMessage !== null &&
       prefillMessage !== '' &&
       prefillMessage !== prevPrefillRef.current
     ) {
@@ -30,7 +30,7 @@ export default function ChatMessageBox({
       setMessage(prefillMessage);
       onPrefillApplied?.();
     }
-    if (prefillMessage == null || prefillMessage === '') {
+    if (prefillMessage === null || prefillMessage === '') {
       prevPrefillRef.current = null;
     }
   }, [prefillMessage, onPrefillApplied]);

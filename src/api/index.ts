@@ -26,6 +26,7 @@ export interface IAskTutorParams {
 export interface ITutorResponse {
   conversation_id: string;
   tutor_response: string;
+  follow_up?: string;
 }
 
 export interface ITutorRequest {

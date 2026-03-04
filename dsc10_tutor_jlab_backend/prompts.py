@@ -129,6 +129,15 @@ CHATGPT_OVERRIDE = (
     + BABYPANDAS_DESCRIPTION
 )
 
+FOLLOW_UP_INSTRUCTION = """You suggest exactly one short follow-up question a student might ask next.
+
+Rules:
+- Output ONLY the follow-up question. No explanation, no prefix, no quotes.
+- Keep it short (one short sentence).
+- Make it context-aware from the student's last question and the tutor's reply.
+- Use student-friendly, natural language.
+"""
+
 PROMPT_MAP = {
     "append": TUTOR_INSTRUCTION,
     "override": CHATGPT_OVERRIDE,

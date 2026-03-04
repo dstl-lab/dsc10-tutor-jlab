@@ -28,8 +28,10 @@ export default function Chat() {
 
   type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
   const [mode, setMode] = useState<FrontendPromptMode>('tutor');
+  const [suggestion, setSuggestion] = useState('');
 
   const handleMessageSubmit = async (text: string) => {
+    setSuggestion('');
     setMessages(prev => [...prev, { author: 'user', text }]);
     setIsWaiting(true);
     try {
@@ -110,6 +112,9 @@ export default function Chat() {
         ...prev,
         { author: 'tutor', text: tutorMessage.tutor_response }
       ]);
+      if (tutorMessage.follow_up) {
+        setSuggestion(tutorMessage.follow_up);
+      }
     } catch (error) {
       console.error('Error asking tutor:', error);
       const errorMessage =
@@ -155,7 +160,12 @@ export default function Chat() {
         <ToggleMode mode={mode} setMode={setMode} disabled={isWaiting} />
       </div>
       <ChatMessages messages={messages} isWaiting={isWaiting} />
-      <ChatMessageBox onSubmit={handleMessageSubmit} disabled={isWaiting} />
+      <ChatMessageBox
+        onSubmit={handleMessageSubmit}
+        disabled={isWaiting}
+        suggestion={suggestion}
+        onSuggestionAccept={() => setSuggestion('')}
+      />
     </div>
   );
 }

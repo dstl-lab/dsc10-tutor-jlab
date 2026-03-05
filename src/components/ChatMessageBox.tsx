@@ -104,15 +104,12 @@ export default function ChatMessageBox({
 
   return (
     <div className="flex flex-col gap-1">
-      <div
-        ref={wrapperRef}
-        className="relative"
-      >
+      <div ref={wrapperRef} className="relative">
         {/* Hidden span to measure width of current input (same font/size as textarea) */}
         <span
           ref={measureRef}
           aria-hidden
-          className="invisible absolute left-0 top-0 whitespace-pre border-0 font-inherit text-inherit"
+          className="font-inherit invisible absolute top-0 left-0 border-0 whitespace-pre text-inherit"
           style={{
             font: 'inherit',
             fontSize: 'inherit',
@@ -130,7 +127,7 @@ export default function ChatMessageBox({
             style={{ color: 'var(--jp-ui-font-color2)' }}
           >
             <span
-              className="whitespace-pre-wrap break-words"
+              className="break-words whitespace-pre-wrap"
               style={{
                 font: 'inherit',
                 fontSize: 'inherit',
@@ -146,7 +143,7 @@ export default function ChatMessageBox({
         {/* Clickable overlay over the suggestion part only: click = accept */}
         {showGhost && onSuggestionAccept && (
           <div
-            className="absolute top-0 bottom-0 right-0 cursor-text"
+            className="absolute top-0 right-0 bottom-0 cursor-text"
             style={{ left: suggestionLeftPx }}
             onClick={acceptSuggestion}
             onKeyDown={e => {

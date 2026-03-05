@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { type ILectureCell } from '@/api';
+import { logEvent } from '@/api/logger';
 import { cn } from '@/utils';
 import { useNotebook } from '@/contexts/NotebookContext';
 import Markdown from './Markdown';
@@ -19,14 +20,33 @@ export default function RelevantLectures({ lectures }: IRelevantLecturesProps) {
     return null;
   }
 
-  const toggleExpanded = (index: number) => {
+  const getLectureTitle = (filename: string): string => {
+    const stem = filename.replace('.ipynb', '');
+    const match = stem.match(/\d+/);
+    if (match) {
+      return `Lecture ${parseInt(match[0], 10)}`;
+    }
+    return stem;
+  };
+
+  const toggleExpanded = (index: number, lecture: ILectureCell) => {
     const newSet = new Set(expandedIndices);
+    const isExpanding = !newSet.has(index);
     if (newSet.has(index)) {
       newSet.delete(index);
     } else {
       newSet.add(index);
     }
     setExpandedIndices(newSet);
+
+    logEvent({
+      event_type: 'lecture_dropdown_toggle',
+      payload: {
+        lecture: getLectureTitle(lecture.lecture),
+        cell_index: lecture.cell_index,
+        expanded: isExpanding
+      }
+    });
   };
 
   const openILectureCell = async (lecture: ILectureCell) => {
@@ -34,6 +54,16 @@ export default function RelevantLectures({ lectures }: IRelevantLecturesProps) {
       console.error('JupyterLab commands not available');
       return;
     }
+
+    logEvent({
+      event_type: 'lecture_open_in_notebook',
+      payload: {
+        lecture: getLectureTitle(lecture.lecture),
+        path: lecture.path,
+        cell_index: lecture.cell_index
+      }
+    });
+
     try {
       const widget = await commands.execute('docmanager:open', {
         path: lecture.path
@@ -58,15 +88,6 @@ export default function RelevantLectures({ lectures }: IRelevantLecturesProps) {
     }
   };
 
-  const getLectureTitle = (filename: string): string => {
-    const stem = filename.replace('.ipynb', '');
-    const match = stem.match(/\d+/);
-    if (match) {
-      return `Lecture ${parseInt(match[0], 10)}`;
-    }
-    return stem;
-  };
-
   return (
     <div className="mt-4 space-y-2 rounded-md border border-jp-border-color0 bg-white p-3">
       <h3 className="text-sm font-semibold text-gray-700">
@@ -80,7 +101,7 @@ export default function RelevantLectures({ lectures }: IRelevantLecturesProps) {
             className="overflow-hidden rounded-md border border-gray-200"
           >
             <button
-              onClick={() => toggleExpanded(idx)}
+              onClick={() => toggleExpanded(idx, lecture)}
               className="flex w-full items-center justify-between bg-gray-50 px-3 py-2 transition-colors hover:bg-gray-100"
             >
               <span className="text-sm font-medium text-gray-800">

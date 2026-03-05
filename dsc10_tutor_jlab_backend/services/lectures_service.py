@@ -1,4 +1,5 @@
 import os
+import re
 import asyncio
 from pathlib import Path
 from typing import List, Dict, Any
@@ -121,7 +122,10 @@ def _simple_similarity(query: str, text: str) -> float:
 
     score = 0.0
     for token in query.split():
-        if token in text:
+        clean_token = re.sub(r"^\W+|\W+$", "", token)
+        if not clean_token:
+            continue
+        if re.search(r"\b" + re.escape(clean_token) + r"\b", text):
             score += 1.0
     return score
 

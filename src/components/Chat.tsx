@@ -7,7 +7,12 @@ import { Button } from '@/components/ui/button';
 import { useNotebook } from '@/contexts/NotebookContext';
 import { chatgptOverride, tutorInstruction } from '@/utils/prompts';
 import { enhanceQuestion } from '@/utils/enhancedQuestionUtils';
+import practicePatternsJson from '@/utils/practice_patterns.json';
 import ChatMessageBox from './ChatMessageBox';
+
+const PRACTICE_PATTERNS = practicePatternsJson.map(
+  (pattern: string) => new RegExp(pattern, 'i')
+);
 import ChatMessages from './ChatMessages';
 import ChatPlaceholder from './ChatPlaceholder';
 import ToggleMode from './ToggleMode';
@@ -32,20 +37,7 @@ export default function Chat() {
   const isPracticeRequest = (
     query: string
   ): { isPractice: boolean; topic?: string } => {
-    const lower = query.toLowerCase().trim();
-    const patterns = [
-      /practice\s+(?:on|with|for|about)\s+(.+)/i,
-      /problems?\s+(?:on|with|for|about|regarding)\s+(.+)/i,
-      /give\s+me\s+(?:practice\s+)?problems?\s+(?:on|about|for)\s+(.+)/i,
-      /i\s+want\s+(?:practice|problems?)\s+(?:on|about|for)\s+(.+)/i,
-      /i\s+need\s+(?:practice|problems?)\s+(?:on|about|for)\s+(.+)/i,
-      /help\s+me\s+practice\s+(.+)/i,
-      /more\s+practice\s+(?:on|with|for|about)\s+(.+)/i,
-      /exercises?\s+(?:on|about|for)\s+(.+)/i,
-      /i\s+want\s+(.+)\s+practice\b/i
-    ];
-
-    for (const pattern of patterns) {
+    for (const pattern of PRACTICE_PATTERNS) {
       const match = query.match(pattern);
       if (match && match[1]) {
         const topic = match[1].trim();

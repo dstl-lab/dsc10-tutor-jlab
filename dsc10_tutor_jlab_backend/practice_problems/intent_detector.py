@@ -1,29 +1,20 @@
+import json
 import re
+from pathlib import Path
 from typing import Optional, Tuple
 
+PATTERNS_FILE = Path(__file__).parent.parent.parent / "src" / "utils" / "practice_patterns.json"
 
-PRACTICE_PATTERNS = [
-    r"practice\s+(?:on|with|for|about)\s+(.+)",
-    r"practice\s+(.+)",
-    r"problems?\s+(?:on|with|for|about|regarding)\s+(.+)",
-    r"problems?\s+(?:for|with)\s+(.+)",
-    r"give\s+me\s+(?:practice\s+)?problems?\s+(?:on|about|for)\s+(.+)",
-    r"i\s+want\s+(?:practice|problems?)\s+(?:on|about|for)\s+(.+)",
-    r"i\s+need\s+(?:practice|problems?)\s+(?:on|about|for)\s+(.+)",
-    r"help\s+me\s+practice\s+(.+)",
-    r"more\s+practice\s+(?:on|with|for|about)\s+(.+)",
-    r"exercises?\s+(?:on|about|for)\s+(.+)",
-    r"i\s+want\s+to\s+practice\s+(.+)",
-    r"can\s+you\s+give\s+me\s+(?:practice\s+)?problems?\s+(?:on|about|for)\s+(.+)",
-    r"/i\s+want\s+(.+)\s+practice\b/i"
-]
+def _load_patterns() -> list[str]:
+    if PATTERNS_FILE.exists():
+        with open(PATTERNS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
+
+PRACTICE_PATTERNS = _load_patterns()
 
 
 def detect_practice_intent(query: str) -> Optional[Tuple[str, str]]:
-    """
-    Detect if a query is asking for practice problems.
-    
-    """
     query_lower = query.lower().strip()
     
     for pattern in PRACTICE_PATTERNS:

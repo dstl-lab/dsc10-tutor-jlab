@@ -45,6 +45,18 @@ def format_problems_response(problems: List[Dict], topic_query: str = "") -> str
                 if match:
                     problem_title = match.group(1)
             
+            if problem_title == "Problem":
+                anchor_id = problem.get("anchor_id", "")
+                if anchor_id:
+                    match = re.match(r"^problem-(\d+)(?:-(\d+))?$", anchor_id, re.I)
+                    if match:
+                        main_num = match.group(1)
+                        sub_num = match.group(2)
+                        if sub_num:
+                            problem_title = f"Problem {main_num}.{sub_num}"
+                        else:
+                            problem_title = f"Problem {main_num}"
+            
             link_text = f"**{problem_title}**"
             if source:
                 link_text += f" — {source}"

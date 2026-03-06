@@ -1,0 +1,15 @@
+[
+  "give\\s+me\\s+(?:practice\\s+)?problems?\\s+(?:on|about|for)\\s+(.+)",
+  "can\\s+you\\s+give\\s+me\\s+(?:practice\\s+)?problems?\\s+(?:on|about|for)\\s+(.+)",
+  "i\\s+want\\s+(?:practice|problems?)\\s+(?:on|about|for)\\s+(.+)",
+  "i\\s+need\\s+(?:practice|problems?)\\s+(?:on|about|for)\\s+(.+)",
+  "i\\s+want\\s+to\\s+practice\\s+(.+)",
+  "help\\s+me\\s+practice\\s+(.+)",
+  "more\\s+practice\\s+(?:on|with|for|about)\\s+(.+)",
+  "practice\\s+(?:on|with|for|about)\\s+(.+)",
+  "problems?\\s+(?:on|with|for|about|regarding)\\s+(.+)",
+  "problems?\\s+(?:for|with)\\s+(.+)",
+  "exercises?\\s+(?:on|about|for)\\s+(.+)",
+  "practice\\s+(.+)",
+  "i\\s+want\\s+(.+)\\s+practice\\b"
+]

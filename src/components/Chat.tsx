@@ -57,20 +57,20 @@ export default function Chat() {
       const practiceCheck = isPracticeRequest(text);
 
       if (practiceCheck.isPractice && practiceCheck.topic) {
-        console.log(
-          '[Practice Problems] Frontend: Requesting problems for topic:',
-          practiceCheck.topic
-        );
-
         const practiceResponse = await getPracticeProblems({
           topic_query: practiceCheck.topic
         });
 
-        console.log(
-          '[Practice Problems] Frontend: Received',
-          practiceResponse.count,
-          'problems'
-        );
+        logEvent({
+          event_type: 'practice_problems_request',
+          payload: {
+            original_query: text,
+            topic_query: practiceCheck.topic,
+            notebook: notebookName,
+            problem_count: practiceResponse.count,
+            formatted_response: practiceResponse.formatted_response
+          }
+        });
 
         setMessages(prev => [
           ...prev,

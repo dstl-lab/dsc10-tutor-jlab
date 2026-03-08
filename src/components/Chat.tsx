@@ -179,7 +179,7 @@ export default function Chat() {
         onSubmit={handleMessageSubmit}
         disabled={isWaiting}
         suggestion={suggestion}
-        onSuggestionAccept={(suggestionText) => {
+        onSuggestionAccept={suggestionText => {
           acceptedFollowUpRef.current = suggestionText;
           setSuggestion('');
         }}

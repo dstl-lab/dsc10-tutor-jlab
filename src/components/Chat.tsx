@@ -25,12 +25,26 @@ export default function Chat() {
   const loggedNotebookJsonForConversationIdRef = useRef<string | undefined>(
     undefined
   );
+  const acceptedFollowUpRef = useRef<string | null>(null);
 
   type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
   const [mode, setMode] = useState<FrontendPromptMode>('tutor');
   const [suggestion, setSuggestion] = useState('');
 
   const handleMessageSubmit = async (text: string) => {
+    const wasFollowUpViaTab = acceptedFollowUpRef.current === text.trim();
+    if (wasFollowUpViaTab) {
+      logEvent({
+        event_type: 'follow_up_question',
+        payload: {
+          question: text,
+          mode,
+          conversation_id: conversationId,
+          notebook: notebookName
+        }
+      });
+      acceptedFollowUpRef.current = null;
+    }
     setSuggestion('');
     setMessages(prev => [...prev, { author: 'user', text }]);
     setIsWaiting(true);
@@ -135,6 +149,7 @@ export default function Chat() {
     setConversationId(undefined);
     setIsWaiting(false);
     loggedNotebookJsonForConversationIdRef.current = undefined;
+    acceptedFollowUpRef.current = null;
 
     setShouldResetNext(true);
   };
@@ -164,7 +179,10 @@ export default function Chat() {
         onSubmit={handleMessageSubmit}
         disabled={isWaiting}
         suggestion={suggestion}
-        onSuggestionAccept={() => setSuggestion('')}
+        onSuggestionAccept={(suggestionText) => {
+          acceptedFollowUpRef.current = suggestionText;
+          setSuggestion('');
+        }}
       />
     </div>
   );

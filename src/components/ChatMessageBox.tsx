@@ -8,7 +8,7 @@ interface IChatMessageBoxProps {
   onSubmit: (message: string) => void;
   disabled?: boolean;
   suggestion?: string;
-  onSuggestionAccept?: () => void;
+  onSuggestionAccept?: (suggestionText: string) => void;
 }
 
 function renderGhost(
@@ -71,7 +71,7 @@ export default function ChatMessageBox({
       return;
     }
     setMessage(suggestion);
-    onSuggestionAccept?.();
+    onSuggestionAccept?.(suggestion);
   }, [suggestion, disabled, onSuggestionAccept]);
 
   const handleKeyDown = React.useCallback(

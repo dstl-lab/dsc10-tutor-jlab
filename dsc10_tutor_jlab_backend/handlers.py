@@ -1,11 +1,12 @@
 import json
 
+import tornado
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
-import tornado
-from .tools.files_tool import ReadFileHandler, SearchFilesHandler
-from .tools.files_tool import ListFilesHandler
+
 from .agents.tutor_agent import ask_tutor
+from .tools.files_tool import ListFilesHandler, ReadFileHandler, SearchFilesHandler
+from .practice_problems.handler import PracticeProblemsHandler
 
 
 class RouteHandler(APIHandler):
@@ -35,13 +36,24 @@ class AskHandler(APIHandler):
                 except json.JSONDecodeError:
                     notebook_json = notebook_json
 
+            # Parse structured_context if provided
+            structured_context = body.get("structured_context")
+            if isinstance(structured_context, str):
+                try:
+                    structured_context = json.loads(structured_context)
+                except json.JSONDecodeError:
+                    structured_context = None
+
             result = await ask_tutor(
                 student_question=body["student_question"],
                 notebook_json=notebook_json,
                 prompt_mode=body.get("prompt_mode", "append"),
                 conversation_id=body.get("conversation_id"),
-                nearest_markdown_cell_text=body.get("nearest_markdown_cell_text"),
+                nearest_markdown_cell_text=body.get(
+                    "nearest_markdown_cell_text"
+                ),
                 reset_conversation=body.get("reset_conversation", False),
+                structured_context=structured_context,
             )
 
             self.finish(json.dumps(result))
@@ -62,11 +74,15 @@ def setup_handlers(web_app):
         base_url, "dsc10-tutor-jlab-backend", "list-files"
     )
     ask_pattern = url_path_join(base_url, "dsc10-tutor-jlab-backend", "ask")
+    practice_problems_pattern = url_path_join(
+        base_url, "dsc10-tutor-jlab-backend", "practice-problems"
+    )
     handlers = [
         (route_pattern, RouteHandler),
         (read_file_pattern, ReadFileHandler),
         (search_files_pattern, SearchFilesHandler),
         (list_files_pattern, ListFilesHandler),
         (ask_pattern, AskHandler),
+        (practice_problems_pattern, PracticeProblemsHandler),
     ]
     web_app.add_handlers(host_pattern, handlers)

@@ -20,6 +20,7 @@ export interface IAskTutorParams {
   conversation_id?: string;
   reset_conversation?: boolean;
   nearest_markdown_cell_text?: string;
+  structured_context?: string;
 }
 
 export interface ILectureCell {
@@ -35,6 +36,27 @@ export interface ITutorResponse {
   conversation_id: string;
   tutor_response: string;
   relevant_lectures?: ILectureCell[];
+  follow_up?: string;
+}
+
+export interface IPracticeProblemsParams {
+  topic_query: string;
+}
+
+export interface IPracticeProblemsResponse {
+  problems: Array<{
+    id: string;
+    lecture_number: number;
+    text: string;
+    choices: string[];
+    images: string[];
+    code: string[];
+    source_url: string;
+    source?: string;
+    anchor_id?: string;
+  }>;
+  formatted_response: string;
+  count: number;
 }
 
 export interface ITutorRequest {
@@ -49,6 +71,7 @@ export interface ITutorRequest {
   conversation_id?: string;
   reset_conversation?: boolean;
   nearest_markdown_cell_text?: string;
+  structured_context?: string;
 }
 
 /**
@@ -61,6 +84,7 @@ export interface ITutorRequest {
  * @param params.prompt_mode - 'append' | 'none' | 'override' (defaults to 'append')
  * @param params.conversation_id - Optional conversation ID to continue an existing conversation
  * @param params.nearest_markdown_cell_text - Optional text content of the nearest markdown cell above the active cell
+ * @param params.structured_context - Optional structured context JSON with active cell and markdown instructions
  * @returns The response from the API
  */
 export async function askTutor({
@@ -70,7 +94,8 @@ export async function askTutor({
   prompt_mode,
   conversation_id,
   reset_conversation,
-  nearest_markdown_cell_text
+  nearest_markdown_cell_text,
+  structured_context
 }: IAskTutorParams): Promise<ITutorResponse> {
   return await requestAPI<ITutorResponse>('ask', {
     method: 'POST',
@@ -82,7 +107,8 @@ export async function askTutor({
       prompt_mode,
       conversation_id,
       reset_conversation,
-      nearest_markdown_cell_text
+      nearest_markdown_cell_text,
+      structured_context
     })
   });
 }
@@ -130,6 +156,41 @@ export async function requestAPI<T>(
   }
 
   return data;
+}
+
+/**
+ * Get practice problems for a topic
+ *
+ * @param params - The parameters for the practice problems request
+ * @param params.topic_query - The topic the student wants to practice
+ * @returns The response from the API with practice problems
+ */
+export async function getPracticeProblems({
+  topic_query
+}: IPracticeProblemsParams): Promise<IPracticeProblemsResponse> {
+  console.log(
+    '[Practice Problems] API: Sending request to backend for:',
+    topic_query
+  );
+
+  try {
+    const response = await requestAPI<IPracticeProblemsResponse>(
+      'practice-problems',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic_query
+        })
+      }
+    );
+
+    console.log('[Practice Problems] API: Response received:', response);
+    return response;
+  } catch (error) {
+    console.error('[Practice Problems] API: Error:', error);
+    throw error;
+  }
 }
 
 /* ===========================

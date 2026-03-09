@@ -29,6 +29,26 @@ export interface ITutorResponse {
   tutor_response: string;
 }
 
+export interface IPracticeProblemsParams {
+  topic_query: string;
+}
+
+export interface IPracticeProblemsResponse {
+  problems: Array<{
+    id: string;
+    lecture_number: number;
+    text: string;
+    choices: string[];
+    images: string[];
+    code: string[];
+    source_url: string;
+    source?: string;
+    anchor_id?: string;
+  }>;
+  formatted_response: string;
+  count: number;
+}
+
 export interface ITutorRequest {
   class_id: string;
   assignment_id: string;
@@ -126,6 +146,41 @@ export async function requestAPI<T>(
   }
 
   return data;
+}
+
+/**
+ * Get practice problems for a topic
+ *
+ * @param params - The parameters for the practice problems request
+ * @param params.topic_query - The topic the student wants to practice
+ * @returns The response from the API with practice problems
+ */
+export async function getPracticeProblems({
+  topic_query
+}: IPracticeProblemsParams): Promise<IPracticeProblemsResponse> {
+  console.log(
+    '[Practice Problems] API: Sending request to backend for:',
+    topic_query
+  );
+
+  try {
+    const response = await requestAPI<IPracticeProblemsResponse>(
+      'practice-problems',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic_query
+        })
+      }
+    );
+
+    console.log('[Practice Problems] API: Response received:', response);
+    return response;
+  } catch (error) {
+    console.error('[Practice Problems] API: Error:', error);
+    throw error;
+  }
 }
 
 /* ===========================

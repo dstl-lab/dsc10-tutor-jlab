@@ -1,0 +1,367 @@
+{
+  "Expressions and Data Types": [
+    2
+  ],
+  "expressions": [
+    2
+  ],
+  "data types": [
+    2
+  ],
+  "arithmetic": [
+    2
+  ],
+  "variables": [
+    2
+  ],
+  "Lists and Arrays": [
+    3
+  ],
+  "arrays": [
+    3
+  ],
+  "lists": [
+    3
+  ],
+  "numpy": [
+    3
+  ],
+  "np.arange": [
+    3
+  ],
+  "strings": [
+    3
+  ],
+  "string methods": [
+    3
+  ],
+  "DataFrames": [
+    4
+  ],
+  "dataframes": [
+    4
+  ],
+  "tables": [
+    4
+  ],
+  "columns": [
+    4
+  ],
+  "indexes": [
+    4
+  ],
+  "Querying and Grouping": [
+    5,
+    8
+  ],
+  "querying": [
+    5
+  ],
+  "filtering": [
+    5
+  ],
+  "sorting": [
+    5
+  ],
+  "where": [
+    5
+  ],
+  "Data Visualization": [
+    6
+  ],
+  "visualization": [
+    6
+  ],
+  "plots": [
+    6
+  ],
+  "scatter plots": [
+    6
+  ],
+  "line plots": [
+    6
+  ],
+  "bar charts": [
+    6
+  ],
+  "Distributions and Histograms": [
+    7
+  ],
+  "histograms": [
+    7
+  ],
+  "distributions": [
+    7
+  ],
+  "bins": [
+    7
+  ],
+  "density": [
+    7
+  ],
+  "Functions and Applying": [
+    8
+  ],
+  "functions": [
+    8
+  ],
+  "applying": [
+    8
+  ],
+  "apply": [
+    8
+  ],
+  "defining functions": [
+    8
+  ],
+  "grouping": [
+    8
+  ],
+  "groupby": [
+    8
+  ],
+  "aggregation": [
+    8
+  ],
+  "Merging": [
+    9
+  ],
+  "merging": [
+    9
+  ],
+  "joining": [
+    9
+  ],
+  "joins": [
+    9
+  ],
+  "Grouping on Multiple Columns": [
+    9
+  ],
+  "pivot tables": [
+    9
+  ],
+  "Conditional Statements and Iteration": [
+    10
+  ],
+  "conditionals": [
+    10
+  ],
+  "if statements": [
+    10
+  ],
+  "iteration": [
+    10
+  ],
+  "for loops": [
+    10
+  ],
+  "control flow": [
+    10
+  ],
+  "Probability": [
+    11
+  ],
+  "probability": [
+    11
+  ],
+  "chance": [
+    11
+  ],
+  "conditional probability": [
+    11
+  ],
+  "Simulation": [
+    12
+  ],
+  "simulation": [
+    12
+  ],
+  "randomness": [
+    12
+  ],
+  "np.random": [
+    12
+  ],
+  "Distributions and Sampling": [
+    13
+  ],
+  "sampling": [
+    13
+  ],
+  "sampling distributions": [
+    13
+  ],
+  "statistics vs parameters": [
+    13
+  ],
+  "Bootstrapping and Confidence Intervals": [
+    14,
+    15
+  ],
+  "bootstrapping": [
+    14
+  ],
+  "resampling": [
+    14
+  ],
+  "Confidence Intervals, Center, and Spread": [
+    15
+  ],
+  "confidence intervals": [
+    15
+  ],
+  "percentiles": [
+    15
+  ],
+  "Standardization and the Normal Distribution": [
+    16
+  ],
+  "normal distribution": [
+    16
+  ],
+  "standardization": [
+    16
+  ],
+  "standard units": [
+    16
+  ],
+  "z-scores": [
+    16
+  ],
+  "bell curve": [
+    16
+  ],
+  "Central Limit Theorem": [
+    17
+  ],
+  "CLT": [
+    17
+  ],
+  "Choosing Sample Sizes": [
+    17
+  ],
+  "sample size": [
+    17
+  ],
+  "square root law": [
+    17
+  ],
+  "Statistical Models": [
+    18
+  ],
+  "models": [
+    18
+  ],
+  "Hypothesis Testing": [
+    18,
+    19
+  ],
+  "hypothesis testing": [
+    18,
+    19
+  ],
+  "null hypothesis": [
+    18,
+    19
+  ],
+  "p-values": [
+    18,
+    19
+  ],
+  "test statistics": [
+    18,
+    19
+  ],
+  "Hypothesis Testing and Total Variation Distance": [
+    20
+  ],
+  "TVD": [
+    20
+  ],
+  "total variation distance": [
+    20
+  ],
+  "categorical distributions": [
+    20
+  ],
+  "Permutation Testing": [
+    21
+  ],
+  "permutation testing": [
+    21
+  ],
+  "A/B testing": [
+    21
+  ],
+  "shuffling": [
+    21
+  ],
+  "Correlation": [
+    22
+  ],
+  "correlation": [
+    22
+  ],
+  "r": [
+    22
+  ],
+  "linear association": [
+    22
+  ],
+  "Regression and Least Squares": [
+    23
+  ],
+  "regression": [
+    23
+  ],
+  "least squares": [
+    23
+  ],
+  "line of best fit": [
+    23
+  ],
+  "slope and intercept": [
+    23
+  ],
+  "RMSE": [
+    23
+  ],
+  "Residuals and Inference": [
+    24,
+    25
+  ],
+  "residuals": [
+    24
+  ],
+  "regression inference": [
+    24,
+    25
+  ],
+  "prediction intervals": [
+    25
+  ],
+  "visualizations": [
+    7
+  ],
+  "varianc": [
+    2
+  ],
+  "statistical significanc": [
+    19,
+    20,
+    21,
+    22,
+    23
+  ],
+  "confidence level": [
+    17,
+    18
+  ],
+  "problems for functions": [
+    3
+  ],
+  "problems on functions": [
+    3
+  ]
+}

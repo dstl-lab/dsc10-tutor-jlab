@@ -36,10 +36,12 @@ export default function Chat() {
   const loggedNotebookJsonForConversationIdRef = useRef<string | undefined>(
     undefined
   );
+  const acceptedFollowUpRef = useRef<string | null>(null);
   const initialNotebookSnapshotRef = useRef<string | undefined>(undefined);
 
   type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
   const [mode, setMode] = useState<FrontendPromptMode>('tutor');
+  const [suggestion, setSuggestion] = useState('');
 
   useEffect(() => {
     if (!notebookName || notebookLoaded) {
@@ -101,6 +103,20 @@ export default function Chat() {
   };
 
   const handleMessageSubmit = async (text: string) => {
+    const wasFollowUpViaTab = acceptedFollowUpRef.current === text.trim();
+    if (wasFollowUpViaTab) {
+      logEvent({
+        event_type: 'follow_up_question',
+        payload: {
+          question: text,
+          mode,
+          conversation_id: conversationId,
+          notebook: notebookName
+        }
+      });
+      acceptedFollowUpRef.current = null;
+    }
+    setSuggestion('');
     setMessages(prev => [...prev, { author: 'user', text }]);
     setIsWaiting(true);
     try {
@@ -209,6 +225,9 @@ export default function Chat() {
         ...prev,
         { author: 'tutor', text: tutorMessage.tutor_response }
       ]);
+      if (tutorMessage.follow_up) {
+        setSuggestion(tutorMessage.follow_up);
+      }
     } catch (error) {
       console.error('Error asking tutor:', error);
       const errorMessage =
@@ -229,6 +248,7 @@ export default function Chat() {
     setConversationId(undefined);
     setIsWaiting(false);
     loggedNotebookJsonForConversationIdRef.current = undefined;
+    acceptedFollowUpRef.current = null;
     setNotebookLoaded(false);
 
     setShouldResetNext(true);
@@ -255,7 +275,15 @@ export default function Chat() {
         <ToggleMode mode={mode} setMode={setMode} disabled={isWaiting} />
       </div>
       <ChatMessages messages={messages} isWaiting={isWaiting} />
-      <ChatMessageBox onSubmit={handleMessageSubmit} disabled={isWaiting} />
+      <ChatMessageBox
+        onSubmit={handleMessageSubmit}
+        disabled={isWaiting}
+        suggestion={suggestion}
+        onSuggestionAccept={suggestionText => {
+          acceptedFollowUpRef.current = suggestionText;
+          setSuggestion('');
+        }}
+      />
     </div>
   );
 }

@@ -136,6 +136,25 @@ CHATGPT_OVERRIDE = (
     + BABYPANDAS_DESCRIPTION
 )
 
+FOLLOW_UP_INSTRUCTION = """You suggest exactly one short follow-up question a student might ask next.
+
+Rules:
+- Output ONLY the follow-up question. No explanation, no prefix, no quotes.
+- Keep it short (one short sentence).
+- Make it context-aware from the student's last question and the tutor's reply.
+- Use student-friendly, natural language.
+
+Question type — CONCEPTUAL ONLY:
+- Ask "why" or "how" questions that deepen understanding or connect ideas (e.g., why a method works, how it relates to other concepts, when you'd choose one approach over another, what would change if the data were different).
+- Do NOT ask procedural questions (what to do next, which function to use, whether to filter first, etc.).
+- Do NOT hint at the next step or the answer. The question should prompt the student to reason and reflect, not to follow a recipe.
+
+Never use a "checking answer" style. The follow-up must NOT:
+- Ask the tutor to verify the student's answer (e.g., "Is this correct?", "Did I do it right?", "Can you check my code?").
+- Ask the student to produce or share their answer (e.g., "What expression do you think you should write?", "What did you get?", "Try it and tell me what you wrote").
+The suggested question should be something the student might ask to understand the concept better — not to get confirmation or to be prompted to show their work.
+"""
+
 PROMPT_MAP = {
     "append": TUTOR_INSTRUCTION,
     "override": CHATGPT_OVERRIDE,

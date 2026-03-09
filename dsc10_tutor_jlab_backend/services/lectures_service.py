@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 backend_dir = Path(__file__).parent.parent
 load_dotenv(dotenv_path=backend_dir / ".env")
 
-WORKSPACE_ROOT = Path.home()
+WORKSPACE_ROOT = Path.cwd().resolve()
 
 # In-memory cache to avoid re-parsing notebooks every request
 _LECTURE_INDEX_CACHE: List[Dict[str, Any]] | None = None
@@ -23,29 +23,32 @@ _LECTURE_FILENAME_PATTERNS = [
 
 
 def _find_lectures_dir() -> Path | None:
-    # Allow override via environment variable
+    # Override for local dev
     env_path = os.getenv("LECTURES_PATH")
     if env_path:
-        p = Path(env_path).expanduser()
+        p = Path(env_path)
         resolved = p if p.is_absolute() else (WORKSPACE_ROOT / env_path).resolve()
         if resolved.exists() and resolved.is_dir():
             return resolved
 
-    # Auto-discover: search home directory for lecture notebooks
-    for pattern in _LECTURE_FILENAME_PATTERNS:
-        matches = [
-            nb
-            for nb in sorted(WORKSPACE_ROOT.rglob(pattern))
-            if ".ipynb_checkpoints" not in nb.parts
-        ]
-        if not matches:
-            continue
-        # Common parent: the deepest directory that is an ancestor of all matches
-        common = matches[0].parent
-        for nb in matches[1:]:
-            while common not in nb.parents:
-                common = common.parent
-        return common
+    # Auto discover lecture notebooks
+    try:
+        top_level = [d for d in WORKSPACE_ROOT.iterdir() if d.is_dir()]
+    except PermissionError:
+        return None
+
+    candidates = []
+    for d in sorted(top_level):
+        candidates.append(d)
+        try:
+            candidates.extend(sorted(sub for sub in d.iterdir() if sub.is_dir()))
+        except PermissionError:
+            pass
+
+    for candidate in candidates:
+        for pattern in _LECTURE_FILENAME_PATTERNS:
+            if any(candidate.glob(pattern)):
+                return candidate
 
     return None
 

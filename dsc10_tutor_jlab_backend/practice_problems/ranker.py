@@ -1,4 +1,4 @@
-"""Rank and filter problems by relevance to a topic query."""
+"""Rank and filter problems by relevance to a topic."""
 
 import logging
 import os

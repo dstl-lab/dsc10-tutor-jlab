@@ -31,7 +31,6 @@ export interface INotebookContext {
   activeCellIndex: number;
 
   getNotebookJson: () => string;
-  getFullNotebookJson: () => any;
   getSanitizedNotebook: () => ISanitizedNotebook;
   getStructuredContext: () => IStructuredContext | null;
   getActiveCellInfo: () => IActiveCellInfo | null;
@@ -54,7 +53,6 @@ export function NotebookProvider({
     Omit<
       INotebookContext,
       | 'getNotebookJson'
-      | 'getFullNotebookJson'
       | 'getSanitizedNotebook'
       | 'getStructuredContext'
       | 'getActiveCellInfo'
@@ -89,97 +87,26 @@ export function NotebookProvider({
     return { notebookName, notebookPath, activeCellIndex };
   }, [notebookTracker, getSelectedCellIndex]);
 
-  // const getNotebookJson = useCallback(() => {
-  //   const model = notebookTracker.currentWidget?.content?.model;
-
-  //   if (!model?.toJSON) {
-  //     return '';
-  //   }
-
-  //   return JSON.stringify(model.toJSON());
-  // }, [notebookTracker]);
-  const getNotebookJson = useCallback(() => {
+  const getFullNotebook = useCallback(() => {
     const model = notebookTracker.currentWidget?.content?.model;
-    if (!model?.cells) {
-      return '';
-    }
-
-    // Temporary truncation limits
-    const MAX_CODE_CHARS_PER_CELL = 1000;
-    const MAX_MARKDOWN_CHARS_PER_CELL = 300;
-    const MAX_TOTAL_CHARS = 20_000;
-
-    let totalChars = 0;
-    const cells: { cell_type: string; source: string }[] = [];
-
-    const cellList = model.cells;
-
-    for (let i = 0; i < cellList.length; i++) {
-      const cell = cellList.get(i);
-      if (!cell) {
-        continue;
-      }
-
-      const cellJSON = cell.toJSON();
-
-      let source = Array.isArray(cellJSON.source)
-        ? cellJSON.source.join('')
-        : (cellJSON.source ?? '');
-
-      if (cellJSON.cell_type === 'markdown') {
-        source = source.slice(0, MAX_MARKDOWN_CHARS_PER_CELL);
-      } else if (cellJSON.cell_type === 'code') {
-        source = source.slice(0, MAX_CODE_CHARS_PER_CELL);
-      }
-
-      totalChars += source.length;
-
-      // Stop once we exceed global cap
-      if (totalChars > MAX_TOTAL_CHARS) {
-        break;
-      }
-
-      cells.push({
-        cell_type: cellJSON.cell_type,
-        source
-      });
-    }
-
-    return JSON.stringify({
-      notebookName: notebookTracker.currentWidget?.title?.label ?? '',
-      cells
-    });
-  }, [notebookTracker]);
-
-  // Get the full notebook JSON including outputs (for initial sanitized snapshot)
-  const getFullNotebookJson = useCallback(() => {
-    const model = notebookTracker.currentWidget?.content?.model;
-    if (!model?.cells) {
+    if (!model?.toJSON) {
       return null;
-    }
-
-    const cells: any[] = [];
-    const cellList = model.cells;
-
-    for (let i = 0; i < cellList.length; i++) {
-      const cell = cellList.get(i);
-      if (!cell) {
-        continue;
-      }
-
-      const cellJSON = cell.toJSON();
-      cells.push(cellJSON);
     }
 
     return {
       notebookName: notebookTracker.currentWidget?.title?.label ?? '',
-      cells
+      ...(model.toJSON() as Record<string, any>)
     };
   }, [notebookTracker]);
 
+  const getNotebookJson = useCallback(() => {
+    const notebookSnapshot = getFullNotebook();
+    return notebookSnapshot ? JSON.stringify(notebookSnapshot) : '';
+  }, [getFullNotebook]);
+
   // Get sanitized notebook (removes images, plots, large outputs)
   const getSanitizedNotebook = useCallback((): ISanitizedNotebook => {
-    const fullNotebook = getFullNotebookJson();
+    const fullNotebook = getFullNotebook();
     if (!fullNotebook) {
       return {
         notebookName: 'Untitled',
@@ -191,7 +118,7 @@ export function NotebookProvider({
     }
 
     return sanitizeNotebook(fullNotebook);
-  }, [getFullNotebookJson]);
+  }, [getFullNotebook]);
 
   // Get active cell information
   const getActiveCellInfo = useCallback((): IActiveCellInfo | null => {
@@ -289,7 +216,6 @@ export function NotebookProvider({
   const fullContextValue: INotebookContext = {
     ...contextValue,
     getNotebookJson,
-    getFullNotebookJson,
     getSanitizedNotebook,
     getStructuredContext,
     getActiveCellInfo,

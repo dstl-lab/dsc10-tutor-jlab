@@ -16,6 +16,13 @@ import {
   useState
 } from 'react';
 
+import {
+  buildStructuredContext,
+  sanitizeNotebook,
+  type IActiveCellInfo,
+  type ISanitizedNotebook,
+  type IStructuredContext
+} from '@/utils/notebookSanitizer';
 import { INotebookTracker, NotebookActions } from '@jupyterlab/notebook';
 import {
   isAutograderExecution,
@@ -29,6 +36,9 @@ export interface INotebookContext {
   activeCellIndex: number;
 
   getNotebookJson: () => string;
+  getSanitizedNotebook: () => ISanitizedNotebook;
+  getStructuredContext: () => IStructuredContext | null;
+  getActiveCellInfo: () => IActiveCellInfo | null;
   getNearestMarkdownCell: () => { cellIndex: number; text: string } | null;
   insertCodeBelowActiveCell?: (code: string) => void;
 }
@@ -45,7 +55,14 @@ export function NotebookProvider({
   notebookTracker
 }: INotebookProviderProps) {
   const [contextValue, setContextValue] = useState<
-    Omit<INotebookContext, 'getNotebookJson' | 'getNearestMarkdownCell'>
+    Omit<
+      INotebookContext,
+      | 'getNotebookJson'
+      | 'getSanitizedNotebook'
+      | 'getStructuredContext'
+      | 'getActiveCellInfo'
+      | 'getNearestMarkdownCell'
+    >
   >({
     notebookName: '',
     notebookPath: '',
@@ -62,10 +79,11 @@ export function NotebookProvider({
     return notebook?.activeCellIndex ?? -1;
   }, [notebookTracker]);
 
-  const getTrackerState = useCallback((): Omit<
-    INotebookContext,
-    'getNotebookJson' | 'getNearestMarkdownCell'
-  > => {
+  const getTrackerState = useCallback((): {
+    notebookName: string;
+    notebookPath: string;
+    activeCellIndex: number;
+  } => {
     const panel = notebookTracker.currentWidget;
     const notebookName = panel?.title?.label ?? '';
     const notebookPath = panel?.context?.path ?? '';
@@ -74,67 +92,57 @@ export function NotebookProvider({
     return { notebookName, notebookPath, activeCellIndex };
   }, [notebookTracker, getSelectedCellIndex]);
 
-  // const getNotebookJson = useCallback(() => {
-  //   const model = notebookTracker.currentWidget?.content?.model;
-
-  //   if (!model?.toJSON) {
-  //     return '';
-  //   }
-
-  //   return JSON.stringify(model.toJSON());
-  // }, [notebookTracker]);
-  const getNotebookJson = useCallback(() => {
+  const getFullNotebook = useCallback(() => {
     const model = notebookTracker.currentWidget?.content?.model;
-    if (!model?.cells) {
-      return '';
+    if (!model?.toJSON) {
+      return null;
     }
 
-    // Temporary truncation limits
-    const MAX_CODE_CHARS_PER_CELL = 1000;
-    const MAX_MARKDOWN_CHARS_PER_CELL = 300;
-    const MAX_TOTAL_CHARS = 20_000;
-
-    let totalChars = 0;
-    const cells: { cell_type: string; source: string }[] = [];
-
-    const cellList = model.cells;
-
-    for (let i = 0; i < cellList.length; i++) {
-      const cell = cellList.get(i);
-      if (!cell) {
-        continue;
-      }
-
-      const cellJSON = cell.toJSON();
-
-      let source = Array.isArray(cellJSON.source)
-        ? cellJSON.source.join('')
-        : (cellJSON.source ?? '');
-
-      if (cellJSON.cell_type === 'markdown') {
-        source = source.slice(0, MAX_MARKDOWN_CHARS_PER_CELL);
-      } else if (cellJSON.cell_type === 'code') {
-        source = source.slice(0, MAX_CODE_CHARS_PER_CELL);
-      }
-
-      totalChars += source.length;
-
-      // Stop once we exceed global cap
-      if (totalChars > MAX_TOTAL_CHARS) {
-        break;
-      }
-
-      cells.push({
-        cell_type: cellJSON.cell_type,
-        source
-      });
-    }
-
-    return JSON.stringify({
+    return {
       notebookName: notebookTracker.currentWidget?.title?.label ?? '',
-      cells
-    });
+      ...(model.toJSON() as Record<string, any>)
+    };
   }, [notebookTracker]);
+
+  const getNotebookJson = useCallback(() => {
+    const notebookSnapshot = getFullNotebook();
+    return notebookSnapshot ? JSON.stringify(notebookSnapshot) : '';
+  }, [getFullNotebook]);
+
+  // Get sanitized notebook (removes images, plots, large outputs)
+  const getSanitizedNotebook = useCallback((): ISanitizedNotebook => {
+    const fullNotebook = getFullNotebook();
+    if (!fullNotebook) {
+      return {
+        notebookName: 'Untitled',
+        cells: [],
+        imagesRemoved: 0,
+        plotsRemoved: 0,
+        largeOutputsRemoved: 0
+      };
+    }
+
+    return sanitizeNotebook(fullNotebook);
+  }, [getFullNotebook]);
+
+  // Get active cell information
+  const getActiveCellInfo = useCallback((): IActiveCellInfo | null => {
+    const sanitized = getSanitizedNotebook();
+    const activeCellIndex = getSelectedCellIndex();
+
+    if (activeCellIndex < 0 || activeCellIndex >= sanitized.cells.length) {
+      return null;
+    }
+
+    const cell = sanitized.cells[activeCellIndex];
+    return {
+      index: activeCellIndex,
+      type: cell.cell_type,
+      source: cell.source,
+      execution_count: cell.execution_count,
+      outputs: cell.outputs
+    };
+  }, [getSanitizedNotebook, getSelectedCellIndex]);
 
   const getNearestMarkdownCell = useCallback(() => {
     const panel = notebookTracker.currentWidget;
@@ -179,6 +187,15 @@ export function NotebookProvider({
 
     return null;
   }, [notebookTracker, getSelectedCellIndex]);
+
+  // Get structured context for a request
+  const getStructuredContext = useCallback((): IStructuredContext | null => {
+    const sanitized = getSanitizedNotebook();
+    const activeCellIndex = getSelectedCellIndex();
+    const nearestMarkdown = getNearestMarkdownCell();
+
+    return buildStructuredContext(sanitized, activeCellIndex, nearestMarkdown);
+  }, [getSanitizedNotebook, getSelectedCellIndex, getNearestMarkdownCell]);
 
   useEffect(() => {
     setContextValue(getTrackerState());
@@ -393,6 +410,9 @@ export function NotebookProvider({
   const fullContextValue: INotebookContext = {
     ...contextValue,
     getNotebookJson,
+    getSanitizedNotebook,
+    getStructuredContext,
+    getActiveCellInfo,
     getNearestMarkdownCell
   };
 

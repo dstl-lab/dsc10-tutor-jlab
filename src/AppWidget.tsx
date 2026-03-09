@@ -11,6 +11,7 @@ import { StrictMode } from 'react';
 
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { ReactWidget } from '@jupyterlab/ui-components';
+import { CommandRegistry } from '@lumino/commands';
 import { type Widget } from '@lumino/widgets';
 
 import Chat from '@/components/Chat';
@@ -33,13 +34,15 @@ function App() {
 }
 
 export function createAppWidget({
-  notebookTracker
+  notebookTracker,
+  commands
 }: {
   notebookTracker: INotebookTracker;
+  commands: CommandRegistry;
 }): Widget {
   const widget = ReactWidget.create(
     <StrictMode>
-      <NotebookProvider notebookTracker={notebookTracker}>
+      <NotebookProvider notebookTracker={notebookTracker} commands={commands}>
         <App />
       </NotebookProvider>
     </StrictMode>

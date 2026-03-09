@@ -1,6 +1,7 @@
 import { cn } from '@/utils';
 import * as React from 'react';
 import Markdown from './Markdown';
+import RelevantLectures from './RelevantLectures';
 import { type IMessage } from './types';
 
 const messageClasses = {
@@ -38,14 +39,21 @@ export default function ChatMessages({
         const enableInsertForPython = message.author === 'tutor';
 
         return (
-          <div
-            key={index}
-            className={cn('flex flex-col', messageClasses[message.author])}
-          >
-            <Markdown
-              text={message.text}
-              enableInsertForPython={enableInsertForPython}
-            />
+          <div key={index} className="flex flex-col gap-2">
+            <div
+              className={cn('flex flex-col', messageClasses[message.author])}
+            >
+              <Markdown
+                text={message.text}
+                enableInsertForPython={enableInsertForPython}
+              />
+            </div>
+            {message.author === 'tutor' &&
+              (message as any).relevantLectures && (
+                <RelevantLectures
+                  lectures={(message as any).relevantLectures}
+                />
+              )}
           </div>
         );
       })}

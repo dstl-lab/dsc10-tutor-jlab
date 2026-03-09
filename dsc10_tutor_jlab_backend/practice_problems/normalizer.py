@@ -134,6 +134,7 @@ def _get_mapping() -> dict:
 
 def normalize_topic(query: str, use_gemini_fallback: bool = True) -> List[int]:
     query_lower = query.lower().strip()
+    query_lower = re.sub(r"[.,!?;:]+$", "", query_lower).strip()
     mapping = _get_mapping()
 
     def remove_articles(text: str) -> str:
@@ -182,7 +183,7 @@ def get_lecture_from_gemini(query: str) -> List[int]:
     
     try:
         genai.configure(api_key=api_key)
-        model_name = "gemini-2.5-flash"
+        model_name = "gemini-3-pro-preview"
         model = genai.GenerativeModel(model_name)
         
         existing_mapping = _get_mapping()

@@ -28,6 +28,6 @@
     "target": "ES2018",
     "types": ["jest", "node"]
   },
-  "include": ["src"],
+  "include": ["src", "src/**/*.json"],
   "exclude": ["**/node_modules", "**/.venv"]
 }

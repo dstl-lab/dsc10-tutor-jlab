@@ -3,11 +3,10 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
+# from ..tools.tools import TOOL_LIST
+from ..conversation_store import append_message, get_history, reset_history
 from ..gemini_client import get_gemini_model
 from ..prompts import PROMPT_MAP, FOLLOW_UP_INSTRUCTION
-
-# from ..tools.tools import TOOL_LIST
-from ..conversation_store import get_history, append_message, reset_history
 
 
 FOLLOW_UP_TUTOR_RESPONSE_MAX_CHARS = 800
@@ -63,6 +62,7 @@ async def ask_tutor(
     conversation_id: str | None = None,
     nearest_markdown_cell_text: str | None = None,
     reset_conversation: bool = False,
+    structured_context: dict | None = None,
 ):
     if reset_conversation:
         conversation_id = reset_history(conversation_id)
@@ -78,12 +78,64 @@ async def ask_tutor(
         # tools=TOOL_LIST,
     )
 
-    user_input = f"""
+    markdown_instructions = ""
+    active_cell_info = ""
+    
+    if structured_context:
+        if structured_context.get("markdownInstructions"):
+            markdown_instructions = "\n".join(
+                structured_context["markdownInstructions"]
+            )
+        
+        if structured_context.get("activeCell"):
+            active_cell = structured_context["activeCell"]
+            active_cell_info = f"""
+ACTIVE CELL (Index: {active_cell.get('index', 'N/A')}):
+- Type: {active_cell.get('type', 'unknown')}
+- Source:
+{active_cell.get('source', '')}
+- Execution count: {active_cell.get('execution_count', 'N/A')}
+- Outputs: {len(active_cell.get('outputs', []))} outputs present
+"""
+    
+    if notebook_json:
+        user_input = f"""
+=== NOTEBOOK SNAPSHOT ===
+The student's notebook has been analyzed and sanitized for optimal performance.
+Notebook: {notebook_json.get('notebookName', 'Untitled')}
+Total cells: {len(notebook_json.get('cells', []))}
+Images removed: {notebook_json.get('imagesRemoved', 0)}
+Plots removed: {notebook_json.get('plotsRemoved', 0)}
+Large outputs truncated: {notebook_json.get('largeOutputsRemoved', 0)}
+
+FULL SANITIZED NOTEBOOK:
+{notebook_json}
+
+=== END NOTEBOOK SNAPSHOT ===
+
 Conversation so far:
 {history}
 
-Notebook context:
-{notebook_json}
+Notebook Instructions:
+{markdown_instructions or "No instructions available"}
+
+{active_cell_info}
+
+Nearest markdown cell:
+{nearest_markdown_cell_text or ""}
+
+Student question:
+{student_question}
+"""
+    else:
+        user_input = f"""
+Conversation so far:
+{history}
+
+Notebook Instructions:
+{markdown_instructions or "No instructions available"}
+
+{active_cell_info}
 
 Nearest markdown cell:
 {nearest_markdown_cell_text or ""}

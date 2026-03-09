@@ -99,7 +99,18 @@ export default function Markdown({
       <ol className="my-2 ml-5 list-decimal space-y-1">{children}</ol>
     ),
     li: ({ children }: any) => <li className="leading-tight">{children}</li>,
-    code: CodeComponent as any
+    code: CodeComponent as any,
+    a: ({ href, children }: any) => (
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        className="hover:text-blue-800"
+        style={{ color: '#2563eb', textDecoration: 'underline' }}
+      >
+        {children}
+      </a>
+    )
   };
 
   /**

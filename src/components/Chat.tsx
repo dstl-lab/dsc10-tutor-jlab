@@ -102,22 +102,6 @@ export default function Chat() {
     return { isPractice: false };
   };
 
-  const isPracticeRequest = (
-    query: string
-  ): { isPractice: boolean; topic?: string } => {
-    for (const pattern of PRACTICE_PATTERNS) {
-      const match = query.match(pattern);
-      if (match && match[1]) {
-        const topic = match[1].trim();
-        if (topic.length > 2) {
-          return { isPractice: true, topic };
-        }
-      }
-    }
-
-    return { isPractice: false };
-  };
-
   const handleMessageSubmit = async (text: string) => {
     const wasFollowUpViaTab = acceptedFollowUpRef.current === text.trim();
     if (wasFollowUpViaTab) {

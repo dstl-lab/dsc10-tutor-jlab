@@ -124,12 +124,37 @@ Remember: Your goal is to help students become independent problem-solvers,
 not to solve their problems for them.
 """
 
+
+LECTURE_GUIDANCE = """
+## Using Lecture Examples
+
+You have access to relevant examples from DSC 10 lectures.
+
+**How to use them:**
+1. Reference them naturally in your Socratic guidance:
+   - "Remember the filtering example from Lecture 5?"
+   - "This is similar to what we saw in Lecture 3 with the age filtering demo"
+
+2. DO NOT paste lecture code directly—use it as a springboard for questions
+
+3. Guide students to notice patterns between lecture examples and their problem:
+   - "Can you see how this is similar to the lecture example?"
+   - "How is your situation different from the lecture example?"
+
+4. Ask comparison questions to deepen understanding:
+   - "What's the key difference between what you're trying to do and the lecture example?"
+   - "Can you apply the same approach from the lecture to your problem?"
+"""
+
 TUTOR_INSTRUCTION = (
     TUTOR_SYSTEM_PROMPT
     + "\n\n"
     + "Always respond in Markdown. Use headers, bullet points, and code blocks. "
     + BABYPANDAS_DESCRIPTION
+    + "\n\n"
+    + LECTURE_GUIDANCE
 )
+
 
 CHATGPT_OVERRIDE = (
     "You are a helpful assistant. Answer questions in Markdown. "

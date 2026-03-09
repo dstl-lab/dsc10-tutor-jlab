@@ -16,6 +16,7 @@ import {
   useState
 } from 'react';
 
+import { CommandRegistry } from '@lumino/commands';
 import {
   buildStructuredContext,
   sanitizeNotebook,
@@ -41,6 +42,7 @@ export interface INotebookContext {
   getActiveCellInfo: () => IActiveCellInfo | null;
   getNearestMarkdownCell: () => { cellIndex: number; text: string } | null;
   insertCodeBelowActiveCell?: (code: string) => void;
+  commands?: CommandRegistry;
 }
 
 const NotebookContext = createContext<INotebookContext | null>(null);
@@ -48,11 +50,13 @@ const NotebookContext = createContext<INotebookContext | null>(null);
 interface INotebookProviderProps {
   children: React.ReactNode;
   notebookTracker: INotebookTracker;
+  commands?: CommandRegistry;
 }
 
 export function NotebookProvider({
   children,
-  notebookTracker
+  notebookTracker,
+  commands
 }: INotebookProviderProps) {
   const [contextValue, setContextValue] = useState<
     Omit<
@@ -413,7 +417,8 @@ export function NotebookProvider({
     getSanitizedNotebook,
     getStructuredContext,
     getActiveCellInfo,
-    getNearestMarkdownCell
+    getNearestMarkdownCell,
+    commands
   };
 
   const insertCodeBelowActiveCell = useCallback(

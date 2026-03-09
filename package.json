@@ -65,8 +65,13 @@
         "@jupyterlab/notebook": "^4.5.1",
         "@jupyterlab/services": "^7.0.0",
         "@jupyterlab/settingregistry": "^4.0.0",
+        "katex": "^0.16.33",
         "react-markdown": "^10.1.0",
-        "remark-gfm": "^4.0.1"
+        "rehype-katex": "^7.0.1",
+        "rehype-raw": "^7.0.0",
+        "rehype-sanitize": "^6.0.0",
+        "remark-gfm": "^4.0.1",
+        "remark-math": "^6.0.0"
     },
     "devDependencies": {
         "@jupyterlab/builder": "^4.0.0",

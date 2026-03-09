@@ -223,7 +223,11 @@ export default function Chat() {
 
       setMessages(prev => [
         ...prev,
-        { author: 'tutor', text: tutorMessage.tutor_response }
+        {
+          author: 'tutor',
+          text: tutorMessage.tutor_response,
+          relevantLectures: tutorMessage.relevant_lectures
+        }
       ]);
       if (tutorMessage.follow_up) {
         setSuggestion(tutorMessage.follow_up);

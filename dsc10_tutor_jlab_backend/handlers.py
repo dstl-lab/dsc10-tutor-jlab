@@ -1,5 +1,4 @@
 import json
-import traceback
 
 import tornado
 from jupyter_server.base.handlers import APIHandler
@@ -59,9 +58,8 @@ class AskHandler(APIHandler):
 
             self.finish(json.dumps(result))
         except Exception as e:
-            error_trace = traceback.format_exc()
             self.set_status(500)
-            self.finish(json.dumps({"error": str(e), "traceback": error_trace}))
+            self.finish(json.dumps({"error": str(e)}))
 
 
 def setup_handlers(web_app):

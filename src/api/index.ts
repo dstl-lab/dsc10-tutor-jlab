@@ -12,7 +12,6 @@ import { ServerConnection } from '@jupyterlab/services';
  * - 'none': Only Tutor's default behavior without any additional prompts.
  */
 export type PromptMode = 'append' | 'none' | 'override';
-
 export interface IAskTutorParams {
   student_question: string;
   notebook_json: string;
@@ -24,9 +23,19 @@ export interface IAskTutorParams {
   structured_context?: string;
 }
 
+export interface ILectureCell {
+  lecture: string;
+  path: string;
+  cell_index: number;
+  cell_type: 'code' | 'markdown';
+  content: string;
+  preview: string;
+}
+
 export interface ITutorResponse {
   conversation_id: string;
   tutor_response: string;
+  relevant_lectures?: ILectureCell[];
   follow_up?: string;
 }
 

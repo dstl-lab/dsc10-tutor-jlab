@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import tornado
 from jupyter_server.base.handlers import APIHandler
@@ -54,6 +55,7 @@ class AskHandler(APIHandler):
                 ),
                 reset_conversation=body.get("reset_conversation", False),
                 structured_context=structured_context,
+                server_root=Path(self.settings.get("server_root_dir", Path.home())).expanduser().resolve(),
             )
 
             self.finish(json.dumps(result))

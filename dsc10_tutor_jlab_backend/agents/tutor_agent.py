@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 from google.adk.agents import Agent
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
@@ -73,6 +74,7 @@ async def ask_tutor(
     nearest_markdown_cell_text: str | None = None,
     reset_conversation: bool = False,
     structured_context: dict | None = None,
+    server_root: Path | None = None,
 ):
     if reset_conversation:
         conversation_id = reset_history(conversation_id)
@@ -80,7 +82,8 @@ async def ask_tutor(
     history, conversation_id = get_history(conversation_id)
 
     relevant_lecture_cells = await retrieve_relevant_lecture_cells(
-        question=student_question
+        question=student_question,
+        server_root=server_root,
     )
 
     lecture_context_str = ""

@@ -18,7 +18,7 @@ load_dotenv(dotenv_path=backend_dir / ".env")
 
 SEARCH_ROOT = Path.home()
 
-# In-memory cache — built once per server process, reused for every request
+# In-memory cache
 _LECTURE_INDEX_CACHE: List[Dict[str, Any]] | None = None
 _IDF_CACHE: Dict[str, float] | None = None
 
@@ -27,8 +27,8 @@ _LECTURES_FOLDER_NAMES = {"lectures", "lecture", "lecs"}
 _LECTURE_FILENAME_RE = re.compile(r"^(lec|lecture)[\s_\-]?\d+", re.IGNORECASE)
 
 _MIN_SCORE = 0.05
-_TFIDF_CANDIDATES = 10  # broad pool fed to Gemini reranker
-_MAX_RESULTS = 2        # final cells shown to student
+_TFIDF_CANDIDATES = 10
+_MAX_RESULTS = 2
 
 _STOP_WORDS = {
     "a", "an", "the", "is", "it", "in", "on", "at", "to", "for", "of", "and",
@@ -43,10 +43,7 @@ _STOP_WORDS = {
 }
 
 
-# ---------------------------------------------------------------------------
 # Lecture discovery
-# ---------------------------------------------------------------------------
-
 def _find_lectures_dir() -> Path | None:
     env_path = os.getenv("LECTURES_PATH")
     if env_path:
@@ -119,10 +116,7 @@ def _build_lecture_index(server_root: Path) -> List[Dict[str, Any]]:
     return index
 
 
-# ---------------------------------------------------------------------------
 # TF-IDF candidate retrieval
-# ---------------------------------------------------------------------------
-
 def _tokenize(text: str) -> List[str]:
     tokens = re.findall(r"[a-z_][a-z0-9_]*", text.lower())
     return [t for t in tokens if t not in _STOP_WORDS and len(t) > 1]
@@ -168,10 +162,8 @@ def _get_tfidf_candidates(
     return [cell for _, cell in scored[:_TFIDF_CANDIDATES]]
 
 
-# ---------------------------------------------------------------------------
-# Gemini reranker
-# ---------------------------------------------------------------------------
 
+# Gemini reranker
 async def _rerank_with_gemini(
     question: str,
     candidates: List[Dict[str, Any]],
@@ -217,10 +209,7 @@ async def _rerank_with_gemini(
     return result if result else candidates[:_MAX_RESULTS]
 
 
-# ---------------------------------------------------------------------------
 # Public API
-# ---------------------------------------------------------------------------
-
 async def retrieve_relevant_lecture_cells(
     question: str,
     server_root: Path | None = None,

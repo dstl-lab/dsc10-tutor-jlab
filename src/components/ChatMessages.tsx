@@ -1,5 +1,6 @@
 import { cn } from '@/utils';
 import * as React from 'react';
+import { useEffect, useRef } from 'react';
 import Markdown from './Markdown';
 import RelevantLectures from './RelevantLectures';
 import { type IMessage } from './types';
@@ -23,6 +24,12 @@ export default function ChatMessages({
   messages,
   isWaiting = false
 }: IChatMessagesProps) {
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isWaiting]);
+
   if (messages.length === 0) {
     return (
       <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
@@ -62,6 +69,7 @@ export default function ChatMessages({
           <TutorTyping />
         </div>
       )}
+      <div ref={bottomRef} />
     </div>
   );
 }

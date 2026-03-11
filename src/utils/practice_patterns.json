@@ -1,6 +1,6 @@
 [
-  "give\\s+me\\s+(?:practice\\s+)?problems?\\s+(?:on|about|for)\\s+(.+)",
-  "can\\s+you\\s+give\\s+me\\s+(?:practice\\s+)?problems?\\s+(?:on|about|for)\\s+(.+)",
+  "give\\s+me\\s+(?:practice\\s+)?problems?\\s+(?:on|about|for|of)\\s+(.+)",
+  "can\\s+you\\s+give\\s+me\\s+(?:practice\\s+)?problems?\\s+(?:on|about|for|of)\\s+(.+)",
   "i\\s+want\\s+(?:practice|problems?)\\s+(?:on|about|for)\\s+(.+)",
   "i\\s+need\\s+(?:practice|problems?)\\s+(?:on|about|for)\\s+(.+)",
   "i\\s+want\\s+to\\s+practice\\s+(.+)",
@@ -10,6 +10,10 @@
   "problems?\\s+(?:on|with|for|about|regarding)\\s+(.+)",
   "problems?\\s+(?:for|with)\\s+(.+)",
   "exercises?\\s+(?:on|about|for)\\s+(.+)",
-  "practice\\s+(.+)",
-  "i\\s+want\\s+(.+)\\s+practice\\b"
+  "i\\s+want\\s+(.+?)\\s+practice\\s+problems?\\b",
+  "i\\s+need\\s+more\\s+(.+?)\\s+problems?\\b",
+  "^(?:can\\s+i\\s+(?:get|have)\\s+)?(.+?)\\s+practice\\s+problems?\\b",
+  "^(.+?)\\s+practice\\b",
+  "i\\s+want\\s+(.+)\\s+practice\\b",
+  "practice\\s+(.+)"
 ]

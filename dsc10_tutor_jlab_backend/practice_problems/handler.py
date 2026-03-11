@@ -5,8 +5,10 @@ import traceback
 from jupyter_server.base.handlers import APIHandler
 import tornado
 
-from .retriever import get_practice_problems
+from .retriever import get_practice_problems, get_problems_by_lecture
 from .formatter import format_problems_response
+from .lecture_mapper import get_lectures_from_tutor
+from .ranker import rank_problems_by_relevance
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +28,27 @@ class PracticeProblemsHandler(APIHandler):
                 }))
                 return
             
+            max_problems = 5
+
             problems = get_practice_problems(
                 topic_query=topic_query,
-                max_problems=5,
-                use_gemini_fallback=True,
-                rank_by_relevance=True 
+                max_problems=max_problems,
+                use_gemini_fallback=False,
+                rank_by_relevance=True,
             )
+
+            if not problems:
+                lecture_numbers = await get_lectures_from_tutor(topic_query)
+                if lecture_numbers:
+                    candidate_problems = get_problems_by_lecture(lecture_numbers)
+                    if candidate_problems:
+                        problems = rank_problems_by_relevance(
+                            candidate_problems,
+                            topic_query,
+                            max_problems=max_problems,
+                            use_gemini=True,
+                        )
+
                         
             formatted_response = format_problems_response(problems, topic_query)
             

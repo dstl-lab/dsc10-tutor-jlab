@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 
-import { askTutor, getPracticeProblems } from '@/api';
+import { askTutor, getPracticeProblems, getRandomExamQuestion } from '@/api';
 import { logEvent } from '@/api/logger';
 import { Button } from '@/components/ui/button';
 import { useNotebook } from '@/contexts/NotebookContext';
@@ -17,6 +17,9 @@ import { type IMessage } from './types';
 const PRACTICE_PATTERNS = practicePatternsJson.map(
   (pattern: string) => new RegExp(pattern, 'i')
 );
+
+const EXAM_TRIGGER_PATTERN =
+  /\b(?:exam\s+mode|exam\s+(?:question|problem)|midterm|final(?:\s+exam)?)\b/i;
 
 export default function Chat() {
   const {
@@ -85,6 +88,34 @@ export default function Chat() {
 
     checkNotebook();
   }, [notebookName, notebookLoaded, getSanitizedNotebook]);
+  const isExamModeRequest = (query: string): boolean =>
+    EXAM_TRIGGER_PATTERN.test(query);
+
+  const formatExamQuestion = (problem: {
+    exam_name: string;
+    exam_type: string;
+    text: string;
+    choices: string[];
+    source_url: string;
+  }): string => {
+    const typeLabel =
+      problem.exam_type === 'midterm'
+        ? 'Midterm'
+        : problem.exam_type === 'final'
+          ? 'Final Exam'
+          : 'Exam';
+    const parts: string[] = [
+      `### 📝 ${typeLabel} Question — ${problem.exam_name}\n`,
+      problem.text
+    ];
+    if (problem.choices.length > 0) {
+      parts.push('\n**Choices:**');
+      problem.choices.forEach(c => parts.push(`- ${c}`));
+    }
+    parts.push(`\n[View on practice site](${problem.source_url})`);
+    return parts.join('\n');
+  };
+
   const isPracticeRequest = (
     query: string
   ): { isPractice: boolean; topic?: string } => {
@@ -119,6 +150,25 @@ export default function Chat() {
     setMessages(prev => [...prev, { author: 'user', text }]);
     setIsWaiting(true);
     try {
+      if (isExamModeRequest(text)) {
+        const examResponse = await getRandomExamQuestion();
+
+        logEvent({
+          event_type: 'exam_question_request',
+          payload: {
+            original_query: text,
+            exam_name: examResponse.problem.exam_name,
+            notebook: notebookName
+          }
+        });
+
+        setMessages(prev => [
+          ...prev,
+          { author: 'tutor', text: formatExamQuestion(examResponse.problem) }
+        ]);
+        return;
+      }
+
       const practiceCheck = isPracticeRequest(text);
 
       if (practiceCheck.isPractice && practiceCheck.topic) {

@@ -59,14 +59,15 @@ export interface IPracticeProblemsResponse {
   count: number;
 }
 
-export interface IPracticeProblemsParams {
-  topic_query: string;
+export interface IRandomExamQuestionParams {
+  exam_type?: 'midterm' | 'final';
 }
 
-export interface IPracticeProblemsResponse {
-  problems: Array<{
+export interface IRandomExamQuestionResponse {
+  problem: {
     id: string;
-    lecture_number: number;
+    exam_name: string;
+    exam_type: string;
     text: string;
     choices: string[];
     images: string[];
@@ -74,9 +75,7 @@ export interface IPracticeProblemsResponse {
     source_url: string;
     source?: string;
     anchor_id?: string;
-  }>;
-  formatted_response: string;
-  count: number;
+  };
 }
 
 export interface ITutorRequest {
@@ -211,6 +210,22 @@ export async function getPracticeProblems({
     console.error('[Practice Problems] API: Error:', error);
     throw error;
   }
+}
+
+/**
+ * Get a random question from a previous DSC 10 midterm or final exam.
+ *
+ * @param params - Optional parameters
+ * @param params.exam_type - 'midterm' | 'final' | undefined (any exam type)
+ * @returns The response from the API with a single exam problem
+ */
+export async function getRandomExamQuestion({
+  exam_type
+}: IRandomExamQuestionParams = {}): Promise<IRandomExamQuestionResponse> {
+  const query = exam_type ? `?exam_type=${encodeURIComponent(exam_type)}` : '';
+  return await requestAPI<IRandomExamQuestionResponse>(
+    `random-exam-question${query}`
+  );
 }
 
 /* ===========================

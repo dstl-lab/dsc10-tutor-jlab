@@ -12,9 +12,11 @@ from bs4 import BeautifulSoup
 
 BASE_URL = "https://practice.dsc10.com"
 LECTURE_PAGE_PATTERN = "/lectures/lec{}/index.html"
+EXAMS_INDEX_URL = f"{BASE_URL}/exams/"
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 PROBLEMS_FILE = DATA_DIR / "lecture_problems.json"
+EXAM_PROBLEMS_FILE = DATA_DIR / "exam_problems.json"
 
 
 def fetch_page(url: str, retry_count: int = 3) -> Optional[str]:
@@ -333,6 +335,150 @@ def load_problems() -> Dict[int, List[Dict]]:
     with open(PROBLEMS_FILE, "r", encoding="utf-8") as f:
         problems = json.load(f)
         return {int(k): v for k, v in problems.items()}
+
+
+def get_exam_type(url: str) -> str:
+    """Return 'midterm', 'final', or 'exam' based on the URL."""
+    url_lower = url.lower()
+    if "final" in url_lower:
+        return "final"
+    if "midterm" in url_lower:
+        return "midterm"
+    return "exam"
+
+
+def parse_exam_page(html: str, page_url: str, exam_name: str, exam_type: str) -> List[Dict]:
+    """Parse an exam page and return a list of problem dicts."""
+    soup = BeautifulSoup(html, "html.parser")
+    problems = []
+
+    main_content = soup.find("main") or soup.find("article") or soup.find("body")
+    if not main_content:
+        return problems
+
+    h2_headings = main_content.find_all("h2")
+    problem_id = 1
+
+    for h2 in h2_headings:
+        h2_text = h2.get_text(strip=True)
+        if not re.match(r"^Problem\s+\d+", h2_text, re.I):
+            continue
+
+        h2_pattern = re.compile(r"^Problem\s+(\d+)", re.I)
+        h2_section = parse_problem_section(
+            h2,
+            page_url,
+            stop_tags=["h2"],
+            anchor_id_pattern=h2_pattern,
+            fallback_anchor_id=f"problem-{problem_id}",
+        )
+
+        # Check for sub-problems (h3 with "Problem N.M")
+        h3_headings = [
+            elem for elem in h2_section["content"]
+            if elem.name == "h3" and re.match(r"^Problem\s+\d+\.\d+", elem.get_text(strip=True), re.I)
+        ]
+
+        if h3_headings:
+            for h3 in h3_headings:
+                h3_pattern = re.compile(r"^Problem\s+(\d+)\.(\d+)", re.I)
+                h3_section = parse_problem_section(
+                    h3,
+                    page_url,
+                    stop_tags=["h3", "h2"],
+                    anchor_id_pattern=h3_pattern,
+                    fallback_anchor_id=f"problem-{problem_id}",
+                )
+                sub_text = h3_section["text"]
+                if sub_text and len(sub_text) > 20:
+                    anchor_id = h3_section["anchor_id"]
+                    source_url = f"{page_url}#{anchor_id}" if anchor_id else page_url
+                    problems.append({
+                        "id": f"{exam_name}_prob_{problem_id}",
+                        "exam_name": exam_name,
+                        "exam_type": exam_type,
+                        "text": sub_text[:2000],
+                        "choices": h3_section["choices"] or h2_section["choices"],
+                        "images": h3_section["images"] or h2_section["images"].copy(),
+                        "code": h3_section["code_blocks"] or h2_section["code_blocks"].copy(),
+                        "source": exam_name,
+                        "source_url": source_url,
+                        "anchor_id": anchor_id,
+                    })
+                    problem_id += 1
+        else:
+            problem_text = h2_section["text"]
+            if problem_text and len(problem_text) > 20:
+                anchor_id = h2_section["anchor_id"]
+                source_url = f"{page_url}#{anchor_id}" if anchor_id else page_url
+                problems.append({
+                    "id": f"{exam_name}_prob_{problem_id}",
+                    "exam_name": exam_name,
+                    "exam_type": exam_type,
+                    "text": problem_text[:2000],
+                    "choices": h2_section["choices"],
+                    "images": h2_section["images"],
+                    "code": h2_section["code_blocks"],
+                    "source": exam_name,
+                    "source_url": source_url,
+                    "anchor_id": anchor_id,
+                })
+                problem_id += 1
+
+    return problems
+
+
+def crawl_exam_pages(save: bool = True) -> List[Dict]:
+    """Crawl midterm and final exam pages from practice.dsc10.com.
+
+    Fetches the /exams/ index page to discover individual exam URLs, then
+    parses each exam page for problems.  Results are saved to exam_problems.json.
+    """
+    index_html = fetch_page(EXAMS_INDEX_URL)
+    exam_urls: List[str] = []
+
+    if index_html:
+        soup = BeautifulSoup(index_html, "html.parser")
+        for a_tag in soup.find_all("a", href=True):
+            href: str = a_tag["href"]
+            if not re.search(r"(midterm|final)", href, re.I):
+                continue
+            if href.startswith("/"):
+                full_url = urljoin(BASE_URL, href)
+            elif href.startswith("http"):
+                full_url = href
+            else:
+                full_url = urljoin(EXAMS_INDEX_URL, href)
+            # Keep only links on the same site and avoid duplicates
+            if full_url.startswith(BASE_URL) and full_url not in exam_urls:
+                exam_urls.append(full_url)
+
+    all_problems: List[Dict] = []
+    for exam_url in exam_urls:
+        html = fetch_page(exam_url)
+        if not html:
+            print(f"  Failed to fetch {exam_url}")
+            continue
+
+        # Derive a short exam name from the URL, e.g. "fa23-midterm1"
+        path_part = exam_url.rstrip("/")
+        if path_part.endswith("/index.html"):
+            exam_name = path_part[len(BASE_URL):].split("/")[-2]
+        else:
+            exam_name = path_part.split("/")[-1]
+
+        exam_type = get_exam_type(exam_url)
+        problems = parse_exam_page(html, exam_url, exam_name, exam_type)
+        print(f"  {exam_name}: {len(problems)} problems")
+        all_problems.extend(problems)
+        time.sleep(0.5)
+
+    if save and all_problems:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        with open(EXAM_PROBLEMS_FILE, "w", encoding="utf-8") as f:
+            json.dump(all_problems, f, indent=2, ensure_ascii=False)
+
+    return all_problems
 
 
 if __name__ == "__main__":

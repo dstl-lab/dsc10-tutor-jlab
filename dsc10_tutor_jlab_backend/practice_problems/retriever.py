@@ -28,7 +28,7 @@ def load_problems_index() -> Dict[int, List[Dict]]:
         return _PROBLEMS_INDEX
 
 
-def get_practice_problems(
+async def get_practice_problems(
     topic_query: str,
     max_problems: int = 5,
     use_gemini_fallback: bool = True,
@@ -63,7 +63,7 @@ def get_practice_problems(
         return []
     
     if rank_by_relevance:
-        return rank_problems_by_relevance(
+        return await rank_problems_by_relevance(
             candidate_problems,
             effective_topic,
             max_problems=max_problems,

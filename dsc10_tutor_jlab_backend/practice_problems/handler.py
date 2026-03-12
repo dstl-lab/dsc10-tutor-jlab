@@ -33,7 +33,7 @@ class PracticeProblemsHandler(APIHandler):
             extracted_topic = extract_topic_from_prompt(topic_query) if "practice" in topic_query.lower() else None
             display_topic = extracted_topic or topic_query
 
-            problems = get_practice_problems(
+            problems = await get_practice_problems(
                 topic_query=topic_query,
                 max_problems=max_problems,
                 use_gemini_fallback=True,
@@ -45,7 +45,7 @@ class PracticeProblemsHandler(APIHandler):
                 if lecture_numbers:
                     candidate_problems = get_problems_by_lecture(lecture_numbers)
                     if candidate_problems:
-                        problems = rank_problems_by_relevance(
+                        problems = await rank_problems_by_relevance(
                             candidate_problems,
                             topic_query,
                             max_problems=max_problems,

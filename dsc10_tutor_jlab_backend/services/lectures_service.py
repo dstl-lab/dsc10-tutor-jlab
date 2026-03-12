@@ -77,7 +77,7 @@ def _list_lecture_notebook_paths(lectures_dir: Path) -> List[Path]:
     return sorted(
         p
         for p in lectures_dir.rglob("*.ipynb")
-        if ".ipynb_checkpoints" not in p.parts and _LECTURE_FILENAME_RE.match(p.stem)
+        if ".ipynb_checkpoints" not in p.parts and _LECTURE_FILENAME_RE.match(p.stem) and not p.stem.endswith("-live")
     )
 
 

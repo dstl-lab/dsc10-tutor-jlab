@@ -40,7 +40,7 @@ def rank_problems_by_relevance(
     
     try:
         genai.configure(api_key=api_key)
-        model_name = "gemini-2.5-flash"
+        model_name = "gemini-3-pro-preview"
         logger.info(f"[Practice Problems] 🚀 Calling Gemini ({model_name}) for problem ranking: '{topic_query}' ({len(problems)} candidates)")
         model = genai.GenerativeModel(model_name)
         

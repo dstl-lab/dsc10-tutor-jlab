@@ -59,6 +59,26 @@ export interface IPracticeProblemsResponse {
   count: number;
 }
 
+export interface IPracticeProblemsParams {
+  topic_query: string;
+}
+
+export interface IPracticeProblemsResponse {
+  problems: Array<{
+    id: string;
+    lecture_number: number;
+    text: string;
+    choices: string[];
+    images: string[];
+    code: string[];
+    source_url: string;
+    source?: string;
+    anchor_id?: string;
+  }>;
+  formatted_response: string;
+  count: number;
+}
+
 export interface ITutorRequest {
   class_id: string;
   assignment_id: string;

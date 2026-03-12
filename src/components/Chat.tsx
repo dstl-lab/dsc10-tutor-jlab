@@ -6,22 +6,21 @@ import { logEvent } from '@/api/logger';
 import { Button } from '@/components/ui/button';
 import { useNotebook } from '@/contexts/NotebookContext';
 import { enhanceQuestion } from '@/utils/enhancedQuestionUtils';
-import { chatgptOverride, tutorInstruction } from '@/utils/prompts';
 import practicePatternsJson from '@/utils/practice_patterns.json';
+import { chatgptOverride, tutorInstruction } from '@/utils/prompts';
 import ChatMessageBox from './ChatMessageBox';
-
-const PRACTICE_PATTERNS = practicePatternsJson.map(
-  (pattern: string) => new RegExp(pattern, 'i')
-);
 import ChatMessages from './ChatMessages';
 import ChatPlaceholder from './ChatPlaceholder';
 import ToggleMode from './ToggleMode';
 import { type IMessage } from './types';
 
+const PRACTICE_PATTERNS = practicePatternsJson.map(
+  (pattern: string) => new RegExp(pattern, 'i')
+);
+
 export default function Chat() {
   const {
     notebookName,
-    getNotebookJson,
     getNearestMarkdownCell,
     getSanitizedNotebook,
     getStructuredContext
@@ -168,7 +167,7 @@ export default function Chat() {
       const tutorMessage = await askTutor({
         student_question: enhancedQuestion,
         conversation_id: conversationId,
-        notebook_json: getNotebookJson(),
+        notebook_json: JSON.stringify(getSanitizedNotebook()),
         structured_context: structuredContext
           ? JSON.stringify(structuredContext)
           : undefined,
@@ -212,7 +211,9 @@ export default function Chat() {
       };
 
       if (isFirstTurnForTurn) {
-        turnPayload.initial_notebook_json = getNotebookJson();
+        turnPayload.initial_notebook_json = JSON.stringify(
+          getSanitizedNotebook()
+        );
         loggedNotebookJsonForConversationIdRef.current = finalConversationId;
       }
 

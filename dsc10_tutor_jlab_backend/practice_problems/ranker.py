@@ -18,6 +18,43 @@ load_dotenv(dotenv_path=backend_dir / ".env", override=False)
 
 
 
+def _normalize_text(text: str) -> str:
+    text = (text or "").lower()
+    chars: list[str] = []
+    for ch in text:
+        chars.append(ch if ch.isalnum() else " ")
+    return " ".join("".join(chars).split()).strip()
+
+
+def _local_relevance_score(problem: Dict, topic_query: str) -> float:
+    """Simple deterministic relevance scoring when Gemini isn't available.
+    """
+    topic_norm = _normalize_text(topic_query)
+    if not topic_norm:
+        return 0.0
+
+    text_norm = _normalize_text(problem.get("text", ""))
+    source_norm = _normalize_text(problem.get("source", ""))
+
+    haystack = f" {text_norm} "
+    score = 0.0
+
+    if f" {topic_norm} " in haystack:
+        score += 10.0
+
+    tokens = [t for t in topic_norm.split() if len(t) >= 4]
+    if not tokens:
+        return score
+
+    for tok in tokens:
+        if f" {tok} " in haystack:
+            score += 1.5
+        if source_norm and f" {tok} " in f" {source_norm} ":
+            score += 0.5
+
+    return score
+
+
 def rank_problems_by_relevance(
     problems: List[Dict],
     topic_query: str,
@@ -27,16 +64,16 @@ def rank_problems_by_relevance(
 
     if not problems:
         return []
-    
-    if not use_gemini:
-        return problems[:max_problems]
-    
+
     api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        return problems[:max_problems]
-    
-    if len(problems) <= max_problems:
-        return problems
+
+    if not use_gemini or not api_key:
+        scored = [
+            (i, _local_relevance_score(p, topic_query), p) for i, p in enumerate(problems)
+        ]
+        scored.sort(key=lambda t: (-t[1], t[0]))
+        ranked = [p for _, _, p in scored]
+        return ranked[:max_problems]
     
     try:
         genai.configure(api_key=api_key)
@@ -101,5 +138,8 @@ JSON:"""
     except Exception as e:
         print(f"Error ranking problems with Gemini: {e}")
     
-    return problems[:max_problems]
+    scored = [(i, _local_relevance_score(p, topic_query), p) for i, p in enumerate(problems)]
+    scored.sort(key=lambda t: (-t[1], t[0]))
+    ranked = [p for _, _, p in scored]
+    return ranked[:max_problems]
 

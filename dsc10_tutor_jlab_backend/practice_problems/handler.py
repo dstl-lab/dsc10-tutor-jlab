@@ -9,6 +9,7 @@ from .retriever import get_practice_problems, get_problems_by_lecture
 from .formatter import format_problems_response
 from .lecture_mapper import get_lectures_from_tutor
 from .ranker import rank_problems_by_relevance
+from .normalizer import extract_topic_from_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -29,11 +30,13 @@ class PracticeProblemsHandler(APIHandler):
                 return
             
             max_problems = 5
+            extracted_topic = extract_topic_from_prompt(topic_query) if "practice" in topic_query.lower() else None
+            display_topic = extracted_topic or topic_query
 
             problems = get_practice_problems(
                 topic_query=topic_query,
                 max_problems=max_problems,
-                use_gemini_fallback=False,
+                use_gemini_fallback=True,
                 rank_by_relevance=True,
             )
 
@@ -50,7 +53,7 @@ class PracticeProblemsHandler(APIHandler):
                         )
 
                         
-            formatted_response = format_problems_response(problems, topic_query)
+            formatted_response = format_problems_response(problems, display_topic)
             
             result = {
                 "problems": problems,

@@ -76,7 +76,6 @@ async def ask_tutor(
     nearest_markdown_cell_text: str | None = None,
     reset_conversation: bool = False,
     structured_context: dict | None = None,
-    exam_context: str | None = None,
     server_root: Path | None = None,
 ):
     if reset_conversation:
@@ -115,13 +114,6 @@ Content:
 
     markdown_instructions = ""
     active_cell_info = ""
-    exam_context_section = ""
-
-    if exam_context:
-        exam_context_section = f"""
-Exam context from the immediately preceding exam-mode interaction:
-{exam_context}
-"""
     
     if structured_context:
         if structured_context.get("markdownInstructions"):
@@ -161,8 +153,6 @@ Conversation so far:
 Notebook Instructions:
 {markdown_instructions or "No instructions available"}
 
-{exam_context_section}
-
 {active_cell_info}
 
 Nearest markdown cell:
@@ -182,8 +172,6 @@ Conversation so far:
 Notebook Instructions:
 {markdown_instructions or "No instructions available"}
 
-{exam_context_section}
-
 {active_cell_info}
 
 Nearest markdown cell:
@@ -195,6 +183,13 @@ Relevant lecture examples:
 Student question:
 {student_question}
 """
+
+    # Debug logging: print the full prompt sent to the model.
+    print("\n===== DSC10 TUTOR SYSTEM PROMPT =====\n")
+    print(system_prompt)
+    print("\n===== DSC10 TUTOR USER PROMPT =====\n")
+    print(user_input)
+    print("\n===== END DSC10 TUTOR PROMPT =====\n")
 
     session_service = InMemorySessionService()
     runner = Runner(

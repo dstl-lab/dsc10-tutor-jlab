@@ -87,12 +87,16 @@ def get_problems_by_lecture(lecture_numbers: List[int]) -> List[Dict]:
 
 
 def load_exam_problems() -> List[Dict]:
-    """Load the crawled exam problems from disk.
-
-    This intentionally refreshes from disk on each call so newly crawled
-    answer fields are immediately visible to the running server.
-    """
+    """Load the crawled exam problems from disk (cached after first load)."""
     global _EXAM_PROBLEMS
+
+    if _EXAM_PROBLEMS is not None:
+        if _exam_problem_cache_has_answers(_EXAM_PROBLEMS):
+            return _EXAM_PROBLEMS
+        _EXAM_PROBLEMS = None
+
+    if _EXAM_PROBLEMS is not None:
+        return _EXAM_PROBLEMS
 
     if not EXAM_PROBLEMS_FILE.exists():
         return []
@@ -122,11 +126,6 @@ def get_random_exam_question(exam_type: Optional[str] = None) -> Optional[Dict]:
 
     if not problems:
         return None
-
-    # Prefer questions that have a scraped answer available.
-    answered_problems = [p for p in problems if p.get("answer")]
-    if answered_problems:
-        problems = answered_problems
 
     return random.choice(problems)
 

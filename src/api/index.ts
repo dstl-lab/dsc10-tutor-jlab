@@ -22,7 +22,6 @@ export interface IAskTutorParams {
   nearest_markdown_cell_text?: string;
   structured_context?: string;
   exam_mode_conversation?: string;
-  exam_context?: string;
 }
 
 export interface ILectureCell {
@@ -74,7 +73,7 @@ export interface IRandomExamQuestionResponse {
     exam_name: string;
     exam_type: string;
     text: string;
-    answer: string;
+    answer?: string;
     choices: string[];
     images: string[];
     code: string[];
@@ -121,8 +120,7 @@ export async function askTutor({
   reset_conversation,
   nearest_markdown_cell_text,
   structured_context,
-  exam_mode_conversation,
-  exam_context
+  exam_mode_conversation
 }: IAskTutorParams): Promise<ITutorResponse> {
   return await requestAPI<ITutorResponse>('ask', {
     method: 'POST',
@@ -136,8 +134,7 @@ export async function askTutor({
       reset_conversation,
       nearest_markdown_cell_text,
       structured_context,
-      exam_mode_conversation,
-      exam_context
+      exam_mode_conversation
     })
   });
 }

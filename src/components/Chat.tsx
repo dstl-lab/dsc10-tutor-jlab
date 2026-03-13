@@ -32,6 +32,9 @@ export default function Chat() {
   const [examModeConversation, setExamModeConversation] = useState<string[]>(
     []
   );
+  const [pendingExamAnswer, setPendingExamAnswer] = useState<string | null>(
+    null
+  );
   const [conversationId, setConversationId] = useState<string | undefined>(
     undefined
   );
@@ -98,11 +101,9 @@ export default function Chat() {
     exam_name: string;
     exam_type: string;
     text: string;
-    answer?: string;
     choices: string[];
     source_url: string;
   }): string => {
-    console.log('Formatting exam question:', problem);
     const typeLabel =
       problem.exam_type === 'midterm'
         ? 'Midterm'
@@ -117,9 +118,7 @@ export default function Chat() {
       parts.push('\n**Choices:**');
       problem.choices.forEach(c => parts.push(`- ${c}`));
     }
-    parts.push('\n**Answer:**');
-    parts.push(problem.answer ?? '_No answer found in API payload._');
-    parts.push(`\n[View on practice site](${problem.source_url})`);
+    parts.push(`\n[See the Full Question](${problem.source_url})`);
     return parts.join('\n');
   };
 
@@ -137,6 +136,20 @@ export default function Chat() {
     }
 
     return { isPractice: false };
+  };
+
+  const withPendingExamAnswerContext = (question: string): string => {
+    if (!pendingExamAnswer) {
+      return question;
+    }
+
+    return [
+      'Context from the exam question shown immediately before this message:',
+      pendingExamAnswer,
+      '',
+      'Student follow-up question:',
+      question
+    ].join('\n');
   };
 
   const handleMessageSubmit = async (text: string) => {
@@ -162,7 +175,6 @@ export default function Chat() {
           conversation_id: shouldResetNext ? undefined : conversationId,
           student_question: text
         });
-        console.log('Raw exam response:', examResponse);
         const examModeMessage = formatExamQuestion(examResponse.problem);
 
         if (shouldResetNext) {
@@ -187,6 +199,8 @@ export default function Chat() {
           `Student: ${text}`,
           `Tutor: ${examModeMessage}`
         ]);
+
+        setPendingExamAnswer(examResponse.problem.answer ?? null);
 
         setMessages(prev => [
           ...prev,
@@ -228,6 +242,7 @@ export default function Chat() {
 
       const nearestMarkdown = getNearestMarkdownCell();
       const enhancedQuestion = enhanceQuestion(text, nearestMarkdown);
+      const questionForTutor = withPendingExamAnswerContext(enhancedQuestion);
       const structuredContext = getStructuredContext();
 
       logEvent({
@@ -241,7 +256,7 @@ export default function Chat() {
       });
 
       const tutorMessage = await askTutor({
-        student_question: enhancedQuestion,
+        student_question: questionForTutor,
         conversation_id: conversationId,
         notebook_json: JSON.stringify(getSanitizedNotebook()),
         structured_context: structuredContext
@@ -258,6 +273,10 @@ export default function Chat() {
 
       if (shouldResetNext) {
         setShouldResetNext(false);
+      }
+
+      if (pendingExamAnswer) {
+        setPendingExamAnswer(null);
       }
 
       if (tutorMessage.conversation_id) {
@@ -331,6 +350,7 @@ export default function Chat() {
   const handleNewConversation = () => {
     setMessages([]);
     setExamModeConversation([]);
+    setPendingExamAnswer(null);
     setConversationId(undefined);
     setIsWaiting(false);
     loggedNotebookJsonForConversationIdRef.current = undefined;

@@ -29,6 +29,9 @@ export default function Chat() {
     getStructuredContext
   } = useNotebook();
   const [messages, setMessages] = useState<IMessage[]>([]);
+  const [examModeConversation, setExamModeConversation] = useState<string[]>(
+    []
+  );
   const [conversationId, setConversationId] = useState<string | undefined>(
     undefined
   );
@@ -95,9 +98,11 @@ export default function Chat() {
     exam_name: string;
     exam_type: string;
     text: string;
+    answer?: string;
     choices: string[];
     source_url: string;
   }): string => {
+    console.log('Formatting exam question:', problem);
     const typeLabel =
       problem.exam_type === 'midterm'
         ? 'Midterm'
@@ -112,6 +117,8 @@ export default function Chat() {
       parts.push('\n**Choices:**');
       problem.choices.forEach(c => parts.push(`- ${c}`));
     }
+    parts.push('\n**Answer:**');
+    parts.push(problem.answer ?? '_No answer found in API payload._');
     parts.push(`\n[View on practice site](${problem.source_url})`);
     return parts.join('\n');
   };
@@ -151,7 +158,20 @@ export default function Chat() {
     setIsWaiting(true);
     try {
       if (isExamModeRequest(text)) {
-        const examResponse = await getRandomExamQuestion();
+        const examResponse = await getRandomExamQuestion({
+          conversation_id: shouldResetNext ? undefined : conversationId,
+          student_question: text
+        });
+        console.log('Raw exam response:', examResponse);
+        const examModeMessage = formatExamQuestion(examResponse.problem);
+
+        if (shouldResetNext) {
+          setShouldResetNext(false);
+        }
+
+        if (examResponse.conversation_id) {
+          setConversationId(examResponse.conversation_id);
+        }
 
         logEvent({
           event_type: 'exam_question_request',
@@ -162,9 +182,15 @@ export default function Chat() {
           }
         });
 
+        setExamModeConversation(prev => [
+          ...prev,
+          `Student: ${text}`,
+          `Tutor: ${examModeMessage}`
+        ]);
+
         setMessages(prev => [
           ...prev,
-          { author: 'tutor', text: formatExamQuestion(examResponse.problem) }
+          { author: 'tutor', text: examModeMessage }
         ]);
         return;
       }
@@ -221,6 +247,10 @@ export default function Chat() {
         structured_context: structuredContext
           ? JSON.stringify(structuredContext)
           : undefined,
+        exam_mode_conversation:
+          examModeConversation.length > 0
+            ? examModeConversation.join('\n\n')
+            : undefined,
         prompt: promptToSend,
         prompt_mode: backendPromptMode,
         reset_conversation: shouldResetNext || undefined
@@ -300,6 +330,7 @@ export default function Chat() {
 
   const handleNewConversation = () => {
     setMessages([]);
+    setExamModeConversation([]);
     setConversationId(undefined);
     setIsWaiting(false);
     loggedNotebookJsonForConversationIdRef.current = undefined;

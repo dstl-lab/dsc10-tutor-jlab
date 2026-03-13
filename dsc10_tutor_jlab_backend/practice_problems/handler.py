@@ -5,6 +5,7 @@ import traceback
 import tornado
 from jupyter_server.base.handlers import APIHandler
 
+from ..conversation_store import append_message, get_history
 from .formatter import format_problems_response
 from .lecture_mapper import get_lectures_from_tutor
 from .ranker import rank_problems_by_relevance
@@ -15,6 +16,35 @@ from .retriever import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _format_exam_problem_for_history(problem: dict) -> str:
+    type_label = "Exam"
+    if problem.get("exam_type") == "midterm":
+        type_label = "Midterm"
+    elif problem.get("exam_type") == "final":
+        type_label = "Final Exam"
+
+    parts = [
+        f"{type_label} Question - {problem.get('exam_name', 'Unknown Exam')}",
+        problem.get("text", ""),
+    ]
+
+    choices = problem.get("choices", [])
+    if choices:
+        parts.append("Choices:")
+        parts.extend(f"- {choice}" for choice in choices)
+
+    source_url = problem.get("source_url")
+    if source_url:
+        parts.append(f"Source: {source_url}")
+
+    answer = problem.get("answer")
+    if answer:
+        parts.append("Answer:")
+        parts.append(answer)
+
+    return "\n".join(parts)
 
 
 class PracticeProblemsHandler(APIHandler):
@@ -80,6 +110,8 @@ class RandomExamQuestionHandler(APIHandler):
     async def get(self):
         try:
             exam_type = self.get_argument("exam_type", None)
+            conversation_id = self.get_argument("conversation_id", None)
+            student_question = self.get_argument("student_question", None)
             # Validate the exam_type argument to prevent unexpected values
             if exam_type is not None and exam_type not in ("midterm", "final"):
                 self.set_status(400)
@@ -95,7 +127,19 @@ class RandomExamQuestionHandler(APIHandler):
                 }))
                 return
 
-            self.finish(json.dumps({"problem": problem}))
+            _, conversation_id = get_history(conversation_id)
+
+            if student_question:
+                append_message(
+                    conversation_id,
+                    student_question,
+                    _format_exam_problem_for_history(problem),
+                )
+
+            self.finish(json.dumps({
+                "problem": problem,
+                "conversation_id": conversation_id,
+            }))
 
         except Exception as e:
             error_trace = traceback.format_exc()

@@ -1,5 +1,6 @@
 import re
 from pathlib import Path
+
 from google.adk.agents import Agent
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
@@ -8,7 +9,7 @@ from google.genai import types
 # from ..tools.tools import TOOL_LIST
 from ..conversation_store import append_message, get_history, reset_history
 from ..gemini_client import get_gemini_model
-from ..prompts import PROMPT_MAP, FOLLOW_UP_INSTRUCTION
+from ..prompts import FOLLOW_UP_INSTRUCTION, PROMPT_MAP
 from ..services.lectures_service import retrieve_relevant_lecture_cells
 
 FOLLOW_UP_TUTOR_RESPONSE_MAX_CHARS = 800
@@ -27,6 +28,7 @@ def _truncate_for_follow_up(text: str, max_chars: int = FOLLOW_UP_TUTOR_RESPONSE
     if len(text) <= max_chars:
         return text
     return text[:max_chars].rstrip() + "…"
+
 
 async def _generate_follow_up(student_question: str, tutor_response: str) -> str | None:
     tutor_context = _truncate_for_follow_up(tutor_response)
@@ -74,6 +76,7 @@ async def ask_tutor(
     nearest_markdown_cell_text: str | None = None,
     reset_conversation: bool = False,
     structured_context: dict | None = None,
+    exam_context: str | None = None,
     server_root: Path | None = None,
 ):
     if reset_conversation:
@@ -112,6 +115,13 @@ Content:
 
     markdown_instructions = ""
     active_cell_info = ""
+    exam_context_section = ""
+
+    if exam_context:
+        exam_context_section = f"""
+Exam context from the immediately preceding exam-mode interaction:
+{exam_context}
+"""
     
     if structured_context:
         if structured_context.get("markdownInstructions"):
@@ -151,6 +161,8 @@ Conversation so far:
 Notebook Instructions:
 {markdown_instructions or "No instructions available"}
 
+{exam_context_section}
+
 {active_cell_info}
 
 Nearest markdown cell:
@@ -169,6 +181,8 @@ Conversation so far:
 
 Notebook Instructions:
 {markdown_instructions or "No instructions available"}
+
+{exam_context_section}
 
 {active_cell_info}
 

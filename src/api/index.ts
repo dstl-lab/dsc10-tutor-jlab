@@ -21,6 +21,8 @@ export interface IAskTutorParams {
   reset_conversation?: boolean;
   nearest_markdown_cell_text?: string;
   structured_context?: string;
+  exam_mode_conversation?: string;
+  exam_context?: string;
 }
 
 export interface ILectureCell {
@@ -61,14 +63,18 @@ export interface IPracticeProblemsResponse {
 
 export interface IRandomExamQuestionParams {
   exam_type?: 'midterm' | 'final';
+  conversation_id?: string;
+  student_question?: string;
 }
 
 export interface IRandomExamQuestionResponse {
+  conversation_id?: string;
   problem: {
     id: string;
     exam_name: string;
     exam_type: string;
     text: string;
+    answer: string;
     choices: string[];
     images: string[];
     code: string[];
@@ -114,7 +120,9 @@ export async function askTutor({
   conversation_id,
   reset_conversation,
   nearest_markdown_cell_text,
-  structured_context
+  structured_context,
+  exam_mode_conversation,
+  exam_context
 }: IAskTutorParams): Promise<ITutorResponse> {
   return await requestAPI<ITutorResponse>('ask', {
     method: 'POST',
@@ -127,7 +135,9 @@ export async function askTutor({
       conversation_id,
       reset_conversation,
       nearest_markdown_cell_text,
-      structured_context
+      structured_context,
+      exam_mode_conversation,
+      exam_context
     })
   });
 }
@@ -220,9 +230,21 @@ export async function getPracticeProblems({
  * @returns The response from the API with a single exam problem
  */
 export async function getRandomExamQuestion({
-  exam_type
+  exam_type,
+  conversation_id,
+  student_question
 }: IRandomExamQuestionParams = {}): Promise<IRandomExamQuestionResponse> {
-  const query = exam_type ? `?exam_type=${encodeURIComponent(exam_type)}` : '';
+  const params = new URLSearchParams();
+  if (exam_type) {
+    params.set('exam_type', exam_type);
+  }
+  if (conversation_id) {
+    params.set('conversation_id', conversation_id);
+  }
+  if (student_question) {
+    params.set('student_question', student_question);
+  }
+  const query = params.toString() ? `?${params.toString()}` : '';
   return await requestAPI<IRandomExamQuestionResponse>(
     `random-exam-question${query}`
   );

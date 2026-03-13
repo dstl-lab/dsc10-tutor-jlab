@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 
 BASE_URL = "https://practice.dsc10.com"
 LECTURE_PAGE_PATTERN = "/lectures/lec{}/index.html"
-EXAMS_INDEX_URL = f"{BASE_URL}/exams/"
+EXAMS_INDEX_URL = f"{BASE_URL}/"
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 PROBLEMS_FILE = DATA_DIR / "lecture_problems.json"
@@ -25,6 +25,8 @@ def fetch_page(url: str, retry_count: int = 3) -> Optional[str]:
         try:
             response = requests.get(url, timeout=10)
             response.raise_for_status()
+            if response.encoding is None or response.encoding.lower() == "iso-8859-1":
+                response.encoding = response.apparent_encoding or "utf-8"
             return response.text
         except requests.RequestException as e:
             if attempt < retry_count - 1:
@@ -129,6 +131,37 @@ def process_problem_content(
     
     problem_text = "\n".join(problem_text_parts).strip()
     return problem_text, choices, images, code_blocks
+
+
+def _clean_solution_text(solution_text: str) -> str:
+    """Normalize scraped solution text for storage in JSON."""
+    text = re.sub(r"\s+", " ", solution_text).strip()
+    text = re.sub(r"\s*Difficulty:\s*.*$", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\s*The average score on this problem was.*$", "", text, flags=re.IGNORECASE)
+    return text.strip()
+
+
+def extract_solution_text_from_heading(start_elem, stop_tags: List[str]) -> str:
+    """Extract solution text from the accordion that follows an exam problem heading."""
+    current = start_elem.next_sibling
+
+    while current:
+        current_name = getattr(current, "name", None)
+        if current_name in stop_tags:
+            heading_text = current.get_text(strip=True)
+            if re.match(r"^Problem\s+\d+(?:\.\d+)?", heading_text, re.I):
+                break
+
+        if current_name:
+            accordion_body = current.select_one("div.accordion-body")
+            if accordion_body is not None:
+                solution_text = accordion_body.get_text("\n", strip=True)
+                if solution_text:
+                    return _clean_solution_text(solution_text)
+
+        current = current.next_sibling
+
+    return ""
 
 
 def parse_problem_section(
@@ -393,11 +426,13 @@ def parse_exam_page(html: str, page_url: str, exam_name: str, exam_type: str) ->
                 if sub_text and len(sub_text) > 20:
                     anchor_id = h3_section["anchor_id"]
                     source_url = f"{page_url}#{anchor_id}" if anchor_id else page_url
+                    answer = extract_solution_text_from_heading(h3, ["h3", "h2"])
                     problems.append({
                         "id": f"{exam_name}_prob_{problem_id}",
                         "exam_name": exam_name,
                         "exam_type": exam_type,
                         "text": sub_text[:2000],
+                        "answer": answer,
                         "choices": h3_section["choices"] or h2_section["choices"],
                         "images": h3_section["images"] or h2_section["images"].copy(),
                         "code": h3_section["code_blocks"] or h2_section["code_blocks"].copy(),
@@ -411,11 +446,13 @@ def parse_exam_page(html: str, page_url: str, exam_name: str, exam_type: str) ->
             if problem_text and len(problem_text) > 20:
                 anchor_id = h2_section["anchor_id"]
                 source_url = f"{page_url}#{anchor_id}" if anchor_id else page_url
+                answer = extract_solution_text_from_heading(h2, ["h2"])
                 problems.append({
                     "id": f"{exam_name}_prob_{problem_id}",
                     "exam_name": exam_name,
                     "exam_type": exam_type,
                     "text": problem_text[:2000],
+                    "answer": answer,
                     "choices": h2_section["choices"],
                     "images": h2_section["images"],
                     "code": h2_section["code_blocks"],

@@ -16,6 +16,10 @@ _PROBLEMS_INDEX = None
 _EXAM_PROBLEMS = None
 
 
+def _exam_problem_cache_has_answers(problems: List[Dict]) -> bool:
+    return any(bool(problem.get("answer")) for problem in problems)
+
+
 def load_problems_index() -> Dict[int, List[Dict]]:
     global _PROBLEMS_INDEX
     
@@ -83,11 +87,12 @@ def get_problems_by_lecture(lecture_numbers: List[int]) -> List[Dict]:
 
 
 def load_exam_problems() -> List[Dict]:
-    """Load the crawled exam problems from disk (cached after first load)."""
-    global _EXAM_PROBLEMS
+    """Load the crawled exam problems from disk.
 
-    if _EXAM_PROBLEMS is not None:
-        return _EXAM_PROBLEMS
+    This intentionally refreshes from disk on each call so newly crawled
+    answer fields are immediately visible to the running server.
+    """
+    global _EXAM_PROBLEMS
 
     if not EXAM_PROBLEMS_FILE.exists():
         return []
@@ -117,6 +122,11 @@ def get_random_exam_question(exam_type: Optional[str] = None) -> Optional[Dict]:
 
     if not problems:
         return None
+
+    # Prefer questions that have a scraped answer available.
+    answered_problems = [p for p in problems if p.get("answer")]
+    if answered_problems:
+        problems = answered_problems
 
     return random.choice(problems)
 

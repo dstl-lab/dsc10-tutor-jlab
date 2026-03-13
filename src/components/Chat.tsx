@@ -144,7 +144,7 @@ export default function Chat() {
     }
 
     return [
-      'Context from the exam question shown immediately before this message:',
+      'Answer for the question shown immediately before this message (the student cannot see this):',
       pendingExamAnswer,
       '',
       'Student follow-up question:',

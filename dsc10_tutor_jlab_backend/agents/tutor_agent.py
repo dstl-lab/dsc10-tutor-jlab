@@ -184,13 +184,6 @@ Student question:
 {student_question}
 """
 
-    # Debug logging: print the full prompt sent to the model.
-    print("\n===== DSC10 TUTOR SYSTEM PROMPT =====\n")
-    print(system_prompt)
-    print("\n===== DSC10 TUTOR USER PROMPT =====\n")
-    print(user_input)
-    print("\n===== END DSC10 TUTOR PROMPT =====\n")
-
     session_service = InMemorySessionService()
     runner = Runner(
         agent=agent,

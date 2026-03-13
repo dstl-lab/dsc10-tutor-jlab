@@ -95,7 +95,7 @@ export default function Chat() {
     checkNotebook();
   }, [notebookName, notebookLoaded, getSanitizedNotebook]);
   const isExamModeRequest = (query: string): boolean =>
-    EXAM_TRIGGER_PATTERN.test(query);
+    query.trim().toLowerCase() === 'next' || EXAM_TRIGGER_PATTERN.test(query);
 
   const formatExamQuestion = (problem: {
     exam_name: string;

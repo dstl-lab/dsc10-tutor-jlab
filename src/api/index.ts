@@ -225,7 +225,10 @@ export function askTutorStream(
               const event = JSON.parse(jsonStr) as ITutorStreamEvent;
               onEvent(event);
             } catch (parseErr) {
-              console.debug('[askTutorStream] Skipping malformed SSE frame', parseErr);
+              console.debug(
+                '[askTutorStream] Skipping malformed SSE frame',
+                parseErr
+              );
             }
           }
         }

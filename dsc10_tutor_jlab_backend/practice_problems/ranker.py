@@ -4,7 +4,7 @@ import logging
 import os
 from typing import List, Dict
 
-import google.generativeai as genai
+from google import genai
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -39,20 +39,19 @@ def rank_problems_by_relevance(
         return problems
     
     try:
-        genai.configure(api_key=api_key)
+        client = genai.Client(api_key=api_key)
         model_name = "gemini-3-pro-preview"
         logger.info(f"[Practice Problems] 🚀 Calling Gemini ({model_name}) for problem ranking: '{topic_query}' ({len(problems)} candidates)")
-        model = genai.GenerativeModel(model_name)
-        
+
         problem_summaries = []
-        for i, problem in enumerate(problems[:20]):  
+        for i, problem in enumerate(problems[:20]):
             problem_id = problem.get("id", f"prob_{i}")
-            problem_text = problem.get("text", "")[:300] 
+            problem_text = problem.get("text", "")[:300]
             problem_summaries.append({
                 "id": problem_id,
                 "text": problem_text
             })
-        
+
         prompt = f"""A DSC 10 student wants practice problems about: "{topic_query}"
 
 Below are {len(problem_summaries)} practice problems. Rank them by relevance to this topic.
@@ -66,8 +65,8 @@ Only include problem IDs that are actually relevant to "{topic_query}".
 Example response: ["lecture_14_prob_1", "lecture_14_prob_3", "lecture_15_prob_2"]
 
 JSON:"""
-        
-        response = model.generate_content(prompt)
+
+        response = client.models.generate_content(model=model_name, contents=prompt)
         response_text = response.text.strip()
         logger.info(f"[Practice Problems] ✅ Ranking response received")
         

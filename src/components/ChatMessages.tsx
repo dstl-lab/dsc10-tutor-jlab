@@ -50,25 +50,37 @@ export default function ChatMessages({
             <div
               className={cn('flex flex-col', messageClasses[message.author])}
             >
-              <Markdown
-                text={message.text}
-                enableInsertForPython={enableInsertForPython}
-              />
+              {message.text ? (
+                <>
+                  <Markdown
+                    text={message.text}
+                    enableInsertForPython={enableInsertForPython}
+                  />
+                  {message.isStreaming && (
+                    <span
+                      className="ml-0.5 inline-block h-[1em] w-[2px] animate-pulse bg-current align-middle opacity-80"
+                      aria-hidden="true"
+                    />
+                  )}
+                </>
+              ) : message.isStreaming ? (
+                <TutorTyping />
+              ) : null}
             </div>
             {message.author === 'tutor' &&
-              (message as any).relevantLectures && (
-                <RelevantLectures
-                  lectures={(message as any).relevantLectures}
-                />
+              message.relevantLectures &&
+              message.relevantLectures.length > 0 && (
+                <RelevantLectures lectures={message.relevantLectures} />
               )}
           </div>
         );
       })}
-      {isWaiting && (
+      {isWaiting && !messages.some(m => m.isStreaming) && (
         <div className={cn('flex flex-col', messageClasses.tutor)}>
           <TutorTyping />
         </div>
       )}
+
       <div ref={bottomRef} />
     </div>
   );

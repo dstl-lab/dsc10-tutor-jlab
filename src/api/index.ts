@@ -39,6 +39,14 @@ export interface ITutorResponse {
   follow_up?: string;
 }
 
+// SSE event shapes emitted by /ask-stream
+export type ITutorStreamEvent =
+  | { type: 'token'; text: string }
+  | { type: 'lectures'; relevant_lectures: ILectureCell[] }
+  | { type: 'follow_up'; text: string }
+  | { type: 'done'; conversation_id: string }
+  | { type: 'error'; message: string };
+
 export interface IPracticeProblemsParams {
   topic_query: string;
 }
@@ -131,6 +139,96 @@ export async function askTutor({
       structured_context
     })
   });
+}
+
+// Stream tutor response from /ask-stream using SSE over a POST body.
+export function askTutorStream(
+  params: IAskTutorParams,
+  onEvent: (event: ITutorStreamEvent) => void,
+  onError: (err: Error) => void
+): () => void {
+  const settings = ServerConnection.makeSettings();
+  const requestUrl = URLExt.join(
+    settings.baseUrl,
+    'dsc10-tutor-jlab-backend',
+    'ask-stream'
+  );
+
+  const controller = new AbortController();
+
+  (async () => {
+    let response: Response;
+    try {
+      response = await fetch(requestUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Forward JupyterLab auth token so @tornado.web.authenticated passes
+          ...(settings.token
+            ? { Authorization: `token ${settings.token}` }
+            : {})
+        },
+        body: JSON.stringify({
+          student_question: params.student_question,
+          notebook_json: params.notebook_json,
+          prompt: params.prompt,
+          prompt_mode: params.prompt_mode,
+          conversation_id: params.conversation_id,
+          reset_conversation: params.reset_conversation,
+          nearest_markdown_cell_text: params.nearest_markdown_cell_text,
+          structured_context: params.structured_context
+        }),
+        signal: controller.signal
+      });
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') {
+        onError(err as Error);
+      }
+      return;
+    }
+
+    if (!response.ok || !response.body) {
+      onError(
+        new Error(
+          `Stream request failed: ${response.status} ${response.statusText}`
+        )
+      );
+      return;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        const frames = buffer.split('\n\n');
+        buffer = frames.pop() ?? '';
+
+        for (const frame of frames) {
+          const line = frame.trim();
+          if (!line.startsWith('data:')) continue;
+          const json = line.slice('data:'.length).trim();
+          if (!json) continue;
+          try {
+            const event = JSON.parse(json) as ITutorStreamEvent;
+            onEvent(event);
+          } catch {}
+        }
+      }
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') {
+        onError(err as Error);
+      }
+    }
+  })();
+
+  return () => controller.abort();
 }
 
 /**

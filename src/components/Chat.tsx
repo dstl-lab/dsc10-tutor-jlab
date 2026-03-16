@@ -6,17 +6,12 @@ import { logEvent } from '@/api/logger';
 import { Button } from '@/components/ui/button';
 import { useNotebook } from '@/contexts/NotebookContext';
 import { enhanceQuestion } from '@/utils/enhancedQuestionUtils';
-import practicePatternsJson from '@/utils/practice_patterns.json';
 import { chatgptOverride, tutorInstruction } from '@/utils/prompts';
 import ChatMessageBox from './ChatMessageBox';
 import ChatMessages from './ChatMessages';
 import ChatPlaceholder from './ChatPlaceholder';
 import ToggleMode from './ToggleMode';
 import { type IMessage } from './types';
-
-const PRACTICE_PATTERNS = practicePatternsJson.map(
-  (pattern: string) => new RegExp(pattern, 'i')
-);
 
 export default function Chat() {
   const {
@@ -85,20 +80,9 @@ export default function Chat() {
 
     checkNotebook();
   }, [notebookName, notebookLoaded, getSanitizedNotebook]);
-  const isPracticeRequest = (
-    query: string
-  ): { isPractice: boolean; topic?: string } => {
-    for (const pattern of PRACTICE_PATTERNS) {
-      const match = query.match(pattern);
-      if (match && match[1]) {
-        const topic = match[1].trim();
-        if (topic.length > 2) {
-          return { isPractice: true, topic };
-        }
-      }
-    }
-
-    return { isPractice: false };
+  const isPracticeRequest = (query: string): boolean => {
+    const q = query.toLowerCase();
+    return q.includes('practice problems') || q.includes('practice');
   };
 
   const handleMessageSubmit = async (text: string) => {
@@ -119,18 +103,20 @@ export default function Chat() {
     setMessages(prev => [...prev, { author: 'user', text }]);
     setIsWaiting(true);
     try {
-      const practiceCheck = isPracticeRequest(text);
+      const shouldGetPracticeProblems = isPracticeRequest(text);
 
-      if (practiceCheck.isPractice && practiceCheck.topic) {
+      if (shouldGetPracticeProblems) {
         const practiceResponse = await getPracticeProblems({
-          topic_query: practiceCheck.topic
+          // Backend will extract the best-matching topic from this prompt
+          // using its `topic_to_lecture.json` mapping.
+          topic_query: text
         });
 
         logEvent({
           event_type: 'practice_problems_request',
           payload: {
             original_query: text,
-            topic_query: practiceCheck.topic,
+            topic_query: text,
             notebook: notebookName,
             problem_count: practiceResponse.count,
             formatted_response: practiceResponse.formatted_response

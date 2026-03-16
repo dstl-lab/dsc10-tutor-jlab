@@ -201,24 +201,33 @@ export function askTutorStream(
     let buffer = '';
 
     try {
-      while (true) {
+      let reading = true;
+      while (reading) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          reading = false;
+        } else {
+          buffer += decoder.decode(value, { stream: true });
 
-        buffer += decoder.decode(value, { stream: true });
+          const frames = buffer.split('\n\n');
+          buffer = frames.pop() ?? '';
 
-        const frames = buffer.split('\n\n');
-        buffer = frames.pop() ?? '';
-
-        for (const frame of frames) {
-          const line = frame.trim();
-          if (!line.startsWith('data:')) continue;
-          const json = line.slice('data:'.length).trim();
-          if (!json) continue;
-          try {
-            const event = JSON.parse(json) as ITutorStreamEvent;
-            onEvent(event);
-          } catch {}
+          for (const frame of frames) {
+            const line = frame.trim();
+            if (!line.startsWith('data:')) {
+              continue;
+            }
+            const jsonStr = line.slice('data:'.length).trim();
+            if (!jsonStr) {
+              continue;
+            }
+            try {
+              const event = JSON.parse(jsonStr) as ITutorStreamEvent;
+              onEvent(event);
+            } catch (parseErr) {
+              console.debug('[askTutorStream] Skipping malformed SSE frame', parseErr);
+            }
+          }
         }
       }
     } catch (err) {

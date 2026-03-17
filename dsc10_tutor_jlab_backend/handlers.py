@@ -1,7 +1,11 @@
 import json
+import logging
+import traceback
 from pathlib import Path
 
 import tornado
+
+logger = logging.getLogger(__name__)
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 
@@ -42,8 +46,6 @@ def _parse_body(raw_body: bytes) -> dict:
 
 
 class AskHandler(APIHandler):
-    """Non-streaming POST /ask — kept for backwards compatibility."""
-
     @tornado.web.authenticated
     async def post(self):
         try:
@@ -107,6 +109,7 @@ class AskStreamHandler(APIHandler):
                 self.write(f"data: {json.dumps(event)}\n\n")
                 await self.flush()
         except Exception as e:
+            logger.error("[AskStream] Unhandled error:\n%s", traceback.format_exc())
             error_event = {"type": "error", "message": str(e)}
             self.write(f"data: {json.dumps(error_event)}\n\n")
             await self.flush()

@@ -284,7 +284,7 @@ export default function Chat() {
 
               resolve();
             } else if (event.type === 'error') {
-              reject(new Error(event.message));
+              console.error('[Tutor] Stream error:', event.message);
             }
           },
           err => reject(err)

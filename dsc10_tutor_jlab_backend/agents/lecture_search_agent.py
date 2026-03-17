@@ -1,7 +1,9 @@
 import asyncio
 import json
 import logging
+import os
 import re
+from collections import deque
 from pathlib import Path
 from typing import Any
 
@@ -13,15 +15,18 @@ from google.adk.tools import FunctionTool
 from google.genai import types
 
 from ..gemini_client import get_gemini_model
-from ..services.lectures_service import (
-    _find_lectures_dir,
-    retrieve_relevant_lecture_cells,
-)
+from ..services.lectures_service import retrieve_relevant_lecture_cells
 from ..tools.bash_tool import bash_exec
 
 logger = logging.getLogger(__name__)
 
 _AGENT_TIMEOUT_SECONDS = 25
+_MAX_SCAN_DEPTH = 6
+
+_LECTURES_FOLDER_NAMES = {"lectures", "lecture", "lecs"}
+_LECTURE_FILENAME_RE = re.compile(r"^(lec|lecture)[\s_\-]?\d+", re.IGNORECASE)
+
+_LECTURES_DIR_CACHE: Path | None = None
 
 _SEARCH_SYSTEM_PROMPT = """You are a lecture search assistant for DSC 10 at UC San Diego.
 Your job is to find the most relevant cells from lecture notebooks that help answer a student's question.
@@ -30,11 +35,18 @@ You have one tool: bash_exec(command). It runs a single read-only shell command.
 Allowed commands: grep, find, cat, ls, head, tail, wc.
 No pipes, no redirects, no shell operators.
 
+Important: skip any notebook whose filename ends with "-live.ipynb" (e.g. lec06-live.ipynb).
+These are duplicate live-coding versions — always prefer the clean version (e.g. lec06.ipynb).
+
 Strategy:
-1. Use grep to search for key terms from the student's question inside .ipynb files.
-   Example: grep -rn "groupby" --include="*.ipynb" .
-2. Use grep -l to find which notebook files match, then cat or head to inspect them.
-3. Identify 1-2 cells most relevant to the question.
+1. If a lectures_hint path is provided, skip to step 2 using that path.
+   Otherwise, locate the lectures folder with a shallow find (directory names only, no content read):
+   Example: find . -maxdepth 4 -name "*.ipynb" -path "*lec*"
+   This is fast — it only reads directory metadata. Use the result to identify the lectures folder.
+2. Once you have the lectures directory, grep inside it for key terms from the student's question:
+   Example: grep -rn "groupby" --include="*.ipynb" ./lectures/
+3. From the grep matches, identify which notebook files are most relevant, then cat or head to read the specific cells.
+4. Identify 1-2 cells most relevant to the question.
 
 Output format — when you have found relevant cells, output ONLY a JSON block in this exact format:
 ```json
@@ -51,16 +63,77 @@ Do not explain your reasoning. Only output the JSON block.
 """
 
 
-def _make_bash_tool(lectures_dir: str) -> FunctionTool:
-    """Return a FunctionTool that runs bash_exec with the lectures dir as cwd."""
+def _find_lectures_dir(search_root: Path) -> Path | None:
+    """Depth-limited BFS over directory names to find the lectures folder.
+
+    Only reads directory metadata (via os.scandir) until a candidate folder is
+    found, so it is fast even on large home directories like DataHub.
+    Results are cached after the first successful discovery.
+    """
+    global _LECTURES_DIR_CACHE
+
+    if _LECTURES_DIR_CACHE is not None:
+        return _LECTURES_DIR_CACHE
+
+    env_path = os.getenv("LECTURES_PATH")
+    if env_path:
+        p = Path(env_path).expanduser()
+        resolved = p if p.is_absolute() else (search_root / env_path).resolve()
+        if resolved.exists() and resolved.is_dir():
+            _LECTURES_DIR_CACHE = resolved
+            return resolved
+
+    candidates: list[Path] = []
+    queue: deque[tuple[Path, int]] = deque([(search_root, 0)])
+
+    while queue:
+        current, depth = queue.popleft()
+
+        try:
+            entries = list(os.scandir(current))
+        except PermissionError:
+            continue
+
+        for entry in entries:
+            if not entry.is_dir(follow_symlinks=False):
+                continue
+            entry_path = Path(entry.path)
+
+            if entry_path.name.lower() in _LECTURES_FOLDER_NAMES:
+                try:
+                    has_lecture_nb = any(
+                        _LECTURE_FILENAME_RE.match(nb.stem)
+                        for nb in entry_path.rglob("*.ipynb")
+                        if ".ipynb_checkpoints" not in nb.parts
+                    )
+                except PermissionError:
+                    has_lecture_nb = False
+
+                if has_lecture_nb:
+                    candidates.append(entry_path)
+                continue
+
+            if depth < _MAX_SCAN_DEPTH:
+                queue.append((entry_path, depth + 1))
+
+    if not candidates:
+        return None
+
+    candidates.sort(key=lambda p: len(p.parts))
+    _LECTURES_DIR_CACHE = candidates[0]
+    return candidates[0]
+
+
+def _make_bash_tool(search_root: str) -> FunctionTool:
+    """Return a FunctionTool that runs bash_exec with search_root as cwd."""
 
     def _tool(command: str) -> str:
-        return bash_exec(command, lectures_dir=lectures_dir)
+        return bash_exec(command, lectures_dir=search_root)
 
     _tool.__name__ = "bash_exec"
     _tool.__doc__ = (
         "Run a read-only shell command (grep, find, cat, ls, head, tail, wc). "
-        "No pipes or redirects allowed. Working directory is the lectures folder."
+        "No pipes or redirects allowed. Working directory is the search root."
     )
     return FunctionTool(_tool)
 
@@ -158,17 +231,20 @@ async def search_lecture_cells_with_agent(
     question: str,
     server_root: Path | None = None,
 ) -> list[dict[str, Any]]:
-    """Run the ADK lecture search agent, fall back to TF-IDF on any failure."""
+    """Run the ADK lecture search agent, fall back to TF-IDF only on hard failures."""
     root = server_root or Path.home()
-    lectures_dir = await asyncio.to_thread(_find_lectures_dir)
 
-    if lectures_dir is None:
-        logger.warning(
-            "[LectureSearch] No lectures directory found; using TF-IDF fallback."
+    lectures_hint = await asyncio.to_thread(_find_lectures_dir, root)
+    bash_cwd = lectures_hint if lectures_hint is not None else root
+
+    if lectures_hint is None:
+        logger.info(
+            "[LectureSearch] No lectures directory pre-discovered; "
+            "agent will search from %s.",
+            root,
         )
-        return await retrieve_relevant_lecture_cells(question, root)
 
-    bash_tool = _make_bash_tool(str(lectures_dir))
+    bash_tool = _make_bash_tool(str(bash_cwd))
 
     agent = Agent(
         name="lecture_search",
@@ -184,9 +260,17 @@ async def search_lecture_cells_with_agent(
         auto_create_session=True,
     )
 
+    if lectures_hint:
+        search_context = f"lectures_hint: {lectures_hint}"
+    else:
+        search_context = (
+            f"No lectures directory pre-discovered. "
+            f"Start by running: find {root} -maxdepth 4 -name '*.ipynb' -path '*lec*' "
+            f"to locate the lectures folder, then grep inside it."
+        )
     user_message = (
         f"Find lecture cells relevant to this DSC 10 student question:\n\n{question}\n\n"
-        f"Lectures directory: {lectures_dir}"
+        f"{search_context}"
     )
     content = types.Content(role="user", parts=[types.Part(text=user_message)])
 
@@ -213,11 +297,11 @@ async def search_lecture_cells_with_agent(
         return await retrieve_relevant_lecture_cells(question, root)
 
     raw_output = "".join(raw_parts)
-    results = _parse_agent_output(raw_output, root, lectures_dir)
+    results = _parse_agent_output(raw_output, root, bash_cwd)
 
-    if not results:
-        logger.info("[LectureSearch] Agent returned no results; using TF-IDF fallback.")
-        return await retrieve_relevant_lecture_cells(question, root)
+    if results:
+        logger.info("[LectureSearch] Agent found %d cell(s).", len(results))
+    else:
+        logger.info("[LectureSearch] Agent found no relevant cells.")
 
-    logger.info("[LectureSearch] Agent found %d cell(s).", len(results))
     return results

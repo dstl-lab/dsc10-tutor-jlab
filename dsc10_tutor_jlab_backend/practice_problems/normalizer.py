@@ -7,7 +7,6 @@ import re
 from pathlib import Path
 from typing import List, Optional
 
-import google.generativeai as genai
 from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)

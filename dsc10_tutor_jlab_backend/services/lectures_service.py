@@ -7,22 +7,13 @@ from pathlib import Path
 from typing import List, Dict, Any
 
 import nbformat
-from dotenv import load_dotenv
 from google import genai
 
 from ..gemini_client import get_gemini_model
 
-backend_dir = Path(__file__).parent.parent
-load_dotenv(dotenv_path=backend_dir / ".env")
-
-
-SEARCH_ROOT = Path.home()
-
 # In-memory cache
 _LECTURE_INDEX_CACHE: List[Dict[str, Any]] | None = None
 _IDF_CACHE: Dict[str, float] | None = None
-
-_LECTURES_FOLDER_NAMES = {"lectures", "lecture", "lecs"}
 
 _LECTURE_FILENAME_RE = re.compile(r"^(lec|lecture)[\s_\-]?\d+", re.IGNORECASE)
 
@@ -31,53 +22,104 @@ _TFIDF_CANDIDATES = 10
 _MAX_RESULTS = 2
 
 _STOP_WORDS = {
-    "a", "an", "the", "is", "it", "in", "on", "at", "to", "for", "of", "and",
-    "or", "with", "that", "this", "be", "are", "was", "were", "by", "from",
-    "as", "we", "i", "my", "your", "can", "do", "does", "not", "but", "so",
-    "if", "when", "what", "how", "which", "will", "have", "has", "had", "get",
-    "use", "used", "let", "s", "t", "don", "about", "its", "into", "also",
-    "just", "now", "here", "there", "then", "than", "more", "some", "any",
-    "all", "no", "yes", "up", "out", "like", "see", "make", "want", "know",
-    "think", "need", "look", "go", "come", "say", "take", "give", "try",
-    "work", "run", "call", "show", "x", "y", "n",
+    "a",
+    "an",
+    "the",
+    "is",
+    "it",
+    "in",
+    "on",
+    "at",
+    "to",
+    "for",
+    "of",
+    "and",
+    "or",
+    "with",
+    "that",
+    "this",
+    "be",
+    "are",
+    "was",
+    "were",
+    "by",
+    "from",
+    "as",
+    "we",
+    "i",
+    "my",
+    "your",
+    "can",
+    "do",
+    "does",
+    "not",
+    "but",
+    "so",
+    "if",
+    "when",
+    "what",
+    "how",
+    "which",
+    "will",
+    "have",
+    "has",
+    "had",
+    "get",
+    "use",
+    "used",
+    "let",
+    "s",
+    "t",
+    "don",
+    "about",
+    "its",
+    "into",
+    "also",
+    "just",
+    "now",
+    "here",
+    "there",
+    "then",
+    "than",
+    "more",
+    "some",
+    "any",
+    "all",
+    "no",
+    "yes",
+    "up",
+    "out",
+    "like",
+    "see",
+    "make",
+    "want",
+    "know",
+    "think",
+    "need",
+    "look",
+    "go",
+    "come",
+    "say",
+    "take",
+    "give",
+    "try",
+    "work",
+    "run",
+    "call",
+    "show",
+    "x",
+    "y",
+    "n",
 }
-
-
-# Lecture discovery
-def _find_lectures_dir() -> Path | None:
-    env_path = os.getenv("LECTURES_PATH")
-    if env_path:
-        p = Path(env_path).expanduser()
-        resolved = p if p.is_absolute() else (SEARCH_ROOT / env_path).resolve()
-        if resolved.exists() and resolved.is_dir():
-            return resolved
-
-    candidates: List[Path] = []
-    for dirpath in SEARCH_ROOT.rglob("*"):
-        if not dirpath.is_dir():
-            continue
-        if dirpath.name.lower() not in _LECTURES_FOLDER_NAMES:
-            continue
-        has_lectures = any(
-            _LECTURE_FILENAME_RE.match(nb.stem)
-            for nb in dirpath.rglob("*.ipynb")
-            if ".ipynb_checkpoints" not in nb.parts
-        )
-        if has_lectures:
-            candidates.append(dirpath)
-
-    if not candidates:
-        return None
-
-    candidates.sort(key=lambda p: len(p.parts))
-    return candidates[0]
 
 
 def _list_lecture_notebook_paths(lectures_dir: Path) -> List[Path]:
     return sorted(
         p
         for p in lectures_dir.rglob("*.ipynb")
-        if ".ipynb_checkpoints" not in p.parts and _LECTURE_FILENAME_RE.match(p.stem) and not p.stem.endswith("-live")
+        if ".ipynb_checkpoints" not in p.parts
+        and _LECTURE_FILENAME_RE.match(p.stem)
+        and not p.stem.endswith("-live")
     )
 
 
@@ -94,19 +136,23 @@ def _parse_notebook_cells(nb_path: Path, server_root: Path) -> List[Dict[str, An
         content = cell.source.strip()
         if not content or len(content) < 40:
             continue
-        cells.append({
-            "lecture": nb_path.name,
-            "path": str(nb_path.relative_to(server_root)),
-            "cell_index": idx,
-            "cell_type": cell.cell_type,
-            "content": content,
-            "preview": content[:300],
-        })
+        cells.append(
+            {
+                "lecture": nb_path.name,
+                "path": str(nb_path.relative_to(server_root)),
+                "cell_index": idx,
+                "cell_type": cell.cell_type,
+                "content": content,
+                "preview": content[:300],
+            }
+        )
     return cells
 
 
 def _build_lecture_index(server_root: Path) -> List[Dict[str, Any]]:
-    dir_path = _find_lectures_dir()
+    from ..agents.lecture_search_agent import _find_lectures_dir
+
+    dir_path = _find_lectures_dir(server_root)
     if dir_path is None:
         return []
 
@@ -133,7 +179,9 @@ def _build_idf(cells: List[Dict[str, Any]]) -> Dict[str, float]:
     return {tok: math.log((N + 1) / (df + 1)) for tok, df in doc_freq.items()}
 
 
-def _score_cell(query_tokens: List[str], cell_content: str, idf: Dict[str, float]) -> float:
+def _score_cell(
+    query_tokens: List[str], cell_content: str, idf: Dict[str, float]
+) -> float:
     cell_tokens = _tokenize(cell_content)
     if not cell_tokens:
         return 0.0
@@ -141,7 +189,11 @@ def _score_cell(query_tokens: List[str], cell_content: str, idf: Dict[str, float
     for tok in cell_tokens:
         cell_tf[tok] = cell_tf.get(tok, 0) + 1
     total = len(cell_tokens)
-    return sum((cell_tf[tok] / total) * idf.get(tok, 1.0) for tok in query_tokens if tok in cell_tf)
+    return sum(
+        (cell_tf[tok] / total) * idf.get(tok, 1.0)
+        for tok in query_tokens
+        if tok in cell_tf
+    )
 
 
 def _get_tfidf_candidates(
@@ -160,7 +212,6 @@ def _get_tfidf_candidates(
     ]
     scored.sort(key=lambda x: x[0], reverse=True)
     return [cell for _, cell in scored[:_TFIDF_CANDIDATES]]
-
 
 
 # Gemini reranker
@@ -205,7 +256,11 @@ async def _rerank_with_gemini(
     except json.JSONDecodeError:
         return candidates[:_MAX_RESULTS]
 
-    result = [candidates[i] for i in indices if isinstance(i, int) and 0 <= i < len(candidates)]
+    result = [
+        candidates[i]
+        for i in indices
+        if isinstance(i, int) and 0 <= i < len(candidates)
+    ]
     return result if result else candidates[:_MAX_RESULTS]
 
 

@@ -71,13 +71,48 @@ def _get_mapping() -> dict:
     return _TOPIC_MAPPING
 
 
+def _normalize_for_substring_match(text: str) -> str:
+    text = (text or "").lower()
+    cleaned_chars: list[str] = []
+    for ch in text:
+        cleaned_chars.append(ch if ch.isalnum() else " ")
+    cleaned = "".join(cleaned_chars)
+    return " ".join(cleaned.split()).strip()
+
+
+def extract_topic_from_prompt(prompt: str, mapping: Optional[dict] = None) -> Optional[str]:
+    mapping = mapping if mapping is not None else _get_mapping()
+    if not mapping:
+        return None
+
+    prompt_norm = _normalize_for_substring_match(prompt)
+    if not prompt_norm:
+        return None
+
+    haystack = f" {prompt_norm} "
+
+    best_key: Optional[str] = None
+    best_len = -1
+
+    for raw_key in mapping.keys():
+        key_norm = _normalize_for_substring_match(str(raw_key))
+        if not key_norm:
+            continue
+        needle = f" {key_norm} "
+        if needle in haystack:
+            if len(key_norm) > best_len:
+                best_key = str(raw_key)
+                best_len = len(key_norm)
+
+    return best_key
+
+
 def normalize_topic(query: str, use_gemini_fallback: bool = True) -> List[int]:
     query_lower = query.lower().strip()
     query_lower = re.sub(r"[.,!?;:]+$", "", query_lower).strip()
     mapping = _get_mapping()
 
     def remove_articles(text: str) -> str:
-        """Remove 'the ', 'a ', or 'an ' prefix if present."""
         if text.startswith("the "):
             text = text[4:]
         elif text.startswith("a "):
@@ -94,11 +129,16 @@ def normalize_topic(query: str, use_gemini_fallback: bool = True) -> List[int]:
     
     normalized_mapping = {k.lower(): v for k, v in mapping.items()}
     
+    if "practice" in query_lower:
+        extracted = extract_topic_from_prompt(query_lower, mapping=mapping)
+        if extracted is not None:
+            extracted_lower = extracted.lower().strip()
+            if extracted_lower in normalized_mapping:
+                return normalized_mapping[extracted_lower]
+
     for variation in query_variations:
         if variation in mapping:
             return mapping[variation]
         if variation in normalized_mapping:
             return normalized_mapping[variation]
-    
-    # No mapping found; caller is responsible for any LLM-based fallback.
     return []

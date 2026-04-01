@@ -30,11 +30,6 @@ def _format_exam_problem_for_history(problem: dict) -> str:
         problem.get("text", ""),
     ]
 
-    choices = problem.get("choices", [])
-    if choices:
-        parts.append("Choices:")
-        parts.extend(f"- {choice}" for choice in choices)
-
     source_url = problem.get("source_url")
     if source_url:
         parts.append(f"Source: {source_url}")

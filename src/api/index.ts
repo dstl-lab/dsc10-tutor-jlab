@@ -49,7 +49,6 @@ export interface IPracticeProblemsResponse {
     id: string;
     lecture_number: number;
     text: string;
-    choices: string[];
     images: string[];
     code: string[];
     source_url: string;
@@ -74,7 +73,6 @@ export interface IRandomExamQuestionResponse {
     exam_type: string;
     text: string;
     answer?: string;
-    choices: string[];
     images: string[];
     code: string[];
     source_url: string;

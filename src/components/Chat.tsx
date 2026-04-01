@@ -102,6 +102,7 @@ export default function Chat() {
     exam_type: string;
     text: string;
     choices: string[];
+    images: string[];
     source_url: string;
   }): string => {
     const typeLabel =
@@ -117,6 +118,13 @@ export default function Chat() {
     if (problem.choices.length > 0) {
       parts.push('\n**Choices:**');
       problem.choices.forEach(c => parts.push(`- ${c}`));
+    }
+    if (problem.images.length > 0) {
+      parts.push('\n**Figures:**');
+      problem.images.forEach((imgUrl, index) => {
+        parts.push(`![Exam figure ${index + 1}](${imgUrl})`);
+        parts.push(`[Open figure ${index + 1}](${imgUrl})`);
+      });
     }
     parts.push(`\n[See the Full Question](${problem.source_url})`);
     return parts.join('\n');

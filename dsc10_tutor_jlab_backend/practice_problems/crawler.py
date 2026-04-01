@@ -9,6 +9,7 @@ from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
+from bs4.element import NavigableString
 
 BASE_URL = "https://practice.dsc10.com"
 LECTURE_PAGE_PATTERN = "/lectures/lec{}/index.html"
@@ -70,40 +71,79 @@ def collect_code_blocks(elem, existing_code: List[str]) -> List[str]:
     return code_blocks
 
 
+def _normalize_markdown_spacing(text: str) -> str:
+    """Normalize spacing while preserving intentional newlines."""
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r" *\n *", "\n", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def _render_markdown_text(elem) -> str:
+    """Render selected HTML content to simple markdown text."""
+    if isinstance(elem, NavigableString):
+        return str(elem)
+
+    if not getattr(elem, "name", None):
+        return ""
+
+    tag = elem.name.lower()
+
+    if tag == "br":
+        return "\n"
+
+    if tag == "code":
+        if getattr(elem.parent, "name", "") == "pre":
+            return ""
+        code_text = elem.get_text(" ", strip=True)
+        return f"`{code_text}`" if code_text else ""
+
+    if tag == "pre":
+        code_text = elem.get_text("\n", strip=False).strip("\n")
+        if not code_text:
+            return ""
+        return f"```\n{code_text}\n```"
+
+    parts = [_render_markdown_text(child) for child in elem.children]
+    return _normalize_markdown_spacing("".join(parts))
+
+
 def extract_text_and_choices(elem, problem_text_parts: List[str], choices: List[str]) -> Tuple[List[str], List[str]]:
     """Extract text and choices from an element."""
     new_text_parts = problem_text_parts.copy()
     new_choices = choices.copy()
     
     if elem.name is None:
-        text = str(elem).strip()
+        text = _normalize_markdown_spacing(str(elem))
         if text:
             new_text_parts.append(text)
     elif elem.name in ["code", "pre"]:
-        pass  # Code blocks are handled separately
+        text = _render_markdown_text(elem)
+        if text:
+            new_text_parts.append(text)
     elif elem.name == "p":
-        text = elem.get_text(strip=True)
+        text = _render_markdown_text(elem)
         if text and not text.lower().startswith("click to view"):
             new_text_parts.append(text)
     elif elem.name in ["h3", "h4", "h5", "h6"]:
-        text = elem.get_text(strip=True)
+        text = _normalize_markdown_spacing(elem.get_text(" ", strip=True))
         if text:
-            new_text_parts.append(f"\n{text}\n")
+            new_text_parts.append(f"### {text}")
     elif elem.name == "ul":
         for li in elem.find_all("li"):
-            choice_text = li.get_text(strip=True)
+            choice_text = _normalize_markdown_spacing(li.get_text(" ", strip=True))
             if choice_text:
                 new_choices.append(choice_text)
     elif elem.name == "ol":
         for li in elem.find_all("li"):
-            text = li.get_text(strip=True)
+            text = _normalize_markdown_spacing(li.get_text(" ", strip=True))
             if text:
                 if re.match(r"^[A-E][\.\)]\s*", text) or len(text) < 200:
                     new_choices.append(text)
                 else:
                     new_text_parts.append(text)
     elif elem.name in ["div", "section"]:
-        text = elem.get_text(strip=True)
+        text = _render_markdown_text(elem)
         if text and not text.lower().startswith("click to view"):
             if len(text) > 20:
                 new_text_parts.append(text)

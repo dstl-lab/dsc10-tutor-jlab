@@ -57,10 +57,9 @@ export function assignVariant(
   studentKey: string,
   experimentId: string
 ): 'A' | 'B' {
-  // const hash = hashString(studentKey + experimentId);
-  // const raw: 'A' | 'B' = hash % 2 === 0 ? 'A' : 'B';
-  // return EXPERIMENT_PHASE === 2 ? (raw === 'A' ? 'B' : 'A') : raw;
-  return 'B';
+  const hash = hashString(studentKey + experimentId);
+  const raw: 'A' | 'B' = hash % 2 === 0 ? 'A' : 'B';
+  return EXPERIMENT_PHASE === 2 ? (raw === 'A' ? 'B' : 'A') : raw;
 }
 
 /**

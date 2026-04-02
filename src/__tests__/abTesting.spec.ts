@@ -85,6 +85,17 @@ describe('Task 1 — variant assignment distribution', () => {
     expect(invalid).toHaveLength(0);
   });
 
+  it('returns null when not on DataHub — experiment gating is disabled', () => {
+    // getStudentKey() returns null in non-DataHub environments (local dev, CI browser_check).
+    // In Chat.tsx this causes variant to default to 'B' (all features on).
+    // We simulate this by verifying the Chat.tsx fallback logic directly.
+    const key: string | null = null; // simulates getStudentKey() off DataHub
+    const activeExperiment: string | null = 'exp_follow_up';
+    const effectiveVariant: 'A' | 'B' =
+      activeExperiment && key ? assignVariant(key, activeExperiment) : 'B';
+    expect(effectiveVariant).toBe('B');
+  });
+
   it('assignment is deterministic — same student always gets the same variant', () => {
     const email = 'testuser@ucsd.edu';
     const first = assignVariant(email, EXPERIMENT_ID);

@@ -39,10 +39,24 @@ function hashString(s: string): number {
 }
 
 /**
- * Returns a stable, pseudonymized key for the current student.
- * Uses the email parsed from the datahub URL so it's consistent across sessions.
+ * Returns true when running on DataHub (URL contains /user/<username>/).
+ * Returns false in local dev, browser_check CI, and other non-DataHub environments.
+ * When false, experiment gating is disabled so all features remain on.
  */
-export function getStudentKey(): string {
+function isOnDataHub(): boolean {
+  try {
+    return /\/user\/[^/]+/.test(window.location.pathname);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Returns a stable key for the current student, or null when not on DataHub.
+ * A null return disables experiment gating — all features behave as variant B.
+ */
+export function getStudentKey(): string | null {
+  if (!isOnDataHub()) return null;
   return getStudentEmailFromUrl();
 }
 

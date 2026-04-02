@@ -45,11 +45,16 @@ export default function Chat() {
   const [suggestion, setSuggestion] = useState('');
 
   // A/B testing: variant is computed once at mount and stable for the session.
-  // Variant A = control (feature OFF), Variant B = treatment (feature ON).
+  // Returns 'B' (all features on) when not on DataHub or no experiment is active.
+  const studentKey = getStudentKey();
   const [variant] = useState<'A' | 'B'>(() =>
-    ACTIVE_EXPERIMENT ? assignVariant(getStudentKey(), ACTIVE_EXPERIMENT) : 'B'
+    ACTIVE_EXPERIMENT && studentKey
+      ? assignVariant(studentKey, ACTIVE_EXPERIMENT)
+      : 'B'
   );
-  const studentKeyHashRef = useRef<string>(hashStudentKey(getStudentKey()));
+  const studentKeyHashRef = useRef<string>(
+    studentKey ? hashStudentKey(studentKey) : 'unknown'
+  );
 
   useEffect(() => {
     if (!notebookName || notebookLoaded) {

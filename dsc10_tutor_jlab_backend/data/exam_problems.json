@@ -11735,18 +11735,6 @@
     "anchor_id": "problem-16.4"
   },
   {
-    "id": "fa22-midterm_prob_1",
-    "exam_name": "fa22-midterm",
-    "exam_type": "midterm",
-    "text": "Problem 1\n\nNote: This problem is out of scope; it\ncovers material no longer included in the course.\n\nTritonTire, a UCSD alumni-run car repair shop, has an electronic\ndatabase of all services it has ever provided, dating back to 1987. The\nowner, Dasha, says:\n\nIn at most two sentences, identify the largest\nconfounding factor that Dasha has not considered in her argument. Your\nanswer must fit in the box below.",
-    "answer": "Answer: The confounding factor that Dasha hasn’t considered is the prevalence of EVs. There are a lot more EVs now than ever before, so even if EVs are made to the same standards as gasoline cars or better, we’d expect to see more repairs of EVs now.",
-    "images": [],
-    "code": [],
-    "source": "fa22-midterm",
-    "source_url": "https://practice.dsc10.com/fa22-midterm/index.html#problem-1",
-    "anchor_id": "problem-1"
-  },
-  {
     "id": "fa22-midterm_prob_2",
     "exam_name": "fa22-midterm",
     "exam_type": "midterm",
@@ -12279,40 +12267,6 @@
     "source": "fa22-final",
     "source_url": "https://practice.dsc10.com/fa22-final/index.html#problem-2.5",
     "anchor_id": "problem-2.5"
-  },
-  {
-    "id": "fa22-final_prob_13",
-    "exam_name": "fa22-final",
-    "exam_type": "final",
-    "text": "Problem 3\n\nIn `apps`, our sample of 1,000 credit card applications,\n500 of the applications come from homeowners and 500 come from people\nwho don’t own their own home. In this sample, homeowner ages have a mean\nof 40 and standard deviation of 10. We want to use the bootstrap method\nto compute a confidence interval for the mean age of a homeowner in the\npopulation of all credit card applicants.\n\nProblem 3.1\n\nNote: This problem is out of scope; it\ncovers material no longer included in the course.\n\nSuppose our computer is too slow to bootstrap 10,000 times, and\ninstead can only bootstrap 20 times. Here are the 20 resample means,\nsorted in ascending order: \\begin{align*}\n&37, 38, 39, 39, 40, 40, 40, 40, 41 , 41, \\\\\n&42, 42, 42, 42, 42, 42, 43, 43, 43 , 44\n\\end{align*} What are the left and right endpoints of a bootstrapped\n80% confidence interval for the population mean? Use\nthe mathematical definition of percentile.",
-    "answer": "Answer: Left endpoint = 38, Right endpoint = 43 To find an 80% confidence interval, we need to find the 10th and 90th percentiles of the resample means. Using the mathematical definiton of percentile, the 10th percentile is at position 0.1*20 = 2 when we count starting with 1. Since 38 is the second element of the sorted data, that is the left endpoint of our confidence interval.",
-    "images": [],
-    "code": [
-      "apps",
-      "pop_mean",
-      "sample_mean",
-      "resample_mean"
-    ],
-    "source": "fa22-final",
-    "source_url": "https://practice.dsc10.com/fa22-final/index.html#problem-3.1",
-    "anchor_id": "problem-3.1"
-  },
-  {
-    "id": "fa22-final_prob_14",
-    "exam_name": "fa22-final",
-    "exam_type": "final",
-    "text": "Problem 3\n\nIn `apps`, our sample of 1,000 credit card applications,\n500 of the applications come from homeowners and 500 come from people\nwho don’t own their own home. In this sample, homeowner ages have a mean\nof 40 and standard deviation of 10. We want to use the bootstrap method\nto compute a confidence interval for the mean age of a homeowner in the\npopulation of all credit card applicants.\n\nProblem 3.2\n\nNote: This problem is out of scope; it\ncovers material no longer included in the course.\n\nTrue or False: Using the mathematical definition of percentile, the\n50th percentile of the bootstrapped distribution above equals its\nmedian.\n\n- True\n\n- False",
-    "answer": "Answer: False The 50th percentile according to the mathematial definition is the element at position 0.5*20 10 when we count starting with 1. The 10th element is 41. However, the median of a data set with 20 elements is halfway between the 10th and 11th values. So the median in this case is 41.5.",
-    "images": [],
-    "code": [
-      "apps",
-      "pop_mean",
-      "sample_mean",
-      "resample_mean"
-    ],
-    "source": "fa22-final",
-    "source_url": "https://practice.dsc10.com/fa22-final/index.html#problem-3.2",
-    "anchor_id": "problem-3.2"
   },
   {
     "id": "fa22-final_prob_15",
@@ -13649,21 +13603,6 @@
     "anchor_id": "problem-10.3"
   },
   {
-    "id": "su22-final_prob_42",
-    "exam_name": "su22-final",
-    "exam_type": "final",
-    "text": "Problem 11\n\nAnswer the following true/false questions.\n\nProblem 11.1\n\nNote: This problem is out of scope; it\ncovers material no longer included in the course.\n\nWhen John Snow took off the handle from the Broad Street pump, the\nnumber of cholera deaths decreased. Because of this, he could conclude\nthat cholera was caused by dirty water.\n\n- True\n\n- False",
-    "answer": "Answer: False There are a couple details that the problem fails to convey and that we cannot assume. 1) Do we even know that the pump he removed was the only pump with dirty water? 2) Do we know that people even drank/took water from the Broad Street pump? 3) Do we even know what kinds of people drank from the Broad Street pump? We need to eliminate all confounding factors, otherwise, it might be difficult to identify causality.",
-    "images": [],
-    "code": [
-      "df.groupby(\"kind\").mean()",
-      "stats"
-    ],
-    "source": "su22-final",
-    "source_url": "https://practice.dsc10.com/su22-final/index.html#problem-11.1",
-    "anchor_id": "problem-11.1"
-  },
-  {
     "id": "su22-final_prob_43",
     "exam_name": "su22-final",
     "exam_type": "final",
@@ -13765,21 +13704,6 @@
     "source": "su22-final",
     "source_url": "https://practice.dsc10.com/su22-final/index.html#problem-11.8",
     "anchor_id": "problem-11.8"
-  },
-  {
-    "id": "su22-final_prob_50",
-    "exam_name": "su22-final",
-    "exam_type": "final",
-    "text": "Problem 11\n\nAnswer the following true/false questions.\n\nProblem 11.9\n\nNote: This problem is out of scope; it\ncovers material no longer included in the course.\n\nThe 20th percentile of the sequence [10, 30, 50, 40, 9, 70] is\n30.\n\n- True\n\n- False",
-    "answer": "Answer: False Recall, we find the p th percentile in 4 steps: Sort the collection in increasing order. [9, 10, 30, 40, 50, 70] Define h to be p\\% of n : h = \\frac p{100} \\cdot n h = \\frac {20}{100} \\cdot 6 = 1.2 If h is an integer, define k = h . Otherwise, let k be the smallest integer greater than h . Since h (which is 1.2) is not an integer, so k is 2 Take the k th element of the sorted collection (start counting from 1, not 0). Since 10 has an ordinal rank of 2 in the data set, the 20th percentile value of the data set is 10, not 30.",
-    "images": [],
-    "code": [
-      "df.groupby(\"kind\").mean()",
-      "stats"
-    ],
-    "source": "su22-final",
-    "source_url": "https://practice.dsc10.com/su22-final/index.html#problem-11.9",
-    "anchor_id": "problem-11.9"
   },
   {
     "id": "su22-final_prob_51",
@@ -13974,18 +13898,6 @@
     "source": "sp22-midterm",
     "source_url": "https://practice.dsc10.com/sp22-midterm/index.html#problem-9",
     "anchor_id": "problem-9"
-  },
-  {
-    "id": "sp22-midterm_prob_11",
-    "exam_name": "sp22-midterm",
-    "exam_type": "midterm",
-    "text": "Problem 10\n\nNote: This problem is out of scope; it\ncovers material no longer included in the course.\n\nIn 2014, the UCSD administration made some important changes to Sun\nGod policies, including:\n\n1. eliminating guest tickets for non-students,\n\n2. increasing security, and\n\n3. introducing on-site medical care.\n\nThese changes were implemented because of incidents related to drug\nand alcohol abuse at the festival. At the 2013 Sun God festival, 48\nstudents were hospitalized, and at the 2014 festival, only 8 students\nwere hospitalized. Assuming there was no change in the total number of\nattendees from 2013 to 2014, which of the following statements is\ncorrect?\n\n- We cannot be sure if there is an association between administrative\nchanges and hospitalizations.\n\n- There is an association between administrative changes and\nhospitalizations. One or more of the administrative changes is\nresponsible for the decrease in hospitalizations, but since several\nadministrative changes happened at the same time, we can’t be sure of\nwhich one to credit with the reduction in hospitalizations.\n\n- There is an association between administrative changes and\nhospitalizations. We can’t be sure if any of the administrative changes\nare responsible for the reduction in hospitalizations.\n\n- None of the above.",
-    "answer": "Answer: There is an association between administrative changes and hospitalizations. We can’t be sure if any of the administrative changes are responsible for the reduction in hospitalizations. We know there is an association between administrative changes and hospitalizations because the number of hospitalized students dropped after the changes went into effect. However, since no randomized controlled trial was done, we can’t be sure of the reason for the reduction in hospitalizations. For example, maybe there were fewer hospitalizations because a new flavor of sparkling water came out in 2014, and people drank that instead of alcohol. We just don’t know enough to conclude any causal explanation for the reduction in hospitalizations.",
-    "images": [],
-    "code": [],
-    "source": "sp22-midterm",
-    "source_url": "https://practice.dsc10.com/sp22-midterm/index.html#problem-10",
-    "anchor_id": "problem-10"
   },
   {
     "id": "sp22-midterm_prob_12",
@@ -15132,29 +15044,6 @@
     "anchor_id": "problem-6.1"
   },
   {
-    "id": "wi22-midterm_prob_20",
-    "exam_name": "wi22-midterm",
-    "exam_type": "midterm",
-    "text": "Problem 6\n\nConsider the following line plot, which depicts the number of\nskyscrapers built per year.\n\nProblem 6.2\n\nNote: This problem is out of scope; it\ncovers material no longer included in the course.\n\nNow let’s look at the number of skyscrapers built each year since\n1975 in New York City 🗽.\n\nWhich of the following is a valid conclusion we can make using this\ngraph alone?\n\n- No city in the dataset had more skyscrapers built in 2015 than New\nYork City.\n\n- The decrease in the number of skyscrapers built in 2012 over previous\nyears was due to the 2008 economic recession, and the reason the\ndecrease is seen in 2012 rather than 2008 is because skyscrapers usually\ntake 4 years to be built.\n\n- The decrease in the number of skyscrapers built in 2012 over previous\nyears was due to something other than the 2008 economic recession.\n\n- The COVID-19 pandemic is the reason that so few skyscrapers were\nbuilt in 2020.\n\n- None of the above.",
-    "answer": "Answer: None of the above. Let’s look at each answer choice. “No city in the dataset had more skyscrapers built in 2015 than New York City.” is not necessarily true, because the graph provided only shows information for New York City. For all we know, 10000 skyscrapers were built in San Diego in 2015. “The decrease in the number of skyscrapers built in 2012 over previous years was due to the 2008 economic recession, and the reason the decrease is seen in 2012 rather than 2008 is because skyscrapers usually take 4 years to be built.” is not necessarily true, and we have no information that suggests that it is. “The decrease in the number of skyscrapers built in 2012 over previous years was due to something other than the 2008 economic recession.” is also not necessarily true – it could be the case that the recession was the reason, but the graph doesn’t tell us whether or not it is. “The COVID-19 pandemic is the reason that so few skyscrapers were built in 2020.”, for similar reasons, is also not necessarily true. Tip: This is a typical “cause-and-effect” problem that you’ll see in DSC 10 exams quite often. In order to establish that some treatment had an effect, we need to run a randomized controlled trial, or have some other guarantee that there is no difference between the naturally-observed control and treatment groups.",
-    "images": [
-      "https://practice.dsc10.com/assets/images/wi22-midterm/ny-per-year.png"
-    ],
-    "code": [
-      "sky.groupby('year').count().plot(kind='line', y='height');",
-      "sky.groupby( 'year' ).count().plot(kind = 'line' , y = 'height' ) ;",
-      "'height'",
-      "'name'",
-      "'material'",
-      "'city'",
-      "'floors'",
-      "'year'"
-    ],
-    "source": "wi22-midterm",
-    "source_url": "https://practice.dsc10.com/wi22-midterm/index.html#problem-6.2",
-    "anchor_id": "problem-6.2"
-  },
-  {
     "id": "wi22-midterm_prob_21",
     "exam_name": "wi22-midterm",
     "exam_type": "midterm",
@@ -15936,23 +15825,6 @@
     "anchor_id": "problem-8.1"
   },
   {
-    "id": "wi22-final_prob_35",
-    "exam_name": "wi22-final",
-    "exam_type": "final",
-    "text": "Problem 8.2\n\nNote: This problem is out of scope; it\ncovers material no longer included in the course.\n\nNote: This question uses the mathematical definition\nof percentile, not `np.percentile`.\n\nThe array `aces` defined below contains the points per\ngame scored by all members of the Las Vegas Aces. Note that it contains\n14 numbers that are in sorted order.\n\n```\naces = np.array([0, 0, 1.05, 1.47, 1.96, 2, 3.25,\n                 10.53, 11.09, 11.62, 12.19,\n                 14.24, 14.81, 18.25])\n```\n\nAs we saw in lab, percentiles are not unique. For instance, the\nnumber 1.05 is both the 15th percentile and 16th percentile of\n`aces`.\n\nThere is a positive integer q,\nbetween 0 and 100, such that 14.24 is the qth percentile of `aces`, but\n14.81 is the (q+1)th percentile of\n`aces`.\n\nWhat is the value of q? Give your\nanswer as an integer between 0 and 100.",
-    "answer": "Answer: 85 For reference, recall that we find the p th percentile of a collection of n numbers as follows: Sort the collection in increasing order. Define h to be p\\% of n : h = \\frac{p}{100} \\cdot n If h is an integer, define k = h . Otherwise, let k be the smallest integer greater than h . Take the k th element of the sorted collection (start counting from 1, not 0). To start, it’s worth emphasizing that there are n = 14 numbers in aces total. 14.24 is at position 12 (when the positions are numbered 1 through 14). Let’s try and find a value of p such that 14.24 is the p th percentile. To do so, we might try and find what “percentage” of the way through the distribution 14.24 is; doing so gives \\frac{12}{14} = 85.71\\% . If we follow the process outlined above with p = 85 , we get that h = \\frac{85}{100} \\cdot 14 = 11.9 and thus k = 12 , meaning that the 85th percentile is the number at position 12, which 14.24. Let’s see what happens when we try the same process with p = 86 . This time, we have h = \\frac{86}{100} \\cdot 14 = 12.04 and thus k = 13 , meaning that the 86th percentile is the number at position 13, which is 14.81. This means that the value of q is 85 – the 85th percentile is 14.24, while the 86th percentile is 14.81.",
-    "images": [],
-    "code": [
-      "np.percentile",
-      "aces",
-      "aces = np.array([0, 0, 1.05, 1.47, 1.96, 2, 3.25,\n                 10.53, 11.09, 11.62, 12.19,\n                 14.24, 14.81, 18.25])",
-      "aces = np.array([ 0 , 0 , 1.05 , 1.47 , 1.96 , 2 , 3.25 , 10.53 , 11.09 , 11.62 , 12.19 , 14.24 , 14.81 , 18.25 ])"
-    ],
-    "source": "wi22-final",
-    "source_url": "https://practice.dsc10.com/wi22-final/index.html#problem-8.2",
-    "anchor_id": "problem-8.2"
-  },
-  {
     "id": "wi22-final_prob_36",
     "exam_name": "wi22-final",
     "exam_type": "final",
@@ -16090,18 +15962,6 @@
     "source": "wi22-final",
     "source_url": "https://practice.dsc10.com/wi22-final/index.html#problem-9.7",
     "anchor_id": "problem-9.7"
-  },
-  {
-    "id": "wi22-final_prob_43",
-    "exam_name": "wi22-final",
-    "exam_type": "final",
-    "text": "Problem 10\n\nNote: This problem is out of scope; it\ncovers material no longer included in the course.\n\nThe WNBA is interested in helping boost their players’ social media\npresence, and considers various ways of making that happen.\n\nWhich of the following claims can be tested using a randomized\ncontrolled trial? Select all that apply.\n\n- Winning two games in a row causes a player to gain Instagram\nfollowers.\n\n- Drinking Gatorade causes a player to gain Instagram followers.\n\n- Playing for the Las Vegas Aces causes a player to gain Instagram\nfollowers.\n\n- Deleting Twitter causes a player to gain Instagram followers.\n\n- None of the above.",
-    "answer": "Answers: Drinking Gatorade causes a player to gain Instagram followers. Deleting Twitter causes a player to gain Instagram followers. The key to this problem is understanding the nature of randomized controlled trials (RCTs). To run an RCT, we must be able to randomly assign our test subjects to either a treatment or control group, and apply some treatment only to the treatment group. With that in mind, let’s look at the four options. Option 1: Here, the treatment would be winning two games in a row. However, this is not something we could apply to a treatment group, since we can’t control whether or not basketball players win games (let alone two games in a row). As such, this is not an RCT we could run. Option 2: Here, the treatment would be drinking Gatorade. We indeed could have a treatment group drink Gatorade; this is no different than having a treatment group take some form of medicine. This is an RCT we could run. Option 3: Here, the treatment would be playing for the Las Vegas Aces. Similar to Option 1, this is not an RCT we could run, since we can’t control which teams players play for. Option 4: Here, the treatment would be deleting Twitter. While they may not like it, we could have players participating in our study delete their Twitter accounts, so this is an RCT we could run. Note, our assessment above did not look at the outcome, gaining Instagram followers, at all. While to us it may seem unlikely that drinking Gatorade causes a player to gain Instagram followers, that doesn’t mean we can’t run an RCT to check.",
-    "images": [],
-    "code": [],
-    "source": "wi22-final",
-    "source_url": "https://practice.dsc10.com/wi22-final/index.html#problem-10",
-    "anchor_id": "problem-10"
   },
   {
     "id": "fa21-midterm_prob_1",
@@ -16493,18 +16353,6 @@
     "anchor_id": "problem-9.3"
   },
   {
-    "id": "fa21-midterm_prob_22",
-    "exam_name": "fa21-midterm",
-    "exam_type": "midterm",
-    "text": "Problem 10\n\nNote: This problem is out of scope; it\ncovers material no longer included in the course.\n\nIn response to the pandemic, some airlines chose to leave middle\nseats empty, while others continued seating passengers in middle seats.\nLet’s suppose Delta did not seat passengers in middle seats during the\npandemic, and United did seat passengers in middle seats during the\npandemic.\n\nDelta wants to know whether customers were satisfied with them for\nmaking this decision not to use middle seats. Suppose they have access\nto a dataset of customer satisfaction surveys, taken annually for each\nairline. How can Delta determine whether its new seating policy caused\nan increase in customer satisfaction?\n\n- Compare Delta’s average customer satisfaction before and after this\nchange went into effect.\n\n- Compare Delta’s average customer satisfaction after the change went\ninto effect to United’s average customer satisfaction at the same point\nin time.\n\n- Compare the change in Delta’s average customer satisfaction to the\nchange in United’s average customer satisfaction, throughout the same\nperiod of time, spanning the change.\n\n- None of the above.",
-    "answer": "Answer: None of the above. None of the options isolate the effect of the seating policy because they do not use randomized controlled trials. Even measuring the change in each airline’s average satisfaction rating as described in the third option is insufficient because we don’t know whether any differences are due to the changed seating policy or other changes. It’s possible that many things changed around the time of the pandemic, and we have no way of separating the effects of each of these changes. For example, maybe United stopped serving snacks during the pandemic and Delta continued serving snacks, at around the same time as the seating changes went into effect. If we find a difference in average customer satisfaction between the airlines, we have no way of knowing whether it’s because of the differences in seating policies or snack policies (or something else).",
-    "images": [],
-    "code": [],
-    "source": "fa21-midterm",
-    "source_url": "https://practice.dsc10.com/fa21-midterm/index.html#problem-10",
-    "anchor_id": "problem-10"
-  },
-  {
     "id": "fa21-final_prob_1",
     "exam_name": "fa21-final",
     "exam_type": "final",
@@ -16621,20 +16469,6 @@
     "source": "fa21-final",
     "source_url": "https://practice.dsc10.com/fa21-final/index.html#problem-3.2",
     "anchor_id": "problem-3.2"
-  },
-  {
-    "id": "fa21-final_prob_7",
-    "exam_name": "fa21-final",
-    "exam_type": "final",
-    "text": "Problem 3\n\nThe table below shows the average amount of revenue from different\nsources for art museums in 2003 and 2013.\n\nProblem 3.3\n\nNote: This problem is out of scope; it\ncovers material no longer included in the course.\n\nNotably, there was an economic recession in 2008-2009. Which of the\nfollowing can we conclude was an effect of the recession?\n\n- The increase in revenue from admissions, as more people were visiting\nmuseums.\n\n- The decline in revenue from museum stores, as people had less money\nto spend.\n\n- The decline in total revenue, as fewer people were visiting\nmuseums.\n\n- None of the above",
-    "answer": "Answer: None of the above Since we are only given the distribution of the revenue, and have no information about the amount of revenue in 2003 and 2013, we cannot conclude how the revenue has changed from 2003 to 2013 after the recession. For instance, if the total revenue in 2003 was 100 billion USD and the total revenue in 2013 was 50 billion USD, revenue from admissions in 2003 was 100 * 15% = 15 billion USD, and revenue from admissions in 2003 was 50 * 24% = 12 billion USD. In this case, we will have 15 > 12, the revenue from admissions has declined rather than increased (As stated by ‘The increase in revenue from admissions, as more people were visiting museums.’). Similarly, since we don’t know the total revenue in 2003 and 2013, we cannot conclude ‘The decline in revenue from museum stores, as people had less money to spend.’ or ‘The decline in total revenue, as fewer people were visiting museums.’",
-    "images": [
-      "https://practice.dsc10.com/assets/images/fa21-final/means.png"
-    ],
-    "code": [],
-    "source": "fa21-final",
-    "source_url": "https://practice.dsc10.com/fa21-final/index.html#problem-3.3",
-    "anchor_id": "problem-3.3"
   },
   {
     "id": "fa21-final_prob_8",
@@ -17343,18 +17177,6 @@
     "anchor_id": "problem-10.7"
   },
   {
-    "id": "wi21-midterm_prob_1",
-    "exam_name": "wi21-midterm",
-    "exam_type": "midterm",
-    "text": "Problem 1\n\nNote: This problem is out of scope; it\ncovers material no longer included in the course.\n\nWhich of the following questions could not be answered by running a\nrandomized controlled experiment?\n\n- Does eating citrus fruits increase the risk of heart disease?\n\n- Do exams with integrity pledges have fewer reported cases of academic\ndishonesty?\n\n- Does rewarding students for good grades improve high school\ngraduation rates?\n\n- Does drug abuse lead to a shorter life span?",
-    "answer": "Answer: Does drug abuse lead to a shorter life span? It would be unethical to try to run a randomized controlled experiment to address the question of whether drug abuse leads to a shorter life span, as this would involve splitting participants into groups and telling one group to abuse drugs. This is problematic because we know drug abuse brings about a host of problems, so we could not ethically ask people to harm themselves. Notice that the first proposed study, about the impacts of citrus fruits on heart disease, does not involve the same kind of ethical dilemma because we’re not forcing people to do something known to be harmful. A randomized controlled experiment would involve splitting participants into two groups and asking one group to eat citrus fruits, and measuring the heart health of both groups. Since there are no known harmful effects of eating citrus fruits, there is no ethical issue. Similarly, we could run a randomized controlled trial by giving an exam where some students had to sign an integrity pledge and others didn’t, tracking the number of reported dishonesty cases in each group. Likewise, we could reward some students for good grades and not others, and keep track of high school graduation rates in each group. Neither of these studies would involve knowingly harming people and could reasonably be carried out.",
-    "images": [],
-    "code": [],
-    "source": "wi21-midterm",
-    "source_url": "https://practice.dsc10.com/wi21-midterm/index.html#problem-1",
-    "anchor_id": "problem-1"
-  },
-  {
     "id": "wi21-midterm_prob_2",
     "exam_name": "wi21-midterm",
     "exam_type": "midterm",
@@ -17684,22 +17506,6 @@
     "source": "wi21-midterm",
     "source_url": "https://practice.dsc10.com/wi21-midterm/index.html#problem-10.6",
     "anchor_id": "problem-10.6"
-  },
-  {
-    "id": "wi21-midterm_prob_21",
-    "exam_name": "wi21-midterm",
-    "exam_type": "midterm",
-    "text": "Problem 11\n\nNote: This problem is out of scope; it\ncovers material no longer included in the course.\n\nYou have a DataFrame called `flights` containing\ninformation on various plane tickets sold between US cities. The columns\nare `'route_length'`, which stores distance between the\narrival and departure airports, in miles, and `'price'`,\nwhich stores the cost of the airline ticket, in dollars. You notice that\nlonger flights tend to cost more, as expected.",
-    "answer": "Answer: 306 dollars Galton’s method for making predictions is to take “nearby” x -values and average their corresponding y -values. For example, to predict the height of a child born to 70-inch parents, he averages the heights of children born to families where the parents are close to 70 inches tall. Using that same strategy here, we first need to identify which flights are considered “nearby” to a route that is 2800 miles. We are told that “nearby” means within 60 miles, so we are looking for flights between 2740 and 2860 miles in length. There are three such flights (the second, third, and fourth rows of the original data): route_length price 2750 249 2850 349 2850 319 Now, we simply need to average these three prices to make our prediction. Since \\frac{249+349+319}{3} = 305.67 and we are told to round to the nearest dollar, our prediction is 306 dollars.",
-    "images": [],
-    "code": [
-      "flights",
-      "'route_length'",
-      "'price'"
-    ],
-    "source": "wi21-midterm",
-    "source_url": "https://practice.dsc10.com/wi21-midterm/index.html#problem-11",
-    "anchor_id": "problem-11"
   },
   {
     "id": "wi21-midterm_prob_22",
@@ -18255,34 +18061,6 @@
     "source": "wi21-final",
     "source_url": "https://practice.dsc10.com/wi21-final/index.html#problem-22.2",
     "anchor_id": "problem-22.2"
-  },
-  {
-    "id": "wi21-final_prob_35",
-    "exam_name": "wi21-final",
-    "exam_type": "final",
-    "text": "Problem 23\n\nNote: This problem is out of scope; it\ncovers material no longer included in the course.\n\nRecall the mathematical definition of percentile and how we calculate\nit.\n\nLet p be a number between 0 and 100.\nThe pth percentile of a collection is the smallest\n\nBy this definition, any percentile between 0 and 100 can be computed\nfor any collection of values and is always an element of the collection.\nSuppose there are n elements in the collection. To find the\npth percentile:\n\n1. Sort the collection in increasing order.\n\n2. Find p % of n : ( p /100) n . Call\nthat h . If h is an integer, define k = h . Otherwise, let k be the smallest integer\ngreater than h .\n\n3. Take the k th element of the sorted collection.\n\nYou have a dataset of 7 values, which are\n`[3, 6, 7, 9, 10, 15, 18]`. Using the mathematical definition\nof percentile above, find the smallest and largest integer values of p\nso that the pth percentile of this dataset corresponds to the value 10.\nInput your answers below, as integers between 0 and\n100.\n\nProblem 23.1\n\n`Smallest = _`",
-    "answer": "Answer: 58 From the definition provided in the question, we want all values of (p/100) * n which will yield an integer larger than 4, but less than or equal to 5 because we want the 5th element (10) in the dataset. To approach this problem we can find how many percentiles each piece of data falls within by taking 100 / 7 which yields around 14.3. Wanting to find the percentiles for the range of 4 to 5 we can multiple (100/7) by 4 to get our lower bound. (100/7) * 4 = 57.14 which is rounded up to 58 since the 57th percentile belongs to the 4th element while 58 belongs to the fifth element.",
-    "images": [],
-    "code": [
-      "Smallest = _"
-    ],
-    "source": "wi21-final",
-    "source_url": "https://practice.dsc10.com/wi21-final/index.html#problem-23.1",
-    "anchor_id": "problem-23.1"
-  },
-  {
-    "id": "wi21-final_prob_36",
-    "exam_name": "wi21-final",
-    "exam_type": "final",
-    "text": "Problem 23\n\nNote: This problem is out of scope; it\ncovers material no longer included in the course.\n\nRecall the mathematical definition of percentile and how we calculate\nit.\n\nLet p be a number between 0 and 100.\nThe pth percentile of a collection is the smallest\n\nBy this definition, any percentile between 0 and 100 can be computed\nfor any collection of values and is always an element of the collection.\nSuppose there are n elements in the collection. To find the\npth percentile:\n\n1. Sort the collection in increasing order.\n\n2. Find p % of n : ( p /100) n . Call\nthat h . If h is an integer, define k = h . Otherwise, let k be the smallest integer\ngreater than h .\n\n3. Take the k th element of the sorted collection.\n\nYou have a dataset of 7 values, which are\n`[3, 6, 7, 9, 10, 15, 18]`. Using the mathematical definition\nof percentile above, find the smallest and largest integer values of p\nso that the pth percentile of this dataset corresponds to the value 10.\nInput your answers below, as integers between 0 and\n100.\n\nProblem 23.2\n\n`Largest = _`",
-    "answer": "Answer: 71 To find the largest we will take (100/7) * 5 which yields 71.43. We will round down since the 72th percentile belongs to the sixth element in the data set. For more information look at the solution above.",
-    "images": [],
-    "code": [
-      "Largest = _"
-    ],
-    "source": "wi21-final",
-    "source_url": "https://practice.dsc10.com/wi21-final/index.html#problem-23.2",
-    "anchor_id": "problem-23.2"
   },
   {
     "id": "wi21-final_prob_37",

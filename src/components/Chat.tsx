@@ -1,7 +1,12 @@
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 
-import { askTutor, getPracticeProblems, getRandomExamQuestion } from '@/api';
+import {
+  askTutor,
+  getPracticeProblems,
+  getRandomExamQuestion,
+  type IAskTutorParams
+} from '@/api';
 import { logEvent } from '@/api/logger';
 import { Button } from '@/components/ui/button';
 import { useNotebook } from '@/contexts/NotebookContext';
@@ -20,6 +25,9 @@ const PRACTICE_PATTERNS = practicePatternsJson.map(
 
 const EXAM_TRIGGER_PATTERN =
   /\b(?:exam\s+mode|exam\s+(?:question|problem)|midterm|final(?:\s+exam)?)\b/i;
+const EXAM_NEXT_PATTERN = /^\s*(?:next|next\s+question)\s*$/i;
+const EXAM_END_PATTERN =
+  /\b(?:end|exit|leave|stop|quit|turn\s+off|disable)\s+exam(?:\s+mode)?\b|^\s*end\s+exam\s*$/i;
 
 export default function Chat() {
   const {
@@ -29,6 +37,7 @@ export default function Chat() {
     getStructuredContext
   } = useNotebook();
   const [messages, setMessages] = useState<IMessage[]>([]);
+  const [isExamModeActive, setIsExamModeActive] = useState(false);
   const [examModeConversation, setExamModeConversation] = useState<string[]>(
     []
   );
@@ -94,8 +103,14 @@ export default function Chat() {
 
     checkNotebook();
   }, [notebookName, notebookLoaded, getSanitizedNotebook]);
-  const isExamModeRequest = (query: string): boolean =>
-    query.trim().toLowerCase() === 'next' || EXAM_TRIGGER_PATTERN.test(query);
+  const isExamModeStartRequest = (query: string): boolean =>
+    EXAM_TRIGGER_PATTERN.test(query);
+
+  const isExamModeNextRequest = (query: string): boolean =>
+    EXAM_NEXT_PATTERN.test(query);
+
+  const isExamModeEndRequest = (query: string): boolean =>
+    EXAM_END_PATTERN.test(query);
 
   const formatExamQuestion = (problem: {
     exam_name: string;
@@ -156,6 +171,44 @@ export default function Chat() {
   };
 
   const handleMessageSubmit = async (text: string) => {
+    const issueExamQuestion = async (studentText: string) => {
+      const examResponse = await getRandomExamQuestion({
+        conversation_id: shouldResetNext ? undefined : conversationId,
+        student_question: studentText
+      });
+      const examModeMessage = formatExamQuestion(examResponse.problem);
+
+      if (shouldResetNext) {
+        setShouldResetNext(false);
+      }
+
+      if (examResponse.conversation_id) {
+        setConversationId(examResponse.conversation_id);
+      }
+
+      logEvent({
+        event_type: 'exam_question_request',
+        payload: {
+          original_query: studentText,
+          exam_name: examResponse.problem.exam_name,
+          notebook: notebookName
+        }
+      });
+
+      setExamModeConversation(prev => [
+        ...prev,
+        `Student: ${studentText}`,
+        `Tutor: ${examModeMessage}`
+      ]);
+
+      setPendingExamAnswer(examResponse.problem.answer ?? null);
+
+      setMessages(prev => [
+        ...prev,
+        { author: 'tutor', text: examModeMessage }
+      ]);
+    };
+
     const wasFollowUpViaTab = acceptedFollowUpRef.current === text.trim();
     if (wasFollowUpViaTab) {
       logEvent({
@@ -173,48 +226,68 @@ export default function Chat() {
     setMessages(prev => [...prev, { author: 'user', text }]);
     setIsWaiting(true);
     try {
-      if (isExamModeRequest(text)) {
-        const examResponse = await getRandomExamQuestion({
-          conversation_id: shouldResetNext ? undefined : conversationId,
-          student_question: text
-        });
-        const examModeMessage = formatExamQuestion(examResponse.problem);
-
-        if (shouldResetNext) {
-          setShouldResetNext(false);
+      if (isExamModeActive) {
+        if (isExamModeEndRequest(text)) {
+          setIsExamModeActive(false);
+          setPendingExamAnswer(null);
+          setExamModeConversation([]);
+          setMessages(prev => [
+            ...prev,
+            {
+              author: 'tutor',
+              text: 'Exam mode ended. You are back in normal tutor mode.'
+            }
+          ]);
+          logEvent({
+            event_type: 'exam_mode_ended',
+            payload: {
+              notebook: notebookName,
+              conversation_id: conversationId
+            }
+          });
+          return;
         }
 
-        if (examResponse.conversation_id) {
-          setConversationId(examResponse.conversation_id);
+        if (isExamModeNextRequest(text)) {
+          await issueExamQuestion(text);
+          return;
         }
-
-        logEvent({
-          event_type: 'exam_question_request',
-          payload: {
-            original_query: text,
-            exam_name: examResponse.problem.exam_name,
-            notebook: notebookName
-          }
-        });
-
-        setExamModeConversation(prev => [
-          ...prev,
-          `Student: ${text}`,
-          `Tutor: ${examModeMessage}`
-        ]);
-
-        setPendingExamAnswer(examResponse.problem.answer ?? null);
-
+      } else if (isExamModeNextRequest(text) || isExamModeEndRequest(text)) {
         setMessages(prev => [
           ...prev,
-          { author: 'tutor', text: examModeMessage }
+          {
+            author: 'tutor',
+            text: 'Exam mode is not active. Ask for exam mode to start, then use `next` to move to another question.'
+          }
         ]);
+        return;
+      } else if (isExamModeStartRequest(text)) {
+        setIsExamModeActive(true);
+        setMessages(prev => [
+          ...prev,
+          {
+            author: 'tutor',
+            text: 'Exam mode activated. Ask about this question, type `next` for a new one, or `end exam mode` to exit.'
+          }
+        ]);
+        logEvent({
+          event_type: 'exam_mode_started',
+          payload: {
+            notebook: notebookName,
+            conversation_id: conversationId
+          }
+        });
+        await issueExamQuestion(text);
         return;
       }
 
       const practiceCheck = isPracticeRequest(text);
 
-      if (practiceCheck.isPractice && practiceCheck.topic) {
+      if (
+        !isExamModeActive &&
+        practiceCheck.isPractice &&
+        practiceCheck.topic
+      ) {
         const practiceResponse = await getPracticeProblems({
           topic_query: practiceCheck.topic
         });
@@ -243,10 +316,39 @@ export default function Chat() {
       const backendPromptMode =
         mode === 'tutor' ? 'append' : mode === 'chatgpt' ? 'override' : 'none';
 
-      const nearestMarkdown = getNearestMarkdownCell();
-      const enhancedQuestion = enhanceQuestion(text, nearestMarkdown);
-      const questionForTutor = withPendingExamAnswerContext(enhancedQuestion);
-      const structuredContext = getStructuredContext();
+      const questionForTutor = isExamModeActive
+        ? withPendingExamAnswerContext(text)
+        : withPendingExamAnswerContext(
+            enhanceQuestion(text, getNearestMarkdownCell())
+          );
+
+      const tutorRequest: IAskTutorParams = isExamModeActive
+        ? {
+            student_question: questionForTutor,
+            conversation_id: conversationId,
+            notebook_json: '{}',
+            exam_mode_conversation:
+              examModeConversation.length > 0
+                ? examModeConversation.join('\n\n')
+                : undefined,
+            reset_conversation: shouldResetNext || undefined,
+            prompt_mode: 'none' as const
+          }
+        : {
+            student_question: questionForTutor,
+            conversation_id: conversationId,
+            notebook_json: JSON.stringify(getSanitizedNotebook()),
+            structured_context: (() => {
+              const structuredContext = getStructuredContext();
+              return structuredContext
+                ? JSON.stringify(structuredContext)
+                : undefined;
+            })(),
+            exam_mode_conversation: undefined,
+            prompt: promptToSend,
+            prompt_mode: backendPromptMode,
+            reset_conversation: shouldResetNext || undefined
+          };
 
       logEvent({
         event_type: 'tutor_query',
@@ -258,27 +360,13 @@ export default function Chat() {
         }
       });
 
-      const tutorMessage = await askTutor({
-        student_question: questionForTutor,
-        conversation_id: conversationId,
-        notebook_json: JSON.stringify(getSanitizedNotebook()),
-        structured_context: structuredContext
-          ? JSON.stringify(structuredContext)
-          : undefined,
-        exam_mode_conversation:
-          examModeConversation.length > 0
-            ? examModeConversation.join('\n\n')
-            : undefined,
-        prompt: promptToSend,
-        prompt_mode: backendPromptMode,
-        reset_conversation: shouldResetNext || undefined
-      });
+      const tutorMessage = await askTutor(tutorRequest);
 
       if (shouldResetNext) {
         setShouldResetNext(false);
       }
 
-      if (pendingExamAnswer) {
+      if (!isExamModeActive && pendingExamAnswer) {
         setPendingExamAnswer(null);
       }
 
@@ -306,13 +394,13 @@ export default function Chat() {
       const turnPayload: Record<string, unknown> = {
         student_message: text,
         tutor_response: tutorMessage.tutor_response,
-        prompt_mode: backendPromptMode,
+        prompt_mode: isExamModeActive ? 'none' : backendPromptMode,
         toggle_mode: mode,
         timestamp: new Date().toISOString(),
         conversation_id: finalConversationId
       };
 
-      if (isFirstTurnForTurn) {
+      if (isFirstTurnForTurn && !isExamModeActive) {
         turnPayload.initial_notebook_json = JSON.stringify(
           getSanitizedNotebook()
         );
@@ -332,6 +420,15 @@ export default function Chat() {
           relevantLectures: tutorMessage.relevant_lectures
         }
       ]);
+
+      if (isExamModeActive) {
+        setExamModeConversation(prev => [
+          ...prev,
+          `Student: ${text}`,
+          `Tutor: ${tutorMessage.tutor_response}`
+        ]);
+      }
+
       if (tutorMessage.follow_up) {
         setSuggestion(tutorMessage.follow_up);
       }
@@ -352,6 +449,7 @@ export default function Chat() {
 
   const handleNewConversation = () => {
     setMessages([]);
+    setIsExamModeActive(false);
     setExamModeConversation([]);
     setPendingExamAnswer(null);
     setConversationId(undefined);

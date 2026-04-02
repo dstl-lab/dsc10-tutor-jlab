@@ -56,7 +56,9 @@ function isOnDataHub(): boolean {
  * A null return disables experiment gating — all features behave as variant B.
  */
 export function getStudentKey(): string | null {
-  if (!isOnDataHub()) return null;
+  if (!isOnDataHub()) {
+    return null;
+  }
   return getStudentEmailFromUrl();
 }
 

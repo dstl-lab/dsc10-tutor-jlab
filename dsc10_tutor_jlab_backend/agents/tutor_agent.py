@@ -136,6 +136,8 @@ async def stream_ask_tutor(
     reset_conversation: bool = False,
     structured_context: dict | None = None,
     server_root: Path | None = None,
+    enable_lectures: bool = True,
+    enable_follow_up: bool = True,
 ) -> AsyncIterator[dict]:
     """Stream tutor response as SSE-ready event dicts.
 
@@ -151,8 +153,10 @@ async def stream_ask_tutor(
 
     history, conversation_id = get_history(conversation_id)
 
-    lecture_task = asyncio.create_task(
-        search_lecture_cells_with_agent(student_question, server_root)
+    lecture_task = (
+        asyncio.create_task(search_lecture_cells_with_agent(student_question, server_root))
+        if enable_lectures
+        else None
     )
 
     system_prompt = PROMPT_MAP.get(prompt_mode, PROMPT_MAP["append"])
@@ -201,17 +205,19 @@ async def stream_ask_tutor(
     full_response = "".join(response_parts)
     append_message(conversation_id, student_question, full_response)
 
-    try:
-        relevant_lectures = await asyncio.wait_for(lecture_task, timeout=30)
-    except (asyncio.TimeoutError, Exception):
-        relevant_lectures = []
+    if lecture_task is not None:
+        try:
+            relevant_lectures = await asyncio.wait_for(lecture_task, timeout=30)
+        except (asyncio.TimeoutError, Exception):
+            relevant_lectures = []
 
-    if relevant_lectures:
-        yield {"type": "lectures", "relevant_lectures": relevant_lectures}
+        if relevant_lectures:
+            yield {"type": "lectures", "relevant_lectures": relevant_lectures}
 
-    follow_up = await _generate_follow_up(student_question, full_response)
-    if follow_up:
-        yield {"type": "follow_up", "text": follow_up}
+    if enable_follow_up:
+        follow_up = await _generate_follow_up(student_question, full_response)
+        if follow_up:
+            yield {"type": "follow_up", "text": follow_up}
 
     yield {"type": "done", "conversation_id": conversation_id}
 

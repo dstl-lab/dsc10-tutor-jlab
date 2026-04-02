@@ -21,6 +21,8 @@ export interface IAskTutorParams {
   reset_conversation?: boolean;
   nearest_markdown_cell_text?: string;
   structured_context?: string;
+  experiment_id?: string;
+  variant?: 'A' | 'B';
 }
 
 export interface ILectureCell {

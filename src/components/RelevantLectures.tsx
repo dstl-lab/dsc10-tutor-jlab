@@ -8,9 +8,15 @@ import Markdown from './Markdown';
 
 interface IRelevantLecturesProps {
   lectures: ILectureCell[];
+  variant?: 'A' | 'B';
+  experimentId?: string;
 }
 
-export default function RelevantLectures({ lectures }: IRelevantLecturesProps) {
+export default function RelevantLectures({
+  lectures,
+  variant,
+  experimentId
+}: IRelevantLecturesProps) {
   const { commands } = useNotebook();
   const [expandedIndices, setExpandedIndices] = React.useState<Set<number>>(
     new Set()
@@ -44,7 +50,8 @@ export default function RelevantLectures({ lectures }: IRelevantLecturesProps) {
       payload: {
         lecture: getLectureTitle(lecture.lecture),
         cell_index: lecture.cell_index,
-        expanded: isExpanding
+        expanded: isExpanding,
+        ...(experimentId && { experiment_id: experimentId, variant })
       }
     });
   };
@@ -60,7 +67,8 @@ export default function RelevantLectures({ lectures }: IRelevantLecturesProps) {
       payload: {
         lecture: getLectureTitle(lecture.lecture),
         path: lecture.path,
-        cell_index: lecture.cell_index
+        cell_index: lecture.cell_index,
+        ...(experimentId && { experiment_id: experimentId, variant })
       }
     });
 

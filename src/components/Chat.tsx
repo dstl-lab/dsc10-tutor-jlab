@@ -3,6 +3,12 @@ import { useEffect, useRef, useState } from 'react';
 
 import { askTutorStream, getPracticeProblems } from '@/api';
 import { logEvent } from '@/api/logger';
+import {
+  ACTIVE_EXPERIMENT,
+  assignVariant,
+  getStudentKey,
+  hashStudentKey
+} from '@/utils/abTesting';
 import { Button } from '@/components/ui/button';
 import { useNotebook } from '@/contexts/NotebookContext';
 import { enhanceQuestion } from '@/utils/enhancedQuestionUtils';
@@ -37,6 +43,13 @@ export default function Chat() {
   type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
   const [mode, setMode] = useState<FrontendPromptMode>('tutor');
   const [suggestion, setSuggestion] = useState('');
+
+  // A/B testing: variant is computed once at mount and stable for the session.
+  // Variant A = control (feature OFF), Variant B = treatment (feature ON).
+  const [variant] = useState<'A' | 'B'>(() =>
+    ACTIVE_EXPERIMENT ? assignVariant(getStudentKey(), ACTIVE_EXPERIMENT) : 'B'
+  );
+  const studentKeyHashRef = useRef<string>(hashStudentKey(getStudentKey()));
 
   useEffect(() => {
     if (!notebookName || notebookLoaded) {
@@ -102,7 +115,11 @@ export default function Chat() {
           question: text,
           mode,
           conversation_id: conversationId,
-          notebook: notebookName
+          notebook: notebookName,
+          ...(ACTIVE_EXPERIMENT === 'exp_follow_up' && {
+            experiment_id: ACTIVE_EXPERIMENT,
+            variant
+          })
         }
       });
       acceptedFollowUpRef.current = null;
@@ -112,7 +129,30 @@ export default function Chat() {
     setIsWaiting(true);
 
     try {
-      const shouldGetPracticeProblems = isPracticeRequest(text);
+      const isPracticeIntent = isPracticeRequest(text);
+
+      // Log the start of every experiment turn. This is the denominator for
+      // all experiment metrics. is_practice_intent identifies eligible turns
+      // for the practice problems experiment specifically.
+      if (ACTIVE_EXPERIMENT) {
+        logEvent({
+          event_type: 'exp_turn_start',
+          payload: {
+            experiment_id: ACTIVE_EXPERIMENT,
+            variant,
+            student_key_hash: studentKeyHashRef.current,
+            is_practice_intent: isPracticeIntent,
+            conversation_id: conversationId,
+            notebook: notebookName
+          }
+        });
+      }
+
+      // Variant A skips the practice problems endpoint during any active experiment
+      // and falls through to the normal tutor flow instead.
+      // Variant B (and no active experiment) keeps the current behavior.
+      const shouldGetPracticeProblems =
+        isPracticeIntent && !(ACTIVE_EXPERIMENT && variant === 'A');
 
       if (shouldGetPracticeProblems) {
         const practiceResponse = await getPracticeProblems({
@@ -131,6 +171,19 @@ export default function Chat() {
             formatted_response: practiceResponse.formatted_response
           }
         });
+
+        if (ACTIVE_EXPERIMENT === 'exp_practice_problems') {
+          logEvent({
+            event_type: 'exp_practice_impression',
+            payload: {
+              experiment_id: ACTIVE_EXPERIMENT,
+              variant,
+              student_key_hash: studentKeyHashRef.current,
+              problem_count: practiceResponse.count,
+              notebook: notebookName
+            }
+          });
+        }
 
         setMessages(prev => [
           ...prev,
@@ -170,6 +223,10 @@ export default function Chat() {
       await new Promise<void>((resolve, reject) => {
         let finalConversationId: string | undefined;
 
+        const isBackendGatedExperiment =
+          ACTIVE_EXPERIMENT === 'exp_relevant_lectures' ||
+          ACTIVE_EXPERIMENT === 'exp_follow_up';
+
         const abort = askTutorStream(
           {
             student_question: enhancedQuestion,
@@ -180,7 +237,12 @@ export default function Chat() {
               : undefined,
             prompt: promptToSend,
             prompt_mode: backendPromptMode,
-            reset_conversation: resetFlag
+            reset_conversation: resetFlag,
+            ...(isBackendGatedExperiment &&
+              ACTIVE_EXPERIMENT && {
+                experiment_id: ACTIVE_EXPERIMENT,
+                variant
+              })
           },
           event => {
             if (event.type === 'token') {
@@ -197,19 +259,51 @@ export default function Chat() {
                 return updated;
               });
             } else if (event.type === 'lectures') {
-              setMessages(prev => {
-                const updated = [...prev];
-                const last = updated[updated.length - 1];
-                if (last?.author === 'tutor') {
-                  updated[updated.length - 1] = {
-                    ...last,
-                    relevantLectures: event.relevant_lectures
-                  };
+              if (
+                !(
+                  ACTIVE_EXPERIMENT === 'exp_relevant_lectures' &&
+                  variant === 'A'
+                )
+              ) {
+                setMessages(prev => {
+                  const updated = [...prev];
+                  const last = updated[updated.length - 1];
+                  if (last?.author === 'tutor') {
+                    updated[updated.length - 1] = {
+                      ...last,
+                      relevantLectures: event.relevant_lectures
+                    };
+                  }
+                  return updated;
+                });
+                if (ACTIVE_EXPERIMENT === 'exp_relevant_lectures') {
+                  logEvent({
+                    event_type: 'exp_lectures_impression',
+                    payload: {
+                      experiment_id: ACTIVE_EXPERIMENT,
+                      variant,
+                      student_key_hash: studentKeyHashRef.current,
+                      lecture_count: event.relevant_lectures.length,
+                      notebook: notebookName
+                    }
+                  });
                 }
-                return updated;
-              });
+              }
             } else if (event.type === 'follow_up') {
-              setSuggestion(event.text);
+              if (!(ACTIVE_EXPERIMENT === 'exp_follow_up' && variant === 'A')) {
+                setSuggestion(event.text);
+                if (ACTIVE_EXPERIMENT === 'exp_follow_up') {
+                  logEvent({
+                    event_type: 'exp_follow_up_impression',
+                    payload: {
+                      experiment_id: ACTIVE_EXPERIMENT,
+                      variant,
+                      student_key_hash: studentKeyHashRef.current,
+                      notebook: notebookName
+                    }
+                  });
+                }
+              }
             } else if (event.type === 'done') {
               finalConversationId = event.conversation_id;
               setMessages(prev => {
@@ -340,7 +434,12 @@ export default function Chat() {
         </Button>
         <ToggleMode mode={mode} setMode={setMode} disabled={isWaiting} />
       </div>
-      <ChatMessages messages={messages} isWaiting={isWaiting} />
+      <ChatMessages
+        messages={messages}
+        isWaiting={isWaiting}
+        variant={variant}
+        experimentId={ACTIVE_EXPERIMENT ?? undefined}
+      />
       <ChatMessageBox
         onSubmit={handleMessageSubmit}
         disabled={isWaiting}

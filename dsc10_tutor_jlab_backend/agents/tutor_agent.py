@@ -76,6 +76,7 @@ async def ask_tutor(
     nearest_markdown_cell_text: str | None = None,
     reset_conversation: bool = False,
     structured_context: dict | None = None,
+    exam_mode_conversation: str | None = None,
     server_root: Path | None = None,
 ):
     if reset_conversation:
@@ -83,10 +84,16 @@ async def ask_tutor(
 
     history, conversation_id = get_history(conversation_id)
 
-    relevant_lecture_cells = await retrieve_relevant_lecture_cells(
-        question=student_question,
-        server_root=server_root,
+    is_exam_mode = bool(exam_mode_conversation) or (
+        prompt_mode == "none" and not notebook_json
     )
+
+    relevant_lecture_cells = []
+    if not is_exam_mode:
+        relevant_lecture_cells = await retrieve_relevant_lecture_cells(
+            question=student_question,
+            server_root=server_root,
+        )
 
     lecture_context_str = ""
     if relevant_lecture_cells:

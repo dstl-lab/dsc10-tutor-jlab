@@ -16,7 +16,6 @@ from typing import Any
 # from google.genai import types
 # from ..tools.bash_tool import bash_exec
 
-from ..observability import elapsed_ms, log_json, now_perf_ns
 from ..services.lectures_service import retrieve_relevant_lecture_cells
 
 logger = logging.getLogger(__name__)
@@ -232,22 +231,11 @@ def _find_lectures_dir(search_root: Path) -> Path | None:
 async def search_lecture_cells_with_agent(
     question: str,
     server_root: Path | None = None,
-    request_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """Lecture retrieval via TF-IDF + Gemini reranker (ADK bash agent disabled for latency experiment)."""
-    retrieval_start_ns = now_perf_ns()
     root = server_root or Path.home()
 
-    discover_start_ns = now_perf_ns()
     lectures_hint = await asyncio.to_thread(_find_lectures_dir, root)
-    log_json(
-        logger,
-        "request.stage",
-        request_id=request_id,
-        stage="retrieval.discover_lectures_dir",
-        elapsed_ms=elapsed_ms(discover_start_ns),
-        lectures_dir_found=bool(lectures_hint),
-    )
 
     if lectures_hint is None:
         logger.info(
@@ -256,22 +244,84 @@ async def search_lecture_cells_with_agent(
             root,
         )
 
-    tfidf_start_ns = now_perf_ns()
     results = await retrieve_relevant_lecture_cells(question, root)
-    log_json(
-        logger,
-        "request.stage",
-        request_id=request_id,
-        stage="retrieval.tfidf_rerank",
-        elapsed_ms=elapsed_ms(tfidf_start_ns),
-        result_count=len(results),
-    )
-    log_json(
-        logger,
-        "request.stage",
-        request_id=request_id,
-        stage="retrieval.search_lecture_cells_with_agent",
-        elapsed_ms=elapsed_ms(retrieval_start_ns),
-        result_count=len(results),
-    )
     return results
+
+    # async def search_lecture_cells_with_agent(
+    #     question: str,
+    #     server_root: Path | None = None,
+    # ) -> list[dict[str, Any]]:
+    #     """Run the ADK lecture search agent, fall back to TF-IDF only on hard failures."""
+    #     root = server_root or Path.home()
+
+    #     lectures_hint = await asyncio.to_thread(_find_lectures_dir, root)
+    #     bash_cwd = lectures_hint if lectures_hint is not None else root
+
+    #     if lectures_hint is None:
+    #         logger.info(
+    #             "[LectureSearch] No lectures directory pre-discovered; "
+    #             "agent will search from %s.",
+    #             root,
+    #         )
+
+    #     bash_tool = _make_bash_tool(str(bash_cwd))
+
+    #     agent = Agent(
+    #         name="lecture_search",
+    #         model=get_gemini_model(),
+    #         instruction=_SEARCH_SYSTEM_PROMPT,
+    #         tools=[bash_tool],
+    #     )
+    #     session_service = InMemorySessionService()
+    #     runner = Runner(
+    #         agent=agent,
+    #         app_name="dsc10-lecture-search",
+    #         session_service=session_service,
+    #         auto_create_session=True,
+    #     )
+
+    #     if lectures_hint:
+    #         search_context = f"lectures_hint: {lectures_hint}"
+    #     else:
+    #         search_context = (
+    #             f"No lectures directory pre-discovered. "
+    #             f"Start by running: find {root} -maxdepth 4 -name '*.ipynb' -path '*lec*' "
+    #             f"to locate the lectures folder, then grep inside it."
+    #         )
+    #     user_message = (
+    #         f"Find lecture cells relevant to this DSC 10 student question:\n\n{question}\n\n"
+    #         f"{search_context}"
+    #     )
+    #     content = types.Content(role="user", parts=[types.Part(text=user_message)])
+
+    #     raw_parts: list[str] = []
+    #     try:
+
+    #         async def _collect():
+    #             async for event in runner.run_async(
+    #                 user_id="student",
+    #                 session_id="lecture-search-one-shot",
+    #                 new_message=content,
+    #             ):
+    #                 if hasattr(event, "content") and event.content:
+    #                     for part in event.content.parts:
+    #                         if hasattr(part, "text") and part.text:
+    #                             raw_parts.append(part.text)
+
+    #         await asyncio.wait_for(_collect(), timeout=_AGENT_TIMEOUT_SECONDS)
+    #     except asyncio.TimeoutError:
+    #         logger.warning("[LectureSearch] Agent timed out; using TF-IDF fallback.")
+    #         return await retrieve_relevant_lecture_cells(question, root)
+    #     except Exception as exc:
+    #         logger.warning("[LectureSearch] Agent error (%s); using TF-IDF fallback.", exc)
+    #         return await retrieve_relevant_lecture_cells(question, root)
+
+    #     raw_output = "".join(raw_parts)
+    #     results = _parse_agent_output(raw_output, root, bash_cwd)
+
+    #     if results:
+    #         logger.info("[LectureSearch] Agent found %d cell(s).", len(results))
+    #     else:
+    #         logger.info("[LectureSearch] Agent found no relevant cells.")
+
+    #     return results

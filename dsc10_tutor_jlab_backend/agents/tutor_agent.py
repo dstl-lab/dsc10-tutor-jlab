@@ -1,6 +1,7 @@
 import asyncio
 from collections.abc import AsyncIterator
 from pathlib import Path
+import logging
 
 from google.adk.agents import Agent
 from google.adk.runners import Runner
@@ -9,10 +10,18 @@ from google.genai import types
 
 from ..conversation_store import append_message, get_history, reset_history
 from ..gemini_client import get_gemini_model
+from ..observability import (
+    elapsed_ms,
+    estimate_token_count,
+    log_json,
+    now_iso_utc,
+    now_perf_ns,
+)
 from ..prompts import FOLLOW_UP_INSTRUCTION, PROMPT_MAP
 from .lecture_search_agent import search_lecture_cells_with_agent
 
 FOLLOW_UP_TUTOR_RESPONSE_MAX_CHARS = 800
+logger = logging.getLogger(__name__)
 
 
 def _truncate_for_follow_up(
@@ -24,11 +33,14 @@ def _truncate_for_follow_up(
     return text[:max_chars].rstrip() + "…"
 
 
-async def _generate_follow_up(student_question: str, tutor_response: str) -> str | None:
+async def _generate_follow_up(
+    student_question: str, tutor_response: str, request_id: str | None = None
+) -> str | None:
     tutor_context = _truncate_for_follow_up(tutor_response)
+    model_name = get_gemini_model()
     agent = Agent(
         name="follow_up",
-        model=get_gemini_model(),
+        model=model_name,
         instruction=FOLLOW_UP_INSTRUCTION,
     )
     session_service = InMemorySessionService()
@@ -47,6 +59,8 @@ Output exactly one short follow-up question the student might ask next. No other
 
     content = types.Content(role="user", parts=[types.Part(text=user_input)])
     response_parts = []
+    llm_start_ns = now_perf_ns()
+    llm_start_iso = now_iso_utc()
 
     async for event in runner.run_async(
         user_id="student",
@@ -59,6 +73,19 @@ Output exactly one short follow-up question the student might ask next. No other
                     response_parts.append(part.text)
 
     raw = "".join(response_parts).strip()
+    llm_end_iso = now_iso_utc()
+    log_json(
+        logger,
+        "llm.call",
+        request_id=request_id,
+        call_name="follow_up",
+        model=model_name,
+        start_time_utc=llm_start_iso,
+        end_time_utc=llm_end_iso,
+        elapsed_ms=elapsed_ms(llm_start_ns),
+        input_token_length=estimate_token_count(user_input),
+        output_token_length=estimate_token_count(raw),
+    )
     return raw if raw else None
 
 
@@ -136,6 +163,7 @@ async def stream_ask_tutor(
     reset_conversation: bool = False,
     structured_context: dict | None = None,
     server_root: Path | None = None,
+    request_id: str | None = None,
 ) -> AsyncIterator[dict]:
     """Stream tutor response as SSE-ready event dicts.
 
@@ -146,19 +174,36 @@ async def stream_ask_tutor(
       {"type": "done",     "conversation_id": "..."}
       {"type": "error",    "message": "..."}
     """
+    request_start_ns = now_perf_ns()
+
     if reset_conversation:
         conversation_id = reset_history(conversation_id)
 
+    history_start_ns = now_perf_ns()
     history, conversation_id = get_history(conversation_id)
-
-    lecture_task = asyncio.create_task(
-        search_lecture_cells_with_agent(student_question, server_root)
+    log_json(
+        logger,
+        "request.stage",
+        request_id=request_id,
+        stage="preprocessing.history_lookup",
+        elapsed_ms=elapsed_ms(history_start_ns),
     )
 
+    retrieval_start_ns = now_perf_ns()
+    lecture_task = asyncio.create_task(
+        search_lecture_cells_with_agent(
+            student_question,
+            server_root,
+            request_id=request_id,
+        )
+    )
+
+    prompt_start_ns = now_perf_ns()
     system_prompt = PROMPT_MAP.get(prompt_mode, PROMPT_MAP["append"])
+    model_name = get_gemini_model()
     agent = Agent(
         name="dsc10_tutor",
-        model=get_gemini_model(),
+        model=model_name,
         instruction=system_prompt,
     )
     session_service = InMemorySessionService()
@@ -177,11 +222,22 @@ async def stream_ask_tutor(
         nearest_markdown_cell_text=nearest_markdown_cell_text,
         lecture_context_str="(Lecture examples are being retrieved and will appear below the response.)",
     )
+    log_json(
+        logger,
+        "request.stage",
+        request_id=request_id,
+        stage="preprocessing.prompt_construction",
+        elapsed_ms=elapsed_ms(prompt_start_ns),
+        prompt_char_length=len(user_input),
+        prompt_token_length=estimate_token_count(user_input),
+    )
 
     content = types.Content(role="user", parts=[types.Part(text=user_input)])
 
     # Stream tutor response
     response_parts: list[str] = []
+    llm_start_ns = now_perf_ns()
+    llm_start_iso = now_iso_utc()
     try:
         async for event in runner.run_async(
             user_id="student",
@@ -194,25 +250,93 @@ async def stream_ask_tutor(
                         response_parts.append(part.text)
                         yield {"type": "token", "text": part.text}
     except Exception as exc:
+        log_json(
+            logger,
+            "llm.call.error",
+            request_id=request_id,
+            call_name="tutor_response",
+            model=model_name,
+            start_time_utc=llm_start_iso,
+            end_time_utc=now_iso_utc(),
+            elapsed_ms=elapsed_ms(llm_start_ns),
+            input_token_length=estimate_token_count(user_input),
+            error=str(exc),
+        )
         yield {"type": "error", "message": str(exc)}
         lecture_task.cancel()
         return
 
     full_response = "".join(response_parts)
+    log_json(
+        logger,
+        "llm.call",
+        request_id=request_id,
+        call_name="tutor_response",
+        model=model_name,
+        start_time_utc=llm_start_iso,
+        end_time_utc=now_iso_utc(),
+        elapsed_ms=elapsed_ms(llm_start_ns),
+        input_token_length=estimate_token_count(user_input),
+        output_token_length=estimate_token_count(full_response),
+    )
+
+    follow_up_task = asyncio.create_task(
+        _generate_follow_up(
+            student_question, full_response, request_id=request_id
+        )
+    )
+
+    async def _lecture_results() -> list:
+        try:
+            return await asyncio.wait_for(lecture_task, timeout=30)
+        except (asyncio.TimeoutError, Exception):
+            return []
+
+    lecture_wait_task = asyncio.create_task(_lecture_results())
+
+    post_process_start_ns = now_perf_ns()
     append_message(conversation_id, student_question, full_response)
+    log_json(
+        logger,
+        "request.stage",
+        request_id=request_id,
+        stage="postprocessing.persist_conversation",
+        elapsed_ms=elapsed_ms(post_process_start_ns),
+    )
 
-    try:
-        relevant_lectures = await asyncio.wait_for(lecture_task, timeout=30)
-    except (asyncio.TimeoutError, Exception):
-        relevant_lectures = []
+    pending: set[asyncio.Task] = {lecture_wait_task, follow_up_task}
+    while pending:
+        done, pending = await asyncio.wait(
+            pending, return_when=asyncio.FIRST_COMPLETED
+        )
+        for finished in done:
+            if finished is lecture_wait_task:
+                relevant_lectures = finished.result()
+                log_json(
+                    logger,
+                    "request.stage",
+                    request_id=request_id,
+                    stage="retrieval.lecture_search",
+                    elapsed_ms=elapsed_ms(retrieval_start_ns),
+                    result_count=len(relevant_lectures),
+                )
+                if relevant_lectures:
+                    yield {
+                        "type": "lectures",
+                        "relevant_lectures": relevant_lectures,
+                    }
+            else:
+                follow_up = finished.result()
+                if follow_up:
+                    yield {"type": "follow_up", "text": follow_up}
 
-    if relevant_lectures:
-        yield {"type": "lectures", "relevant_lectures": relevant_lectures}
-
-    follow_up = await _generate_follow_up(student_question, full_response)
-    if follow_up:
-        yield {"type": "follow_up", "text": follow_up}
-
+    log_json(
+        logger,
+        "request.total",
+        request_id=request_id,
+        stage="stream_ask_tutor",
+        total_elapsed_ms=elapsed_ms(request_start_ns),
+    )
     yield {"type": "done", "conversation_id": conversation_id}
 
 

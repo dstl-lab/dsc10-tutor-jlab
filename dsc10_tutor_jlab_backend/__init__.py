@@ -1,3 +1,5 @@
+import logging
+
 try:
     from ._version import __version__
 except ImportError:
@@ -33,4 +35,9 @@ def _load_jupyter_server_extension(server_app):
     """
     setup_handlers(server_app.web_app)
     name = "dsc10_tutor_jlab_backend"
+    # Route package logs through ServerApp handlers so INFO JSON timing logs are visible.
+    package_logger = logging.getLogger(name)
+    package_logger.setLevel(logging.INFO)
+    package_logger.handlers = list(server_app.log.handlers)
+    package_logger.propagate = False
     server_app.log.info(f"Registered {name} server extension")

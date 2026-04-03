@@ -1,6 +1,7 @@
 import json
 import logging
 import traceback
+import uuid
 from pathlib import Path
 
 import tornado
@@ -10,6 +11,7 @@ from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 
 from .agents.tutor_agent import ask_tutor, stream_ask_tutor
+from .observability import elapsed_ms, log_json, now_perf_ns
 from .tools.files_tool import ListFilesHandler, ReadFileHandler, SearchFilesHandler
 from .practice_problems.handler import PracticeProblemsHandler
 
@@ -48,8 +50,20 @@ def _parse_body(raw_body: bytes) -> dict:
 class AskHandler(APIHandler):
     @tornado.web.authenticated
     async def post(self):
+        request_id = str(uuid.uuid4())
+        request_start_ns = now_perf_ns()
         try:
+            parse_start_ns = now_perf_ns()
             body = _parse_body(self.request.body)
+            parse_elapsed_ms = elapsed_ms(parse_start_ns)
+            log_json(
+                logger,
+                "request.stage",
+                request_id=request_id,
+                route="ask",
+                stage="preprocessing.body_parse",
+                elapsed_ms=parse_elapsed_ms,
+            )
 
             result = await ask_tutor(
                 student_question=body["student_question"],
@@ -62,10 +76,26 @@ class AskHandler(APIHandler):
                 server_root=Path(self.settings.get("server_root_dir", Path.home()))
                 .expanduser()
                 .resolve(),
+                request_id=request_id,
             )
 
+            log_json(
+                logger,
+                "request.total",
+                request_id=request_id,
+                route="ask",
+                total_elapsed_ms=elapsed_ms(request_start_ns),
+            )
             self.finish(json.dumps(result))
         except Exception as e:
+            log_json(
+                logger,
+                "request.error",
+                request_id=request_id,
+                route="ask",
+                total_elapsed_ms=elapsed_ms(request_start_ns),
+                error=str(e),
+            )
             self.set_status(500)
             self.finish(json.dumps({"error": str(e)}))
 
@@ -78,8 +108,19 @@ class AskStreamHandler(APIHandler):
 
     @tornado.web.authenticated
     async def post(self):
+        request_id = str(uuid.uuid4())
+        request_start_ns = now_perf_ns()
         try:
+            parse_start_ns = now_perf_ns()
             body = _parse_body(self.request.body)
+            log_json(
+                logger,
+                "request.stage",
+                request_id=request_id,
+                route="ask-stream",
+                stage="preprocessing.body_parse",
+                elapsed_ms=elapsed_ms(parse_start_ns),
+            )
         except Exception as e:
             self.set_status(400)
             self.finish(json.dumps({"error": f"Bad request: {e}"}))
@@ -105,6 +146,7 @@ class AskStreamHandler(APIHandler):
                 reset_conversation=body.get("reset_conversation", False),
                 structured_context=body.get("structured_context"),
                 server_root=server_root,
+                request_id=request_id,
             ):
                 self.write(f"data: {json.dumps(event)}\n\n")
                 await self.flush()
@@ -114,6 +156,13 @@ class AskStreamHandler(APIHandler):
             self.write(f"data: {json.dumps(error_event)}\n\n")
             await self.flush()
         finally:
+            log_json(
+                logger,
+                "request.total",
+                request_id=request_id,
+                route="ask-stream",
+                total_elapsed_ms=elapsed_ms(request_start_ns),
+            )
             self.finish()
 
 

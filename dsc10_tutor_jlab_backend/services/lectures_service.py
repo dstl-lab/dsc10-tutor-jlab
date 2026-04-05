@@ -18,7 +18,7 @@ _IDF_CACHE: Dict[str, float] | None = None
 _LECTURE_FILENAME_RE = re.compile(r"^(lec|lecture)[\s_\-]?\d+", re.IGNORECASE)
 
 _MIN_SCORE = 0.05
-_TFIDF_CANDIDATES = 10
+_TFIDF_CANDIDATES = 20
 _MAX_RESULTS = 2
 
 _STOP_WORDS = {

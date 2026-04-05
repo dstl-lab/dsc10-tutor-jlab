@@ -114,6 +114,14 @@ export default function Markdown({
       >
         {children}
       </a>
+    ),
+    img: ({ src, alt }: any) => (
+      <img
+        src={src}
+        alt={alt ?? 'Problem figure'}
+        className="my-2 h-auto max-w-full rounded border border-jp-border-color0"
+        loading="lazy"
+      />
     )
   };
 

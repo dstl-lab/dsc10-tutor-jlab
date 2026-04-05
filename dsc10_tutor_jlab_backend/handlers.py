@@ -1,22 +1,23 @@
 import json
+import logging
+import traceback
 from pathlib import Path
 
 import tornado
+
+logger = logging.getLogger(__name__)
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 
-from .agents.tutor_agent import ask_tutor
 from .practice_problems.handler import (
     PracticeProblemsHandler,
     RandomExamQuestionHandler,
 )
+from .agents.tutor_agent import ask_tutor, stream_ask_tutor
 from .tools.files_tool import ListFilesHandler, ReadFileHandler, SearchFilesHandler
 
 
 class RouteHandler(APIHandler):
-    # The following decorator should be present on all verb methods (head, get, post,
-    # patch, put, delete, options) to ensure only authorized user can request the
-    # Jupyter server
     @tornado.web.authenticated
     def get(self):
         self.finish(
@@ -26,40 +27,44 @@ class RouteHandler(APIHandler):
         )
 
 
+def _parse_body(raw_body: bytes) -> dict:
+    """Parse request body and deserialise any nested JSON strings."""
+    body = json.loads(raw_body)
+
+    notebook_json = body.get("notebook_json")
+    if isinstance(notebook_json, str):
+        try:
+            body["notebook_json"] = json.loads(notebook_json)
+        except json.JSONDecodeError:
+            pass
+
+    structured_context = body.get("structured_context")
+    if isinstance(structured_context, str):
+        try:
+            body["structured_context"] = json.loads(structured_context)
+        except json.JSONDecodeError:
+            body["structured_context"] = None
+
+    return body
+
+
 class AskHandler(APIHandler):
     @tornado.web.authenticated
     async def post(self):
         try:
-            body = json.loads(self.request.body)
-
-            # Parse notebook_json if it's a JSON string
-            notebook_json = body.get("notebook_json")
-            if isinstance(notebook_json, str):
-                try:
-                    notebook_json = json.loads(notebook_json)
-                except json.JSONDecodeError:
-                    notebook_json = notebook_json
-
-            # Parse structured_context if provided
-            structured_context = body.get("structured_context")
-            if isinstance(structured_context, str):
-                try:
-                    structured_context = json.loads(structured_context)
-                except json.JSONDecodeError:
-                    structured_context = None
+            body = _parse_body(self.request.body)
 
             result = await ask_tutor(
                 student_question=body["student_question"],
-                notebook_json=notebook_json,
+                notebook_json=body.get("notebook_json"),
                 prompt_mode=body.get("prompt_mode", "append"),
                 conversation_id=body.get("conversation_id"),
-                nearest_markdown_cell_text=body.get(
-                    "nearest_markdown_cell_text"
-                ),
+                nearest_markdown_cell_text=body.get("nearest_markdown_cell_text"),
                 reset_conversation=body.get("reset_conversation", False),
-                structured_context=structured_context,
-                exam_mode_conversation=body.get("exam_mode_conversation"),
-                server_root=Path(self.settings.get("server_root_dir", Path.home())).expanduser().resolve(),
+                structured_context=body.get("structured_context"),
+                server_root=Path(self.settings.get("server_root_dir", Path.home()))
+                .expanduser()
+                .resolve(),
             )
 
             self.finish(json.dumps(result))
@@ -68,31 +73,68 @@ class AskHandler(APIHandler):
             self.finish(json.dumps({"error": str(e)}))
 
 
+class AskStreamHandler(APIHandler):
+    """
+    Streaming POST /ask-stream — sends Server-Sent Events over the response body.
+    The client reads the response as a ReadableStream.
+    """
+
+    @tornado.web.authenticated
+    async def post(self):
+        try:
+            body = _parse_body(self.request.body)
+        except Exception as e:
+            self.set_status(400)
+            self.finish(json.dumps({"error": f"Bad request: {e}"}))
+            return
+
+        self.set_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.set_header("Cache-Control", "no-cache")
+        self.set_header("X-Accel-Buffering", "no")  # disable nginx buffering on DataHub
+
+        server_root = (
+            Path(self.settings.get("server_root_dir", Path.home()))
+            .expanduser()
+            .resolve()
+        )
+
+        try:
+            async for event in stream_ask_tutor(
+                student_question=body["student_question"],
+                notebook_json=body.get("notebook_json"),
+                prompt_mode=body.get("prompt_mode", "append"),
+                conversation_id=body.get("conversation_id"),
+                nearest_markdown_cell_text=body.get("nearest_markdown_cell_text"),
+                reset_conversation=body.get("reset_conversation", False),
+                structured_context=body.get("structured_context"),
+                server_root=server_root,
+            ):
+                self.write(f"data: {json.dumps(event)}\n\n")
+                await self.flush()
+        except Exception as e:
+            logger.error("[AskStream] Unhandled error:\n%s", traceback.format_exc())
+            error_event = {"type": "error", "message": str(e)}
+            self.write(f"data: {json.dumps(error_event)}\n\n")
+            await self.flush()
+        finally:
+            self.finish()
+    
 def setup_handlers(web_app):
     host_pattern = ".*$"
     base_url = web_app.settings["base_url"]
-    route_pattern = url_path_join(base_url, "dsc10-tutor-jlab-backend", "get-example")
-    read_file_pattern = url_path_join(base_url, "dsc10-tutor-jlab-backend", "read-file")
-    search_files_pattern = url_path_join(
-        base_url, "dsc10-tutor-jlab-backend", "search-files"
-    )
-    list_files_pattern = url_path_join(
-        base_url, "dsc10-tutor-jlab-backend", "list-files"
-    )
-    ask_pattern = url_path_join(base_url, "dsc10-tutor-jlab-backend", "ask")
-    practice_problems_pattern = url_path_join(
-        base_url, "dsc10-tutor-jlab-backend", "practice-problems"
-    )
-    random_exam_question_pattern = url_path_join(
-        base_url, "dsc10-tutor-jlab-backend", "random-exam-question"
-    )
+
+    def url(*parts):
+        return url_path_join(base_url, "dsc10-tutor-jlab-backend", *parts)
+
     handlers = [
-        (route_pattern, RouteHandler),
-        (read_file_pattern, ReadFileHandler),
-        (search_files_pattern, SearchFilesHandler),
-        (list_files_pattern, ListFilesHandler),
-        (ask_pattern, AskHandler),
-        (practice_problems_pattern, PracticeProblemsHandler),
-        (random_exam_question_pattern, RandomExamQuestionHandler),
+        (url("get-example"), RouteHandler),
+        (url("read-file"), ReadFileHandler),
+        (url("search-files"), SearchFilesHandler),
+        (url("list-files"), ListFilesHandler),
+        (url("ask"), AskHandler),
+        (url("ask-stream"), AskStreamHandler),
+        (url("practice-problems"), PracticeProblemsHandler),
+        (url("random-exam-question"), RandomExamQuestionHandler),
     ]
+    
     web_app.add_handlers(host_pattern, handlers)

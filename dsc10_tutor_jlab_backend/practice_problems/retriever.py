@@ -5,7 +5,7 @@ import random
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from .normalizer import normalize_topic
+from .normalizer import extract_topic_from_prompt, normalize_topic
 from .ranker import rank_problems_by_relevance
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -35,7 +35,7 @@ def load_problems_index() -> Dict[int, List[Dict]]:
         return _PROBLEMS_INDEX
 
 
-def get_practice_problems(
+async def get_practice_problems(
     topic_query: str,
     max_problems: int = 5,
     use_gemini_fallback: bool = True,
@@ -44,7 +44,14 @@ def get_practice_problems(
     """
     Get practice problems for a given topic query.
     """
-    lecture_numbers = normalize_topic(topic_query, use_gemini_fallback=use_gemini_fallback)
+    
+    effective_topic = topic_query
+    if "practice" in (topic_query or "").lower():
+        extracted = extract_topic_from_prompt(topic_query)
+        if extracted:
+            effective_topic = extracted
+
+    lecture_numbers = normalize_topic(effective_topic, use_gemini_fallback=use_gemini_fallback)
     
     if not lecture_numbers:
         return []
@@ -62,15 +69,14 @@ def get_practice_problems(
     if not candidate_problems:
         return []
     
-    if rank_by_relevance and len(candidate_problems) > max_problems:
-        ranked_problems = rank_problems_by_relevance(
+    if rank_by_relevance:
+        return await rank_problems_by_relevance(
             candidate_problems,
-            topic_query,
+            effective_topic,
             max_problems=max_problems,
-            use_gemini=use_gemini_fallback
+            use_gemini=use_gemini_fallback,
         )
-        return ranked_problems
-    
+
     return candidate_problems[:max_problems]
 
 

@@ -2,16 +2,16 @@ import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 
 import {
-  askTutor,
+  askTutorStream,
   getPracticeProblems,
   getRandomExamQuestion,
   type IAskTutorParams
 } from '@/api';
+
 import { logEvent } from '@/api/logger';
 import { Button } from '@/components/ui/button';
 import { useNotebook } from '@/contexts/NotebookContext';
 import { enhanceQuestion } from '@/utils/enhancedQuestionUtils';
-import practicePatternsJson from '@/utils/practice_patterns.json';
 import { chatgptOverride, tutorInstruction } from '@/utils/prompts';
 import ChatMessageBox from './ChatMessageBox';
 import ChatMessages from './ChatMessages';
@@ -55,6 +55,7 @@ export default function Chat() {
   );
   const acceptedFollowUpRef = useRef<string | null>(null);
   const initialNotebookSnapshotRef = useRef<string | undefined>(undefined);
+  const abortStreamRef = useRef<(() => void) | null>(null);
 
   type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
   const [mode, setMode] = useState<FrontendPromptMode>('tutor');
@@ -153,8 +154,11 @@ export default function Chat() {
       }
     }
 
-    return { isPractice: false };
-  };
+  useEffect(() => {
+    return () => {
+      abortStreamRef.current?.();
+    };
+  }, []);
 
   const withPendingExamAnswerContext = (question: string): string => {
     if (!pendingExamAnswer) {
@@ -225,6 +229,7 @@ export default function Chat() {
     setSuggestion('');
     setMessages(prev => [...prev, { author: 'user', text }]);
     setIsWaiting(true);
+
     try {
       if (isExamModeActive) {
         if (isExamModeEndRequest(text)) {
@@ -289,14 +294,16 @@ export default function Chat() {
         practiceCheck.topic
       ) {
         const practiceResponse = await getPracticeProblems({
-          topic_query: practiceCheck.topic
+          // Backend will extract the best-matching topic from this prompt
+          // using its `topic_to_lecture.json` mapping.
+          topic_query: text
         });
 
         logEvent({
           event_type: 'practice_problems_request',
           payload: {
             original_query: text,
-            topic_query: practiceCheck.topic,
+            topic_query: text,
             notebook: notebookName,
             problem_count: practiceResponse.count,
             formatted_response: practiceResponse.formatted_response
@@ -307,6 +314,7 @@ export default function Chat() {
           ...prev,
           { author: 'tutor', text: practiceResponse.formatted_response }
         ]);
+        setIsWaiting(false);
         return;
       }
 
@@ -360,56 +368,113 @@ export default function Chat() {
         }
       });
 
-      const tutorMessage = await askTutor(tutorRequest);
+      setMessages(prev => [
+        ...prev,
+        { author: 'tutor', text: '', isStreaming: true }
+      ]);
 
-      if (shouldResetNext) {
-        setShouldResetNext(false);
-      }
+      const resetFlag = shouldResetNext || undefined;
 
-      if (!isExamModeActive && pendingExamAnswer) {
-        setPendingExamAnswer(null);
-      }
+      await new Promise<void>((resolve, reject) => {
+        let finalConversationId: string | undefined;
 
-      if (tutorMessage.conversation_id) {
-        setConversationId(tutorMessage.conversation_id);
-      }
+        const abort = askTutorStream(
+          tutorRequest,
+          event => {
+            if (event.type === 'token') {
+              setMessages(prev => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last?.author === 'tutor') {
+                  updated[updated.length - 1] = {
+                    ...last,
+                    text: last.text + event.text,
+                    isStreaming: true
+                  };
+                }
+                return updated;
+              });
+            } else if (event.type === 'lectures') {
+              setMessages(prev => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last?.author === 'tutor') {
+                  updated[updated.length - 1] = {
+                    ...last,
+                    relevantLectures: event.relevant_lectures
+                  };
+                }
+                return updated;
+              });
+            } else if (event.type === 'follow_up') {
+              setSuggestion(event.text);
+            } else if (event.type === 'done') {
+              finalConversationId = event.conversation_id;
+              setMessages(prev => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last?.author === 'tutor') {
+                  updated[updated.length - 1] = { ...last, isStreaming: false };
+                }
+                return updated;
+              });
 
-      logEvent({
-        event_type: 'tutor_response',
-        payload: {
-          conversation_id: tutorMessage.conversation_id,
-          response: tutorMessage.tutor_response,
-          mode,
-          notebook: notebookName
-        }
-      });
+              if (finalConversationId) {
+                setConversationId(finalConversationId);
+              }
 
-      const finalConversationId =
-        tutorMessage.conversation_id || conversationId;
+              setMessages(prev => {
+                const last = prev[prev.length - 1];
+                const responseText = last?.text ?? '';
 
-      const isFirstTurnForTurn =
-        !!finalConversationId &&
-        loggedNotebookJsonForConversationIdRef.current !== finalConversationId;
+                logEvent({
+                  event_type: 'tutor_response',
+                  payload: {
+                    conversation_id: finalConversationId,
+                    response: responseText,
+                    mode,
+                    notebook: notebookName
+                  }
+                });
 
-      const turnPayload: Record<string, unknown> = {
-        student_message: text,
-        tutor_response: tutorMessage.tutor_response,
-        prompt_mode: isExamModeActive ? 'none' : backendPromptMode,
-        toggle_mode: mode,
-        timestamp: new Date().toISOString(),
-        conversation_id: finalConversationId
-      };
+                const resolvedId = finalConversationId || conversationId;
+                const isFirstTurn =
+                  !!resolvedId &&
+                  loggedNotebookJsonForConversationIdRef.current !== resolvedId;
 
-      if (isFirstTurnForTurn && !isExamModeActive) {
-        turnPayload.initial_notebook_json = JSON.stringify(
-          getSanitizedNotebook()
+                const turnPayload: Record<string, unknown> = {
+                  student_message: text,
+                  tutor_response: responseText,
+                  prompt_mode: backendPromptMode,
+                  toggle_mode: mode,
+                  timestamp: new Date().toISOString(),
+                  conversation_id: resolvedId
+                };
+
+                if (isFirstTurn) {
+                  turnPayload.initial_notebook_json = JSON.stringify(
+                    getSanitizedNotebook()
+                  );
+                  loggedNotebookJsonForConversationIdRef.current =
+                    resolvedId ?? undefined;
+                }
+
+                logEvent({
+                  event_type: 'tutor_notebook_info',
+                  payload: turnPayload
+                });
+                return prev;
+              });
+
+              resolve();
+            } else if (event.type === 'error') {
+              console.error('[Tutor] Stream error:', event.message);
+            }
+          },
+          err => reject(err)
         );
-        loggedNotebookJsonForConversationIdRef.current = finalConversationId;
-      }
 
-      logEvent({
-        event_type: 'tutor_notebook_info',
-        payload: turnPayload
+        abortStreamRef.current = abort;
       });
 
       setMessages(prev => [
@@ -431,6 +496,8 @@ export default function Chat() {
 
       if (tutorMessage.follow_up) {
         setSuggestion(tutorMessage.follow_up);
+      if (shouldResetNext) {
+        setShouldResetNext(false);
       }
     } catch (error) {
       console.error('Error asking tutor:', error);
@@ -438,16 +505,29 @@ export default function Chat() {
         error instanceof Error
           ? error.message
           : 'An error occurred while contacting the tutor. Please try again.';
-      setMessages(prev => [
-        ...prev,
-        { author: 'tutor', text: `Error: ${errorMessage}` }
-      ]);
+      setMessages(prev => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        if (last?.author === 'tutor' && last.isStreaming) {
+          updated[updated.length - 1] = {
+            author: 'tutor',
+            text: `Error: ${errorMessage}`,
+            isStreaming: false
+          };
+        } else {
+          updated.push({ author: 'tutor', text: `Error: ${errorMessage}` });
+        }
+        return updated;
+      });
     } finally {
+      abortStreamRef.current = null;
       setIsWaiting(false);
     }
   };
 
   const handleNewConversation = () => {
+    abortStreamRef.current?.();
+    abortStreamRef.current = null;
     setMessages([]);
     setIsExamModeActive(false);
     setExamModeConversation([]);
@@ -457,7 +537,6 @@ export default function Chat() {
     loggedNotebookJsonForConversationIdRef.current = undefined;
     acceptedFollowUpRef.current = null;
     setNotebookLoaded(false);
-
     setShouldResetNext(true);
   };
 

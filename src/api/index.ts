@@ -21,6 +21,8 @@ export interface IAskTutorParams {
   reset_conversation?: boolean;
   nearest_markdown_cell_text?: string;
   structured_context?: string;
+  experiment_id?: string;
+  variant?: 'A' | 'B';
   exam_mode_conversation?: string;
 }
 
@@ -180,7 +182,8 @@ export function askTutorStream(
           conversation_id: params.conversation_id,
           reset_conversation: params.reset_conversation,
           nearest_markdown_cell_text: params.nearest_markdown_cell_text,
-          structured_context: params.structured_context
+          structured_context: params.structured_context,
+          exam_mode_conversation: params.exam_mode_conversation
         }),
         signal: controller.signal
       });

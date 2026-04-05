@@ -139,6 +139,8 @@ async def stream_ask_tutor(
     reset_conversation: bool = False,
     structured_context: dict | None = None,
     server_root: Path | None = None,
+    enable_lectures: bool = True,
+    enable_follow_up: bool = True,
 ) -> AsyncIterator[dict]:
     """Stream tutor response as SSE-ready event dicts.
 
@@ -154,11 +156,10 @@ async def stream_ask_tutor(
 
     history, conversation_id = get_history(conversation_id)
 
-    lecture_task = asyncio.create_task(
-        search_lecture_cells_with_agent(
-            student_question,
-            server_root,
-        )
+    lecture_task = (
+        asyncio.create_task(search_lecture_cells_with_agent(student_question, server_root))
+        if enable_lectures
+        else None
     )
 
     system_prompt = PROMPT_MAP.get(prompt_mode, PROMPT_MAP["append"])
@@ -202,13 +203,16 @@ async def stream_ask_tutor(
                         yield {"type": "token", "text": part.text}
     except Exception as exc:
         yield {"type": "error", "message": str(exc)}
-        lecture_task.cancel()
+        if lecture_task is not None:
+            lecture_task.cancel()
         return
 
     full_response = "".join(response_parts)
 
-    follow_up_task = asyncio.create_task(
-        _generate_follow_up(student_question, full_response)
+    follow_up_task = (
+        asyncio.create_task(_generate_follow_up(student_question, full_response))
+        if enable_follow_up
+        else None
     )
 
     async def _lecture_results() -> list:
@@ -217,11 +221,15 @@ async def stream_ask_tutor(
         except (asyncio.TimeoutError, Exception):
             return []
 
-    lecture_wait_task = asyncio.create_task(_lecture_results())
+    lecture_wait_task = (
+        asyncio.create_task(_lecture_results()) if lecture_task is not None else None
+    )
 
     append_message(conversation_id, student_question, full_response)
 
-    pending: set[asyncio.Task] = {lecture_wait_task, follow_up_task}
+    pending: set[asyncio.Task] = {
+        t for t in (lecture_wait_task, follow_up_task) if t is not None
+    }
     while pending:
         done, pending = await asyncio.wait(
             pending, return_when=asyncio.FIRST_COMPLETED

@@ -95,9 +95,6 @@ def load_exam_problems() -> List[Dict]:
             return _EXAM_PROBLEMS
         _EXAM_PROBLEMS = None
 
-    if _EXAM_PROBLEMS is not None:
-        return _EXAM_PROBLEMS
-
     if not EXAM_PROBLEMS_FILE.exists():
         return []
 

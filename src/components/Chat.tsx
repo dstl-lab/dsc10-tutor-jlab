@@ -19,10 +19,6 @@ import ChatPlaceholder from './ChatPlaceholder';
 import ToggleMode from './ToggleMode';
 import { type IMessage } from './types';
 
-const PRACTICE_PATTERNS = practicePatternsJson.map(
-  (pattern: string) => new RegExp(pattern, 'i')
-);
-
 const EXAM_TRIGGER_PATTERN =
   /\b(?:exam\s+mode|exam\s+(?:question|problem)|midterm|final(?:\s+exam)?)\b/i;
 const EXAM_NEXT_PATTERN = /^\s*(?:next|next\s+question)\s*$/i;
@@ -141,18 +137,10 @@ export default function Chat() {
     return parts.join('\n');
   };
 
-  const isPracticeRequest = (
-    query: string
-  ): { isPractice: boolean; topic?: string } => {
-    for (const pattern of PRACTICE_PATTERNS) {
-      const match = query.match(pattern);
-      if (match && match[1]) {
-        const topic = match[1].trim();
-        if (topic.length > 2) {
-          return { isPractice: true, topic };
-        }
-      }
-    }
+  const isPracticeRequest = (query: string): boolean => {
+    const q = query.toLowerCase();
+    return q.includes('practice problems') || q.includes('practice');
+  };
 
   useEffect(() => {
     return () => {
@@ -288,11 +276,7 @@ export default function Chat() {
 
       const practiceCheck = isPracticeRequest(text);
 
-      if (
-        !isExamModeActive &&
-        practiceCheck.isPractice &&
-        practiceCheck.topic
-      ) {
+      if (!isExamModeActive && practiceCheck) {
         const practiceResponse = await getPracticeProblems({
           // Backend will extract the best-matching topic from this prompt
           // using its `topic_to_lecture.json` mapping.
@@ -373,7 +357,7 @@ export default function Chat() {
         { author: 'tutor', text: '', isStreaming: true }
       ]);
 
-      const resetFlag = shouldResetNext || undefined;
+      let streamedTutorResponse = '';
 
       await new Promise<void>((resolve, reject) => {
         let finalConversationId: string | undefined;
@@ -382,6 +366,7 @@ export default function Chat() {
           tutorRequest,
           event => {
             if (event.type === 'token') {
+              streamedTutorResponse += event.text;
               setMessages(prev => {
                 const updated = [...prev];
                 const last = updated[updated.length - 1];
@@ -421,6 +406,14 @@ export default function Chat() {
 
               if (finalConversationId) {
                 setConversationId(finalConversationId);
+              }
+
+              if (isExamModeActive) {
+                setExamModeConversation(prev => [
+                  ...prev,
+                  `Student: ${text}`,
+                  `Tutor: ${streamedTutorResponse}`
+                ]);
               }
 
               setMessages(prev => {
@@ -476,26 +469,6 @@ export default function Chat() {
 
         abortStreamRef.current = abort;
       });
-
-      setMessages(prev => [
-        ...prev,
-        {
-          author: 'tutor',
-          text: tutorMessage.tutor_response,
-          relevantLectures: tutorMessage.relevant_lectures
-        }
-      ]);
-
-      if (isExamModeActive) {
-        setExamModeConversation(prev => [
-          ...prev,
-          `Student: ${text}`,
-          `Tutor: ${tutorMessage.tutor_response}`
-        ]);
-      }
-
-      if (tutorMessage.follow_up) {
-        setSuggestion(tutorMessage.follow_up);
       if (shouldResetNext) {
         setShouldResetNext(false);
       }

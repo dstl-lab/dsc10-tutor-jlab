@@ -136,18 +136,7 @@ export default function Markdown({
           {children}
         </a>
       );
-    }
-    a: ({ href, children }: any) => (
-      <a
-        href={href}
-        target="_blank"
-        rel="noreferrer"
-        className="hover:text-blue-800"
-        style={{ color: '#2563eb', textDecoration: 'underline' }}
-      >
-        {children}
-      </a>
-    ),
+    },
     img: ({ src, alt }: any) => (
       <img
         src={src}

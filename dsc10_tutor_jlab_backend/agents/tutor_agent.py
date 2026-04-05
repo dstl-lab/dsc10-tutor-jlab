@@ -203,26 +203,16 @@ async def stream_ask_tutor(
                         yield {"type": "token", "text": part.text}
     except Exception as exc:
         yield {"type": "error", "message": str(exc)}
-        lecture_task.cancel()
+        if lecture_task is not None:
+            lecture_task.cancel()
         return
 
     full_response = "".join(response_parts)
 
-    if lecture_task is not None:
-        try:
-            relevant_lectures = await asyncio.wait_for(lecture_task, timeout=30)
-        except (asyncio.TimeoutError, Exception):
-            relevant_lectures = []
-
-        if relevant_lectures:
-            yield {"type": "lectures", "relevant_lectures": relevant_lectures}
-
-    if enable_follow_up:
-        follow_up = await _generate_follow_up(student_question, full_response)
-        if follow_up:
-            yield {"type": "follow_up", "text": follow_up}
-    follow_up_task = asyncio.create_task(
-        _generate_follow_up(student_question, full_response)
+    follow_up_task = (
+        asyncio.create_task(_generate_follow_up(student_question, full_response))
+        if enable_follow_up
+        else None
     )
 
     async def _lecture_results() -> list:
@@ -231,11 +221,15 @@ async def stream_ask_tutor(
         except (asyncio.TimeoutError, Exception):
             return []
 
-    lecture_wait_task = asyncio.create_task(_lecture_results())
+    lecture_wait_task = (
+        asyncio.create_task(_lecture_results()) if lecture_task is not None else None
+    )
 
     append_message(conversation_id, student_question, full_response)
 
-    pending: set[asyncio.Task] = {lecture_wait_task, follow_up_task}
+    pending: set[asyncio.Task] = {
+        t for t in (lecture_wait_task, follow_up_task) if t is not None
+    }
     while pending:
         done, pending = await asyncio.wait(
             pending, return_when=asyncio.FIRST_COMPLETED

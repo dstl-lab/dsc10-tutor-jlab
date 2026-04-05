@@ -58,19 +58,19 @@ export default function Chat() {
   const acceptedFollowUpRef = useRef<string | null>(null);
   const initialNotebookSnapshotRef = useRef<string | undefined>(undefined);
   const abortStreamRef = useRef<(() => void) | null>(null);
+  const examModeStartTimestampRef = useRef<number | null>(null);
 
   type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
   const [mode, setMode] = useState<FrontendPromptMode>('tutor');
   const [suggestion, setSuggestion] = useState('');
 
-  // A/B testing: variant is computed once at mount and stable for the session.
-  // Returns 'B' (all features on) when not on DataHub or no experiment is active.
   const studentKey = getStudentKey();
   const [variant] = useState<'A' | 'B'>(() =>
     ACTIVE_EXPERIMENT && studentKey
       ? assignVariant(studentKey, ACTIVE_EXPERIMENT)
       : 'B'
   );
+  // const [variant] = useState<'A' | 'B'>(() => 'B');
   const studentKeyHashRef = useRef<string>(
     studentKey ? hashStudentKey(studentKey) : 'unknown'
   );
@@ -260,11 +260,18 @@ export default function Chat() {
         });
       }
 
-      // Variant A skips the practice problems endpoint during any active experiment
-      // and falls through to the normal tutor flow instead.
-      // Variant B (and no active experiment) keeps the current behavior.
+      // Practice problems are only active when no experiment is running, or when the
+      // active experiment specifically targets practice problems and the student is
+      // variant B. All other experiments suppress this feature entirely so they
+      // don't interfere with each other.
       const shouldGetPracticeProblems =
-        isPracticeIntent && !(ACTIVE_EXPERIMENT && variant === 'A');
+        isPracticeIntent &&
+        (!ACTIVE_EXPERIMENT ||
+          (ACTIVE_EXPERIMENT === 'exp_practice_problems' && variant === 'B'));
+
+      const shouldActivateExamMode =
+        !ACTIVE_EXPERIMENT ||
+        (ACTIVE_EXPERIMENT === 'exp_exam_mode' && variant === 'B');
       if (isExamModeActive) {
         if (isExamModeEndRequest(text)) {
           setIsExamModeActive(false);
@@ -277,13 +284,37 @@ export default function Chat() {
               text: 'Exam mode ended. You are back in normal tutor mode.'
             }
           ]);
+          const examEndTimestamp = new Date().toISOString();
+          const durationMs = examModeStartTimestampRef.current
+            ? Date.now() - examModeStartTimestampRef.current
+            : null;
+          examModeStartTimestampRef.current = null;
           logEvent({
             event_type: 'exam_mode_ended',
             payload: {
               notebook: notebookName,
-              conversation_id: conversationId
+              conversation_id: conversationId,
+              timestamp: examEndTimestamp,
+              ...(durationMs !== null && {
+                duration_seconds: Math.round(durationMs / 1000)
+              })
             }
           });
+          if (ACTIVE_EXPERIMENT === 'exp_exam_mode') {
+            logEvent({
+              event_type: 'exp_exam_mode_duration',
+              payload: {
+                experiment_id: ACTIVE_EXPERIMENT,
+                variant,
+                student_key_hash: studentKeyHashRef.current,
+                notebook: notebookName,
+                timestamp: examEndTimestamp,
+                ...(durationMs !== null && {
+                  duration_seconds: Math.round(durationMs / 1000)
+                })
+              }
+            });
+          }
           return;
         }
 
@@ -301,6 +332,19 @@ export default function Chat() {
         ]);
         return;
       } else if (isExamModeStartRequest(text)) {
+        if (!shouldActivateExamMode) {
+          setMessages(prev => [
+            ...prev,
+            {
+              author: 'tutor',
+              text: 'Exam mode is not available.'
+            }
+          ]);
+          setIsWaiting(false);
+          return;
+        }
+        const examStartTimestamp = new Date().toISOString();
+        examModeStartTimestampRef.current = Date.now();
         setIsExamModeActive(true);
         setMessages(prev => [
           ...prev,
@@ -313,16 +357,27 @@ export default function Chat() {
           event_type: 'exam_mode_started',
           payload: {
             notebook: notebookName,
-            conversation_id: conversationId
+            conversation_id: conversationId,
+            timestamp: examStartTimestamp
           }
         });
+        if (ACTIVE_EXPERIMENT === 'exp_exam_mode') {
+          logEvent({
+            event_type: 'exp_exam_mode_activated',
+            payload: {
+              experiment_id: ACTIVE_EXPERIMENT,
+              variant,
+              student_key_hash: studentKeyHashRef.current,
+              notebook: notebookName,
+              timestamp: examStartTimestamp
+            }
+          });
+        }
         await issueExamQuestion(text);
         return;
       }
 
-      const practiceCheck = isPracticeRequest(text);
-
-      if (!isExamModeActive && practiceCheck) {
+      if (!isExamModeActive && shouldGetPracticeProblems) {
         const practiceResponse = await getPracticeProblems({
           // Backend will extract the best-matching topic from this prompt
           // using its `topic_to_lecture.json` mapping.
@@ -427,22 +482,13 @@ export default function Chat() {
 
         const abort = askTutorStream(
           {
-            student_question: enhancedQuestion,
-            conversation_id: conversationId,
-            notebook_json: JSON.stringify(getSanitizedNotebook()),
-            structured_context: structuredContext
-              ? JSON.stringify(structuredContext)
-              : undefined,
-            prompt: promptToSend,
-            prompt_mode: backendPromptMode,
-            reset_conversation: resetFlag,
+            ...tutorRequest,
             ...(isBackendGatedExperiment &&
               ACTIVE_EXPERIMENT && {
                 experiment_id: ACTIVE_EXPERIMENT,
                 variant
               })
           },
-          tutorRequest,
           event => {
             if (event.type === 'token') {
               streamedTutorResponse += event.text;
@@ -460,10 +506,9 @@ export default function Chat() {
               });
             } else if (event.type === 'lectures') {
               if (
-                !(
-                  ACTIVE_EXPERIMENT === 'exp_relevant_lectures' &&
-                  variant === 'A'
-                )
+                !ACTIVE_EXPERIMENT ||
+                (ACTIVE_EXPERIMENT === 'exp_relevant_lectures' &&
+                  variant === 'B')
               ) {
                 setMessages(prev => {
                   const updated = [...prev];
@@ -490,7 +535,10 @@ export default function Chat() {
                 }
               }
             } else if (event.type === 'follow_up') {
-              if (!(ACTIVE_EXPERIMENT === 'exp_follow_up' && variant === 'A')) {
+              if (
+                !ACTIVE_EXPERIMENT ||
+                (ACTIVE_EXPERIMENT === 'exp_follow_up' && variant === 'B')
+              ) {
                 setSuggestion(event.text);
                 if (ACTIVE_EXPERIMENT === 'exp_follow_up') {
                   logEvent({
@@ -620,6 +668,7 @@ export default function Chat() {
     setIsWaiting(false);
     loggedNotebookJsonForConversationIdRef.current = undefined;
     acceptedFollowUpRef.current = null;
+    examModeStartTimestampRef.current = null;
     setNotebookLoaded(false);
     setShouldResetNext(true);
   };

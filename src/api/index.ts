@@ -23,6 +23,7 @@ export interface IAskTutorParams {
   structured_context?: string;
   experiment_id?: string;
   variant?: 'A' | 'B';
+  exam_mode_conversation?: string;
 }
 
 export interface ILectureCell {
@@ -58,7 +59,6 @@ export interface IPracticeProblemsResponse {
     id: string;
     lecture_number: number;
     text: string;
-    choices: string[];
     images: string[];
     code: string[];
     source_url: string;
@@ -69,24 +69,26 @@ export interface IPracticeProblemsResponse {
   count: number;
 }
 
-export interface IPracticeProblemsParams {
-  topic_query: string;
+export interface IRandomExamQuestionParams {
+  exam_type?: 'midterm' | 'final';
+  conversation_id?: string;
+  student_question?: string;
 }
 
-export interface IPracticeProblemsResponse {
-  problems: Array<{
+export interface IRandomExamQuestionResponse {
+  conversation_id?: string;
+  problem: {
     id: string;
-    lecture_number: number;
+    exam_name: string;
+    exam_type: string;
     text: string;
-    choices: string[];
+    answer?: string;
     images: string[];
     code: string[];
     source_url: string;
     source?: string;
     anchor_id?: string;
-  }>;
-  formatted_response: string;
-  count: number;
+  };
 }
 
 export interface ITutorRequest {
@@ -125,7 +127,8 @@ export async function askTutor({
   conversation_id,
   reset_conversation,
   nearest_markdown_cell_text,
-  structured_context
+  structured_context,
+  exam_mode_conversation
 }: IAskTutorParams): Promise<ITutorResponse> {
   return await requestAPI<ITutorResponse>('ask', {
     method: 'POST',
@@ -138,7 +141,8 @@ export async function askTutor({
       conversation_id,
       reset_conversation,
       nearest_markdown_cell_text,
-      structured_context
+      structured_context,
+      exam_mode_conversation
     })
   });
 }
@@ -323,6 +327,34 @@ export async function getPracticeProblems({
     console.error('[Practice Problems] API: Error:', error);
     throw error;
   }
+}
+
+/**
+ * Get a random question from a previous DSC 10 midterm or final exam.
+ *
+ * @param params - Optional parameters
+ * @param params.exam_type - 'midterm' | 'final' | undefined (any exam type)
+ * @returns The response from the API with a single exam problem
+ */
+export async function getRandomExamQuestion({
+  exam_type,
+  conversation_id,
+  student_question
+}: IRandomExamQuestionParams = {}): Promise<IRandomExamQuestionResponse> {
+  const params = new URLSearchParams();
+  if (exam_type) {
+    params.set('exam_type', exam_type);
+  }
+  if (conversation_id) {
+    params.set('conversation_id', conversation_id);
+  }
+  if (student_question) {
+    params.set('student_question', student_question);
+  }
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return await requestAPI<IRandomExamQuestionResponse>(
+    `random-exam-question${query}`
+  );
 }
 
 /* ===========================

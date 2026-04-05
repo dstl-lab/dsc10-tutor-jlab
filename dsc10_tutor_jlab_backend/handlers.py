@@ -9,9 +9,12 @@ logger = logging.getLogger(__name__)
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 
+from .practice_problems.handler import (
+    PracticeProblemsHandler,
+    RandomExamQuestionHandler,
+)
 from .agents.tutor_agent import ask_tutor, stream_ask_tutor
 from .tools.files_tool import ListFilesHandler, ReadFileHandler, SearchFilesHandler
-from .practice_problems.handler import PracticeProblemsHandler
 
 
 class RouteHandler(APIHandler):
@@ -124,8 +127,7 @@ class AskStreamHandler(APIHandler):
             await self.flush()
         finally:
             self.finish()
-
-
+    
 def setup_handlers(web_app):
     host_pattern = ".*$"
     base_url = web_app.settings["base_url"]
@@ -141,5 +143,7 @@ def setup_handlers(web_app):
         (url("ask"), AskHandler),
         (url("ask-stream"), AskStreamHandler),
         (url("practice-problems"), PracticeProblemsHandler),
+        (url("random-exam-question"), RandomExamQuestionHandler),
     ]
+    
     web_app.add_handlers(host_pattern, handlers)

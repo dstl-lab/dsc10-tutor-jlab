@@ -137,6 +137,25 @@ export default function Markdown({
         </a>
       );
     }
+    a: ({ href, children }: any) => (
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        className="hover:text-blue-800"
+        style={{ color: '#2563eb', textDecoration: 'underline' }}
+      >
+        {children}
+      </a>
+    ),
+    img: ({ src, alt }: any) => (
+      <img
+        src={src}
+        alt={alt ?? 'Problem figure'}
+        className="my-2 h-auto max-w-full rounded border border-jp-border-color0"
+        loading="lazy"
+      />
+    )
   };
 
   /**

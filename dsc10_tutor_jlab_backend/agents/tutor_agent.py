@@ -24,11 +24,14 @@ def _truncate_for_follow_up(
     return text[:max_chars].rstrip() + "…"
 
 
-async def _generate_follow_up(student_question: str, tutor_response: str) -> str | None:
+async def _generate_follow_up(
+    student_question: str, tutor_response: str
+) -> str | None:
     tutor_context = _truncate_for_follow_up(tutor_response)
+    model_name = get_gemini_model()
     agent = Agent(
         name="follow_up",
-        model=get_gemini_model(),
+        model=model_name,
         instruction=FOLLOW_UP_INSTRUCTION,
     )
     session_service = InMemorySessionService()
@@ -160,9 +163,10 @@ async def stream_ask_tutor(
     )
 
     system_prompt = PROMPT_MAP.get(prompt_mode, PROMPT_MAP["append"])
+    model_name = get_gemini_model()
     agent = Agent(
         name="dsc10_tutor",
-        model=get_gemini_model(),
+        model=model_name,
         instruction=system_prompt,
     )
     session_service = InMemorySessionService()
@@ -203,7 +207,6 @@ async def stream_ask_tutor(
         return
 
     full_response = "".join(response_parts)
-    append_message(conversation_id, student_question, full_response)
 
     if lecture_task is not None:
         try:
@@ -218,6 +221,37 @@ async def stream_ask_tutor(
         follow_up = await _generate_follow_up(student_question, full_response)
         if follow_up:
             yield {"type": "follow_up", "text": follow_up}
+    follow_up_task = asyncio.create_task(
+        _generate_follow_up(student_question, full_response)
+    )
+
+    async def _lecture_results() -> list:
+        try:
+            return await asyncio.wait_for(lecture_task, timeout=30)
+        except (asyncio.TimeoutError, Exception):
+            return []
+
+    lecture_wait_task = asyncio.create_task(_lecture_results())
+
+    append_message(conversation_id, student_question, full_response)
+
+    pending: set[asyncio.Task] = {lecture_wait_task, follow_up_task}
+    while pending:
+        done, pending = await asyncio.wait(
+            pending, return_when=asyncio.FIRST_COMPLETED
+        )
+        for finished in done:
+            if finished is lecture_wait_task:
+                relevant_lectures = finished.result()
+                if relevant_lectures:
+                    yield {
+                        "type": "lectures",
+                        "relevant_lectures": relevant_lectures,
+                    }
+            else:
+                follow_up = finished.result()
+                if follow_up:
+                    yield {"type": "follow_up", "text": follow_up}
 
     yield {"type": "done", "conversation_id": conversation_id}
 

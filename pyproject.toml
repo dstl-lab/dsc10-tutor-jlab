@@ -23,8 +23,9 @@ classifiers = [
 dependencies = [
     "beautifulsoup4>=4.14.0",
     "google-adk>=1.24.1",
-    "google-generativeai>=0.8.6",
+    "google-genai>=1.0.0",
     "jupyter_server>=2.4.0,<3",
+    "nbformat>=5.10.0",
     "python-dotenv>=1.2.1",
     "requests>=2.32.5",
 ]

@@ -7,7 +7,7 @@ backend_dir = Path(__file__).parent
 load_dotenv(dotenv_path=backend_dir / ".env")
 
 
-def get_gemini_model(model_name: str = "gemini-3-pro-preview"):
+def get_gemini_model(model_name: str = "gemini-3-flash-preview"):
     """
     Return a model identifier for ADK.
     ADK handles model instantiation internally.

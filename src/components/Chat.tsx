@@ -1,22 +1,17 @@
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 
-import { askTutor, getPracticeProblems } from '@/api';
+import { askTutorStream, getPracticeProblems } from '@/api';
 import { logEvent } from '@/api/logger';
 import { Button } from '@/components/ui/button';
 import { useNotebook } from '@/contexts/NotebookContext';
 import { enhanceQuestion } from '@/utils/enhancedQuestionUtils';
-import practicePatternsJson from '@/utils/practice_patterns.json';
 import { chatgptOverride, tutorInstruction } from '@/utils/prompts';
 import ChatMessageBox from './ChatMessageBox';
 import ChatMessages from './ChatMessages';
 import ChatPlaceholder from './ChatPlaceholder';
 import ToggleMode from './ToggleMode';
 import { type IMessage } from './types';
-
-const PRACTICE_PATTERNS = practicePatternsJson.map(
-  (pattern: string) => new RegExp(pattern, 'i')
-);
 
 export default function Chat() {
   const {
@@ -37,6 +32,7 @@ export default function Chat() {
   );
   const acceptedFollowUpRef = useRef<string | null>(null);
   const initialNotebookSnapshotRef = useRef<string | undefined>(undefined);
+  const abortStreamRef = useRef<(() => void) | null>(null);
 
   type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
   const [mode, setMode] = useState<FrontendPromptMode>('tutor');
@@ -85,20 +81,16 @@ export default function Chat() {
 
     checkNotebook();
   }, [notebookName, notebookLoaded, getSanitizedNotebook]);
-  const isPracticeRequest = (
-    query: string
-  ): { isPractice: boolean; topic?: string } => {
-    for (const pattern of PRACTICE_PATTERNS) {
-      const match = query.match(pattern);
-      if (match && match[1]) {
-        const topic = match[1].trim();
-        if (topic.length > 2) {
-          return { isPractice: true, topic };
-        }
-      }
-    }
 
-    return { isPractice: false };
+  useEffect(() => {
+    return () => {
+      abortStreamRef.current?.();
+    };
+  }, []);
+
+  const isPracticeRequest = (query: string): boolean => {
+    const q = query.toLowerCase();
+    return q.includes('practice problems') || q.includes('practice');
   };
 
   const handleMessageSubmit = async (text: string) => {
@@ -118,19 +110,22 @@ export default function Chat() {
     setSuggestion('');
     setMessages(prev => [...prev, { author: 'user', text }]);
     setIsWaiting(true);
-    try {
-      const practiceCheck = isPracticeRequest(text);
 
-      if (practiceCheck.isPractice && practiceCheck.topic) {
+    try {
+      const shouldGetPracticeProblems = isPracticeRequest(text);
+
+      if (shouldGetPracticeProblems) {
         const practiceResponse = await getPracticeProblems({
-          topic_query: practiceCheck.topic
+          // Backend will extract the best-matching topic from this prompt
+          // using its `topic_to_lecture.json` mapping.
+          topic_query: text
         });
 
         logEvent({
           event_type: 'practice_problems_request',
           payload: {
             original_query: text,
-            topic_query: practiceCheck.topic,
+            topic_query: text,
             notebook: notebookName,
             problem_count: practiceResponse.count,
             formatted_response: practiceResponse.formatted_response
@@ -141,6 +136,7 @@ export default function Chat() {
           ...prev,
           { author: 'tutor', text: practiceResponse.formatted_response }
         ]);
+        setIsWaiting(false);
         return;
       }
 
@@ -164,74 +160,127 @@ export default function Chat() {
         }
       });
 
-      const tutorMessage = await askTutor({
-        student_question: enhancedQuestion,
-        conversation_id: conversationId,
-        notebook_json: JSON.stringify(getSanitizedNotebook()),
-        structured_context: structuredContext
-          ? JSON.stringify(structuredContext)
-          : undefined,
-        prompt: promptToSend,
-        prompt_mode: backendPromptMode,
-        reset_conversation: shouldResetNext || undefined
+      setMessages(prev => [
+        ...prev,
+        { author: 'tutor', text: '', isStreaming: true }
+      ]);
+
+      const resetFlag = shouldResetNext || undefined;
+
+      await new Promise<void>((resolve, reject) => {
+        let finalConversationId: string | undefined;
+
+        const abort = askTutorStream(
+          {
+            student_question: enhancedQuestion,
+            conversation_id: conversationId,
+            notebook_json: JSON.stringify(getSanitizedNotebook()),
+            structured_context: structuredContext
+              ? JSON.stringify(structuredContext)
+              : undefined,
+            prompt: promptToSend,
+            prompt_mode: backendPromptMode,
+            reset_conversation: resetFlag
+          },
+          event => {
+            if (event.type === 'token') {
+              setMessages(prev => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last?.author === 'tutor') {
+                  updated[updated.length - 1] = {
+                    ...last,
+                    text: last.text + event.text,
+                    isStreaming: true
+                  };
+                }
+                return updated;
+              });
+            } else if (event.type === 'lectures') {
+              setMessages(prev => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last?.author === 'tutor') {
+                  updated[updated.length - 1] = {
+                    ...last,
+                    relevantLectures: event.relevant_lectures
+                  };
+                }
+                return updated;
+              });
+            } else if (event.type === 'follow_up') {
+              setSuggestion(event.text);
+            } else if (event.type === 'done') {
+              finalConversationId = event.conversation_id;
+              setMessages(prev => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last?.author === 'tutor') {
+                  updated[updated.length - 1] = { ...last, isStreaming: false };
+                }
+                return updated;
+              });
+
+              if (finalConversationId) {
+                setConversationId(finalConversationId);
+              }
+
+              setMessages(prev => {
+                const last = prev[prev.length - 1];
+                const responseText = last?.text ?? '';
+
+                logEvent({
+                  event_type: 'tutor_response',
+                  payload: {
+                    conversation_id: finalConversationId,
+                    response: responseText,
+                    mode,
+                    notebook: notebookName
+                  }
+                });
+
+                const resolvedId = finalConversationId || conversationId;
+                const isFirstTurn =
+                  !!resolvedId &&
+                  loggedNotebookJsonForConversationIdRef.current !== resolvedId;
+
+                const turnPayload: Record<string, unknown> = {
+                  student_message: text,
+                  tutor_response: responseText,
+                  prompt_mode: backendPromptMode,
+                  toggle_mode: mode,
+                  timestamp: new Date().toISOString(),
+                  conversation_id: resolvedId
+                };
+
+                if (isFirstTurn) {
+                  turnPayload.initial_notebook_json = JSON.stringify(
+                    getSanitizedNotebook()
+                  );
+                  loggedNotebookJsonForConversationIdRef.current =
+                    resolvedId ?? undefined;
+                }
+
+                logEvent({
+                  event_type: 'tutor_notebook_info',
+                  payload: turnPayload
+                });
+                return prev;
+              });
+
+              resolve();
+            } else if (event.type === 'error') {
+              console.error('[Tutor] Stream error:', event.message);
+            }
+          },
+          err => reject(err)
+        );
+
+        abortStreamRef.current = abort;
       });
 
       if (shouldResetNext) {
         setShouldResetNext(false);
-      }
-
-      if (tutorMessage.conversation_id) {
-        setConversationId(tutorMessage.conversation_id);
-      }
-
-      logEvent({
-        event_type: 'tutor_response',
-        payload: {
-          conversation_id: tutorMessage.conversation_id,
-          response: tutorMessage.tutor_response,
-          mode,
-          notebook: notebookName
-        }
-      });
-
-      const finalConversationId =
-        tutorMessage.conversation_id || conversationId;
-
-      const isFirstTurnForTurn =
-        !!finalConversationId &&
-        loggedNotebookJsonForConversationIdRef.current !== finalConversationId;
-
-      const turnPayload: Record<string, unknown> = {
-        student_message: text,
-        tutor_response: tutorMessage.tutor_response,
-        prompt_mode: backendPromptMode,
-        toggle_mode: mode,
-        timestamp: new Date().toISOString(),
-        conversation_id: finalConversationId
-      };
-
-      if (isFirstTurnForTurn) {
-        turnPayload.initial_notebook_json = JSON.stringify(
-          getSanitizedNotebook()
-        );
-        loggedNotebookJsonForConversationIdRef.current = finalConversationId;
-      }
-
-      logEvent({
-        event_type: 'tutor_notebook_info',
-        payload: turnPayload
-      });
-
-      setMessages(prev => [
-        ...prev,
-        {
-          author: 'tutor',
-          text: tutorMessage.tutor_response,
-          relevantLectures: tutorMessage.relevant_lectures
-        }
-      ]);
-      if (tutorMessage.follow_up) {
-        setSuggestion(tutorMessage.follow_up);
       }
     } catch (error) {
       console.error('Error asking tutor:', error);
@@ -239,23 +288,35 @@ export default function Chat() {
         error instanceof Error
           ? error.message
           : 'An error occurred while contacting the tutor. Please try again.';
-      setMessages(prev => [
-        ...prev,
-        { author: 'tutor', text: `Error: ${errorMessage}` }
-      ]);
+      setMessages(prev => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        if (last?.author === 'tutor' && last.isStreaming) {
+          updated[updated.length - 1] = {
+            author: 'tutor',
+            text: `Error: ${errorMessage}`,
+            isStreaming: false
+          };
+        } else {
+          updated.push({ author: 'tutor', text: `Error: ${errorMessage}` });
+        }
+        return updated;
+      });
     } finally {
+      abortStreamRef.current = null;
       setIsWaiting(false);
     }
   };
 
   const handleNewConversation = () => {
+    abortStreamRef.current?.();
+    abortStreamRef.current = null;
     setMessages([]);
     setConversationId(undefined);
     setIsWaiting(false);
     loggedNotebookJsonForConversationIdRef.current = undefined;
     acceptedFollowUpRef.current = null;
     setNotebookLoaded(false);
-
     setShouldResetNext(true);
   };
 

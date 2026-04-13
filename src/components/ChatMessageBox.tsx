@@ -123,11 +123,27 @@ export default function ChatMessageBox({
         {/* Ghost text (gray suggestion) behind the textarea */}
         {showGhost && (
           <div
-            className="pointer-events-none absolute inset-0 flex items-start overflow-hidden rounded-md border border-transparent p-2"
+            className="pointer-events-none absolute inset-0 flex items-start gap-1.5 overflow-hidden rounded-md border border-transparent p-2"
             style={{ color: 'var(--jp-ui-font-color2)' }}
           >
             <span
-              className="break-words whitespace-pre-wrap"
+              className="mt-px inline-flex shrink-0 items-center gap-1 text-[0.85em] leading-none"
+              aria-hidden
+            >
+              <span
+                className="rounded border px-1 py-0.5"
+                style={{
+                  borderColor: 'var(--jp-border-color2)',
+                  color: 'var(--jp-ui-font-color2)',
+                  fontFamily: 'var(--jp-ui-font-family)'
+                }}
+              >
+                Tab
+              </span>
+              <span className="opacity-80">→</span>
+            </span>
+            <span
+              className="min-w-0 flex-1 break-words whitespace-pre-wrap"
               style={{
                 font: 'inherit',
                 fontSize: 'inherit',

@@ -9,9 +9,12 @@ logger = logging.getLogger(__name__)
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 
+from .practice_problems.handler import (
+    PracticeProblemsHandler,
+    RandomExamQuestionHandler,
+)
 from .agents.tutor_agent import ask_tutor, stream_ask_tutor
 from .tools.files_tool import ListFilesHandler, ReadFileHandler, SearchFilesHandler
-from .practice_problems.handler import PracticeProblemsHandler
 
 
 class RouteHandler(APIHandler):
@@ -95,6 +98,13 @@ class AskStreamHandler(APIHandler):
             .resolve()
         )
 
+        experiment_id = body.get("experiment_id")
+        variant = body.get("variant")
+        # Lectures only run when they are the feature being tested (or no experiment is active).
+        # For all other experiments, skip the lecture search so the stream ends faster.
+        enable_lectures = not (experiment_id == "exp_relevant_lectures" and variant == "A")  
+        enable_follow_up = not (experiment_id == "exp_follow_up" and variant == "A")
+
         try:
             async for event in stream_ask_tutor(
                 student_question=body["student_question"],
@@ -105,6 +115,8 @@ class AskStreamHandler(APIHandler):
                 reset_conversation=body.get("reset_conversation", False),
                 structured_context=body.get("structured_context"),
                 server_root=server_root,
+                enable_lectures=enable_lectures,
+                enable_follow_up=enable_follow_up,
             ):
                 self.write(f"data: {json.dumps(event)}\n\n")
                 await self.flush()
@@ -115,8 +127,7 @@ class AskStreamHandler(APIHandler):
             await self.flush()
         finally:
             self.finish()
-
-
+    
 def setup_handlers(web_app):
     host_pattern = ".*$"
     base_url = web_app.settings["base_url"]
@@ -132,5 +143,7 @@ def setup_handlers(web_app):
         (url("ask"), AskHandler),
         (url("ask-stream"), AskStreamHandler),
         (url("practice-problems"), PracticeProblemsHandler),
+        (url("random-exam-question"), RandomExamQuestionHandler),
     ]
+    
     web_app.add_handlers(host_pattern, handlers)

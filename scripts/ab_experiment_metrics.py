@@ -32,8 +32,8 @@ import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
+from statistics import median
 from typing import Any, Callable, Iterable
-
 
 PayloadPredicate = Callable[[dict[str, Any]], bool]
 
@@ -114,6 +114,36 @@ def ratio(num: int, den: int) -> float | None:
     return num / den
 
 
+def duration_seconds(event: dict[str, Any]) -> float | None:
+    raw = _payload(event).get("duration_seconds")
+    if isinstance(raw, (int, float)):
+        return float(raw)
+    if isinstance(raw, str):
+        try:
+            return float(raw)
+        except ValueError:
+            return None
+    return None
+
+
+def duration_summary(events: list[dict[str, Any]]) -> dict[str, float | int | None]:
+    vals = [v for v in (duration_seconds(e) for e in events) if v is not None]
+    if not vals:
+        return {
+            "duration_events_with_value": 0,
+            "total_duration_seconds": 0.0,
+            "mean_duration_seconds": None,
+            "median_duration_seconds": None,
+        }
+    total = float(sum(vals))
+    return {
+        "duration_events_with_value": len(vals),
+        "total_duration_seconds": total,
+        "mean_duration_seconds": total / len(vals),
+        "median_duration_seconds": float(median(vals)),
+    }
+
+
 def report_follow_up(events: list[dict[str, Any]]) -> dict[str, Any]:
     exp = "exp_follow_up"
 
@@ -154,6 +184,20 @@ def report_follow_up(events: list[dict[str, Any]]) -> dict[str, Any]:
             }
             for v in ("A", "B")
         },
+        # Requested direct ratio: follow_up_question / exp_follow_up_impression
+        "rates_follow_up_question_vs_impression": {
+            v: {
+                "event_ratio": ratio(
+                    follow_tab.get(v, VariantStats()).count,
+                    impressions.get(v, VariantStats()).count,
+                ),
+                "unique_user_ratio": ratio(
+                    len(follow_tab.get(v, VariantStats()).users),
+                    len(impressions.get(v, VariantStats()).users),
+                ),
+            }
+            for v in ("A", "B")
+        },
     }
 
 
@@ -177,6 +221,10 @@ def report_practice(events: list[dict[str, Any]]) -> dict[str, Any]:
         [e for e in events if e.get("event_type") == "exp_practice_impression"],
         in_exp,
     )
+    requests = count_by_variant(
+        [e for e in events if e.get("event_type") == "practice_problems_request"],
+        lambda p: True,
+    )
     clicks = count_by_variant(
         [e for e in events if e.get("event_type") == "exp_practice_click"],
         in_exp,
@@ -189,6 +237,9 @@ def report_practice(events: list[dict[str, Any]]) -> dict[str, Any]:
         },
         "exp_practice_impression": {
             k: {"events": v.count, "unique_users": len(v.users)} for k, v in impressions.items()
+        },
+        "practice_problems_request": {
+            k: {"events": v.count, "unique_users": len(v.users)} for k, v in requests.items()
         },
         "exp_practice_click": {
             k: {"events": v.count, "unique_users": len(v.users)} for k, v in clicks.items()
@@ -205,6 +256,13 @@ def report_practice(events: list[dict[str, Any]]) -> dict[str, Any]:
                 ),
             }
             for v in ("A", "B")
+        },
+        "rates_request_vs_impression": {
+            v: ratio(
+                requests.get(v, VariantStats()).count,
+                impressions.get(v, VariantStats()).count,
+            )
+            for v in ("A", "B", "_missing_variant")
         },
     }
 
@@ -260,6 +318,19 @@ def report_lectures(events: list[dict[str, Any]]) -> dict[str, Any]:
             }
             for v in ("A", "B")
         },
+        "rates_vs_impression": {
+            v: {
+                "open_per_impression": ratio(
+                    opens.get(v, VariantStats()).count,
+                    impressions.get(v, VariantStats()).count,
+                ),
+                "toggle_per_impression": ratio(
+                    toggles.get(v, VariantStats()).count,
+                    impressions.get(v, VariantStats()).count,
+                ),
+            }
+            for v in ("A", "B")
+        },
     }
 
 
@@ -281,14 +352,44 @@ def report_exam_mode(events: list[dict[str, Any]]) -> dict[str, Any]:
         [e for e in events if e.get("event_type") == "exp_exam_mode_activated"],
         in_exp,
     )
+    attempts = count_by_variant(
+        [e for e in events if e.get("event_type") in ("exp_exam_mode_attempt", "exam_mode_attempt")],
+        lambda p: p.get("experiment_id") in (None, exp),
+    )
+    exam_started = count_by_variant(
+        [e for e in events if e.get("event_type") == "exam_mode_started"],
+        lambda p: True,
+    )
     duration_events = count_by_variant(
         [e for e in events if e.get("event_type") == "exp_exam_mode_duration"],
         in_exp,
     )
+    duration_raw = [
+        e
+        for e in events
+        if e.get("event_type") in ("exp_exam_mode_duration", "exam_mode_duration")
+        and _payload(e).get("experiment_id") in (None, exp)
+    ]
+    duration_by_variant: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for e in duration_raw:
+        v = variant_of(e) or "_missing_variant"
+        duration_by_variant[v].append(e)
+
+    duration_stats = {
+        v: duration_summary(duration_by_variant.get(v, []))
+        for v in ("A", "B", "_missing_variant")
+    }
+
     return {
         "experiment_id": exp,
         "denominator": "exp_turn_start + feature-specific activation/duration events",
         "turns_by_variant": {k: {"events": v.count, "unique_users": len(v.users)} for k, v in turns.items()},
+        "exam_mode_attempt": {
+            k: {"events": v.count, "unique_users": len(v.users)} for k, v in attempts.items()
+        },
+        "exam_mode_started": {
+            k: {"events": v.count, "unique_users": len(v.users)} for k, v in exam_started.items()
+        },
         "exp_exam_mode_activated": {
             k: {"events": v.count, "unique_users": len(v.users)} for k, v in activated.items()
         },
@@ -301,6 +402,28 @@ def report_exam_mode(events: list[dict[str, Any]]) -> dict[str, Any]:
                 turns.get(v, VariantStats()).count,
             )
             for v in ("A", "B")
+        },
+        "activation_rate_vs_attempts": {
+            v: ratio(
+                activated.get(v, VariantStats()).count,
+                attempts.get(v, VariantStats()).count,
+            )
+            for v in ("A", "B", "_missing_variant")
+        },
+        # Requested metric: duration per activation.
+        "duration_per_activation": {
+            v: {
+                "duration_event_per_activation": ratio(
+                    duration_stats[v]["duration_events_with_value"],
+                    activated.get(v, VariantStats()).count,
+                ),
+                "avg_duration_seconds_per_activation": ratio(
+                    duration_stats[v]["total_duration_seconds"],
+                    activated.get(v, VariantStats()).count,
+                ),
+                "duration_distribution": duration_stats[v],
+            }
+            for v in ("A", "B", "_missing_variant")
         },
     }
 

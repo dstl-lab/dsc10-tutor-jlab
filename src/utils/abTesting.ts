@@ -10,7 +10,7 @@ import { getStudentEmailFromUrl } from './index';
  *   'exp_follow_up'          — gate follow-up suggestion feature
  *   'exp_relevant_lectures'  — gate relevant lectures feature
  */
-export const ACTIVE_EXPERIMENT: string | null = 'exp_follow_up';
+export const ACTIVE_EXPERIMENT: string | null = 'exp_practice_problems';
 
 /**
  * Phase of the current experiment.
@@ -20,7 +20,7 @@ export const ACTIVE_EXPERIMENT: string | null = 'exp_follow_up';
  * This enables a within-subjects crossover design without re-randomising.
  * To flip at the halfway point: set to 2 and redeploy.
  */
-export const EXPERIMENT_PHASE: 1 | 2 = 2;
+export const EXPERIMENT_PHASE: 1 | 2 = 1;
 
 /**
  * FNV-1a 32-bit hash. Pure string hash — no async, no browser API dependency.

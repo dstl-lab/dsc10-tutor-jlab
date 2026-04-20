@@ -10,7 +10,7 @@ import { getStudentEmailFromUrl } from './index';
  *   'exp_follow_up'          — gate follow-up suggestion feature
  *   'exp_relevant_lectures'  — gate relevant lectures feature
  */
-export const ACTIVE_EXPERIMENT: string | null = 'exp_follow_up';
+export const ACTIVE_EXPERIMENT: string | null = 'exp_practice_problems';
 
 /**
  * Phase of the current experiment.

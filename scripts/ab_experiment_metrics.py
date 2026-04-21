@@ -22,6 +22,7 @@ Usage
 -----
   python scripts/ab_experiment_metrics.py -i events.jsonl
   python scripts/ab_experiment_metrics.py -i 'part-*.jsonl'
+  python scripts/ab_experiment_metrics.py -i events.jsonl --output-json metrics.json
 """
 
 from __future__ import annotations
@@ -445,6 +446,13 @@ def print_text(reports: list[dict[str, Any]]) -> None:
         print()
 
 
+def write_json_output(reports: list[dict[str, Any]], output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8") as f:
+        json.dump(reports, f, indent=2, sort_keys=False)
+        f.write("\n")
+
+
 def expand_inputs(patterns: list[str]) -> list[Path]:
     paths: list[Path] = []
     for p in patterns:
@@ -470,6 +478,11 @@ def main() -> int:
         required=True,
         help="JSONL file path, glob, or - for stdin (repeatable)",
     )
+    parser.add_argument(
+        "--output-json",
+        type=Path,
+        help="Optional path to write reports as JSON for downstream analysis",
+    )
     args = parser.parse_args()
 
     paths = expand_inputs(args.input)
@@ -481,6 +494,9 @@ def main() -> int:
     events = load_jsonl(paths)
     reports = [REPORTERS[eid](events) for eid in sorted(REPORTERS)]
     print_text(reports)
+    if args.output_json is not None:
+        write_json_output(reports, args.output_json)
+        print(f"Wrote JSON report to {args.output_json}")
 
     return 0
 

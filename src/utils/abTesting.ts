@@ -20,7 +20,7 @@ export const ACTIVE_EXPERIMENT: string | null = 'exp_practice_problems';
  * This enables a within-subjects crossover design without re-randomising.
  * To flip at the halfway point: set to 2 and redeploy.
  */
-export const EXPERIMENT_PHASE: 1 | 2 = 1;
+export const EXPERIMENT_PHASE: 1 | 2 = 2;
 
 /**
  * FNV-1a 32-bit hash. Pure string hash — no async, no browser API dependency.

@@ -220,8 +220,7 @@ export default function Chat() {
     };
 
     const wasFollowUpQuestion = !!(
-      suggestion &&
-      text.trim() === suggestion.trim()
+      suggestion && text.trim() === suggestion.trim()
     );
     if (wasFollowUpQuestion) {
       logEvent({

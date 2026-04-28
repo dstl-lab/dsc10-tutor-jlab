@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   askTutorStream,
@@ -63,6 +63,7 @@ export default function Chat() {
   type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
   const [mode, setMode] = useState<FrontendPromptMode>('tutor');
   const [suggestion, setSuggestion] = useState('');
+  const [messageBoxKey, setMessageBoxKey] = useState(0);
 
   const studentKey = getStudentKey();
   const [variant] = useState<'A' | 'B'>(() =>
@@ -219,8 +220,9 @@ export default function Chat() {
       ]);
     };
 
-    const wasFollowUpViaTab = acceptedFollowUpRef.current === text.trim();
-    if (wasFollowUpViaTab) {
+    const wasFollowUpFromSuggestion =
+      acceptedFollowUpRef.current === text.trim();
+    if (wasFollowUpFromSuggestion) {
       logEvent({
         event_type: 'follow_up_question',
         payload: {
@@ -671,7 +673,13 @@ export default function Chat() {
     examModeStartTimestampRef.current = null;
     setNotebookLoaded(false);
     setShouldResetNext(true);
+    setSuggestion('');
+    setMessageBoxKey(k => k + 1);
   };
+
+  const handleFollowUpPrefill = useCallback((suggestionText: string) => {
+    acceptedFollowUpRef.current = suggestionText;
+  }, []);
 
   if (!notebookName) {
     return (
@@ -700,13 +708,11 @@ export default function Chat() {
         experimentId={ACTIVE_EXPERIMENT ?? undefined}
       />
       <ChatMessageBox
+        key={messageBoxKey}
         onSubmit={handleMessageSubmit}
         disabled={isWaiting}
         suggestion={suggestion}
-        onSuggestionAccept={suggestionText => {
-          acceptedFollowUpRef.current = suggestionText;
-          setSuggestion('');
-        }}
+        onSuggestionAccept={handleFollowUpPrefill}
       />
     </div>
   );

@@ -55,7 +55,6 @@ export default function Chat() {
   const loggedNotebookJsonForConversationIdRef = useRef<string | undefined>(
     undefined
   );
-  const acceptedFollowUpRef = useRef<string | null>(null);
   const initialNotebookSnapshotRef = useRef<string | undefined>(undefined);
   const abortStreamRef = useRef<(() => void) | null>(null);
   const examModeStartTimestampRef = useRef<number | null>(null);
@@ -63,6 +62,7 @@ export default function Chat() {
   type FrontendPromptMode = 'tutor' | 'chatgpt' | 'none';
   const [mode, setMode] = useState<FrontendPromptMode>('tutor');
   const [suggestion, setSuggestion] = useState('');
+  const [messageBoxKey, setMessageBoxKey] = useState(0);
 
   const studentKey = getStudentKey();
   const [variant] = useState<'A' | 'B'>(() =>
@@ -219,8 +219,11 @@ export default function Chat() {
       ]);
     };
 
-    const wasFollowUpViaTab = acceptedFollowUpRef.current === text.trim();
-    if (wasFollowUpViaTab) {
+    const wasFollowUpQuestion = !!(
+      suggestion &&
+      text.trim() === suggestion.trim()
+    );
+    if (wasFollowUpQuestion) {
       logEvent({
         event_type: 'follow_up_question',
         payload: {
@@ -234,7 +237,6 @@ export default function Chat() {
           })
         }
       });
-      acceptedFollowUpRef.current = null;
     }
     setSuggestion('');
     setMessages(prev => [...prev, { author: 'user', text }]);
@@ -667,8 +669,9 @@ export default function Chat() {
     setConversationId(undefined);
     setIsWaiting(false);
     loggedNotebookJsonForConversationIdRef.current = undefined;
-    acceptedFollowUpRef.current = null;
     examModeStartTimestampRef.current = null;
+    setSuggestion('');
+    setMessageBoxKey(k => k + 1);
     setNotebookLoaded(false);
     setShouldResetNext(true);
   };
@@ -700,13 +703,10 @@ export default function Chat() {
         experimentId={ACTIVE_EXPERIMENT ?? undefined}
       />
       <ChatMessageBox
+        key={messageBoxKey}
         onSubmit={handleMessageSubmit}
         disabled={isWaiting}
         suggestion={suggestion}
-        onSuggestionAccept={suggestionText => {
-          acceptedFollowUpRef.current = suggestionText;
-          setSuggestion('');
-        }}
       />
     </div>
   );

@@ -537,23 +537,7 @@ export default function Chat() {
                 }
               }
             } else if (event.type === 'follow_up') {
-              if (
-                !ACTIVE_EXPERIMENT ||
-                (ACTIVE_EXPERIMENT === 'exp_follow_up' && variant === 'B')
-              ) {
-                setSuggestion(event.text);
-                if (ACTIVE_EXPERIMENT === 'exp_follow_up') {
-                  logEvent({
-                    event_type: 'exp_follow_up_impression',
-                    payload: {
-                      experiment_id: ACTIVE_EXPERIMENT,
-                      variant,
-                      student_key_hash: studentKeyHashRef.current,
-                      notebook: notebookName
-                    }
-                  });
-                }
-              }
+              setSuggestion(event.text);
             } else if (event.type === 'done') {
               finalConversationId = event.conversation_id;
               setMessages(prev => {

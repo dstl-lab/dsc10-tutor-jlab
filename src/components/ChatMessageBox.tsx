@@ -1,5 +1,6 @@
 import * as React from 'react';
 
+import { logEvent } from '@/api/logger';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/utils';
@@ -18,6 +19,7 @@ export default function ChatMessageBox({
   onSuggestionAccept
 }: IChatMessageBoxProps) {
   const [message, setMessage] = React.useState('');
+  const activeSuggestionRef = React.useRef<string>('');
 
   // Prefill from parent `suggestion` (cleared on send in Chat). `onSuggestionAccept`
   // stores text for follow-up analytics when the user sends unchanged.
@@ -26,6 +28,7 @@ export default function ChatMessageBox({
       return;
     }
     setMessage(suggestion);
+    activeSuggestionRef.current = suggestion;
     onSuggestionAccept?.(suggestion);
   }, [suggestion, onSuggestionAccept]);
 
@@ -34,6 +37,24 @@ export default function ChatMessageBox({
       return;
     }
     if (message.trim()) {
+      const activeSuggestion = activeSuggestionRef.current;
+      if (activeSuggestion) {
+        if (message.trim() === activeSuggestion.trim()) {
+          logEvent({
+            event_type: 'follow_up_sent_unedited',
+            payload: { question: message.trim() }
+          });
+        } else {
+          logEvent({
+            event_type: 'follow_up_overridden',
+            payload: {
+              suggestion: activeSuggestion,
+              sent_query: message.trim()
+            }
+          });
+        }
+        activeSuggestionRef.current = '';
+      }
       onSubmit(message.trim());
       setMessage('');
     }

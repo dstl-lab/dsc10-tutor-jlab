@@ -166,6 +166,15 @@ def report_follow_up(events: list[dict[str, Any]]) -> dict[str, Any]:
         [e for e in events if e.get("event_type") == "follow_up_question"],
         in_exp,
     )
+    
+    follow_sent_unedited = count_by_variant(
+        [e for e in events if e.get("event_type") == "follow_up_sent_unedited"],
+        lambda p: True,
+    )
+    follow_overridden = count_by_variant(
+        [e for e in events if e.get("event_type") == "follow_up_overridden"],
+        lambda p: True,
+    )
     return {
         "experiment_id": exp,
         "denominator": "exp_turn_start (payload.experiment_id = exp_follow_up)",
@@ -198,6 +207,14 @@ def report_follow_up(events: list[dict[str, Any]]) -> dict[str, Any]:
                 ),
             }
             for v in ("A", "B")
+        },
+        "follow_up_sent_unedited": {
+            k: {"events": v.count, "unique_users": len(v.users)}
+            for k, v in follow_sent_unedited.items()
+        },
+        "follow_up_overridden": {
+            k: {"events": v.count, "unique_users": len(v.users)}
+            for k, v in follow_overridden.items()
         },
     }
 

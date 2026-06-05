@@ -7,10 +7,7 @@ type TextareaProps = React.ComponentProps<'textarea'> & {
 };
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  function Textarea(
-    { className, autoResize, onInput, value, ...props },
-    forwardedRef
-  ) {
+  ({ className, autoResize, onInput, value, ...props }, forwardedRef) => {
     const internalRef = React.useRef<HTMLTextAreaElement | null>(null);
 
     const setRefs = React.useCallback(

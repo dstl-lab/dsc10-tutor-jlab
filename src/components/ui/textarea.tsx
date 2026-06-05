@@ -6,14 +6,24 @@ type TextareaProps = React.ComponentProps<'textarea'> & {
   autoResize?: boolean;
 };
 
-function Textarea({
-  className,
-  autoResize,
-  onInput,
-  value,
-  ...props
-}: TextareaProps) {
+const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
+  function Textarea(
+    { className, autoResize, onInput, value, ...props },
+    forwardedRef
+  ) {
   const internalRef = React.useRef<HTMLTextAreaElement | null>(null);
+
+  const setRefs = React.useCallback(
+    (element: HTMLTextAreaElement | null) => {
+      internalRef.current = element;
+      if (typeof forwardedRef === 'function') {
+        forwardedRef(element);
+      } else if (forwardedRef) {
+        forwardedRef.current = element;
+      }
+    },
+    [forwardedRef]
+  );
 
   const applyAutoResize = React.useCallback((element: HTMLTextAreaElement) => {
     if (!element) {
@@ -56,7 +66,7 @@ function Textarea({
 
   return (
     <textarea
-      ref={internalRef}
+      ref={setRefs}
       data-slot="textarea"
       className={cn(
         'min-h-16, w-full resize-none rounded-md border-1 border-jp-brand-color2 p-2 transition-[color,box-shadow]',
@@ -67,6 +77,6 @@ function Textarea({
       {...props}
     />
   );
-}
+});
 
 export { Textarea };

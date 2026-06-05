@@ -19,18 +19,31 @@ export default function ChatMessageBox({
   onSuggestionAccept
 }: IChatMessageBoxProps) {
   const [message, setMessage] = React.useState('');
+  const [suggestionAccepted, setSuggestionAccepted] = React.useState(false);
   const activeSuggestionRef = React.useRef<string>('');
+  const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
 
-  // Prefill from parent `suggestion` (cleared on send in Chat). `onSuggestionAccept`
-  // stores text for follow-up analytics when the user sends unchanged.
   React.useEffect(() => {
     if (!suggestion) {
       return;
     }
+    setSuggestionAccepted(false);
+    activeSuggestionRef.current = '';
+  }, [suggestion]);
+
+  const showGhostSuggestion =
+    Boolean(suggestion) && !suggestionAccepted && message === '';
+
+  const acceptSuggestion = React.useCallback(() => {
+    if (!suggestion || disabled) {
+      return;
+    }
     setMessage(suggestion);
+    setSuggestionAccepted(true);
     activeSuggestionRef.current = suggestion;
     onSuggestionAccept?.(suggestion);
-  }, [suggestion, onSuggestionAccept]);
+    textareaRef.current?.focus();
+  }, [suggestion, disabled, onSuggestionAccept]);
 
   const handleSubmit = React.useCallback(() => {
     if (disabled) {
@@ -57,6 +70,7 @@ export default function ChatMessageBox({
       }
       onSubmit(message.trim());
       setMessage('');
+      setSuggestionAccepted(false);
     }
   }, [message, onSubmit, disabled]);
 
@@ -65,12 +79,17 @@ export default function ChatMessageBox({
       if (disabled) {
         return;
       }
+      if (event.key === 'Tab' && showGhostSuggestion) {
+        event.preventDefault();
+        acceptSuggestion();
+        return;
+      }
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
         handleSubmit();
       }
     },
-    [handleSubmit, disabled]
+    [handleSubmit, disabled, showGhostSuggestion, acceptSuggestion]
   );
 
   const handleChange = React.useCallback(
@@ -85,14 +104,36 @@ export default function ChatMessageBox({
 
   return (
     <div className="flex flex-col gap-1">
-      <Textarea
-        autoResize
-        className={cn('max-h-128', disabled ? 'pointer-events-none' : '')}
-        value={message}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        disabled={disabled}
-      />
+      <div className="relative">
+        <Textarea
+          ref={textareaRef}
+          autoResize
+          className={cn('max-h-128', disabled ? 'pointer-events-none' : '')}
+          value={message}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          disabled={disabled}
+        />
+        {showGhostSuggestion && (
+          <div
+            className="pointer-events-none absolute inset-0 overflow-hidden rounded-md p-2"
+            aria-hidden
+          >
+            <p className="m-0 leading-relaxed text-gray-400">
+              <button
+                type="button"
+                className="pointer-events-auto mr-1 inline-flex items-center rounded border border-gray-300 px-1.5 py-0.5 align-text-bottom text-xs leading-none text-gray-400 hover:bg-gray-50 hover:text-gray-500"
+                onClick={acceptSuggestion}
+                tabIndex={-1}
+              >
+                Tab
+              </button>
+              <span className="whitespace-pre">→ </span>
+              {suggestion}
+            </p>
+          </div>
+        )}
+      </div>
       <Button onClick={handleSubmit} disabled={disabled}>
         Send
       </Button>

@@ -1,4 +1,3 @@
-import { logEvent } from '@/api/logger';
 import { useNotebook } from '@/contexts/NotebookContext';
 import React from 'react';
 import ReactMarkdown, { Components } from 'react-markdown';
@@ -12,16 +11,11 @@ type MarkdownProps = {
   text: string;
   // If true, Markdown will render an "Insert code below"
   enableInsertForPython?: boolean;
-  // A/B experiment context — passed through from Chat.tsx when relevant
-  variant?: 'A' | 'B';
-  experimentId?: string;
 };
 
 export default function Markdown({
   text,
-  enableInsertForPython = false,
-  variant,
-  experimentId
+  enableInsertForPython = false
 }: MarkdownProps) {
   const notebook = useNotebook();
   // Code block & inline code renderer which can render optional actions
@@ -110,33 +104,17 @@ export default function Markdown({
     ),
     li: ({ children }: any) => <li className="leading-tight">{children}</li>,
     code: CodeComponent as any,
-    a: ({ href, children }: any) => {
-      const handleClick = () => {
-        if (experimentId === 'exp_practice_problems') {
-          logEvent({
-            event_type: 'exp_practice_click',
-            payload: {
-              experiment_id: experimentId,
-              variant,
-              markdown_link_click: true
-            }
-          });
-        }
-      };
-
-      return (
-        <a
-          href={href}
-          target="_blank"
-          rel="noreferrer"
-          className="hover:text-blue-800"
-          style={{ color: '#2563eb', textDecoration: 'underline' }}
-          onClick={handleClick}
-        >
-          {children}
-        </a>
-      );
-    },
+    a: ({ href, children }: any) => (
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        className="hover:text-blue-800"
+        style={{ color: '#2563eb', textDecoration: 'underline' }}
+      >
+        {children}
+      </a>
+    ),
     img: ({ src, alt }: any) => (
       <img
         src={src}

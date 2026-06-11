@@ -18,15 +18,11 @@ const messageClasses = {
 interface IChatMessagesProps {
   messages: IMessage[];
   isWaiting?: boolean;
-  variant?: 'A' | 'B';
-  experimentId?: string;
 }
 
 export default function ChatMessages({
   messages,
-  isWaiting = false,
-  variant,
-  experimentId
+  isWaiting = false
 }: IChatMessagesProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -59,8 +55,6 @@ export default function ChatMessages({
                   <Markdown
                     text={message.text}
                     enableInsertForPython={enableInsertForPython}
-                    variant={variant}
-                    experimentId={experimentId}
                   />
                   {message.isStreaming && (
                     <span
@@ -76,11 +70,7 @@ export default function ChatMessages({
             {message.author === 'tutor' &&
               message.relevantLectures &&
               message.relevantLectures.length > 0 && (
-                <RelevantLectures
-                  lectures={message.relevantLectures}
-                  variant={variant}
-                  experimentId={experimentId}
-                />
+                <RelevantLectures lectures={message.relevantLectures} />
               )}
           </div>
         );

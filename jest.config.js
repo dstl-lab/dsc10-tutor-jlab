@@ -17,6 +17,15 @@ const baseConfig = jestJupyterLab(__dirname);
 module.exports = {
   ...baseConfig,
   automock: false,
+  moduleNameMapper: {
+    ...baseConfig.moduleNameMapper,
+    '^@/(.*)$': '<rootDir>/src/$1'
+  },
+  modulePathIgnorePatterns: [
+    ...(baseConfig.modulePathIgnorePatterns ?? []),
+    '<rootDir>/.venv/',
+    '<rootDir>/jupyterlab_ai_tutor_backend/labextension/'
+  ],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',

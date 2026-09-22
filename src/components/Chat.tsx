@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { UUID } from '@lumino/coreutils';
 
 import {
   askTutorStream,
@@ -8,7 +9,7 @@ import {
   type IAskTutorParams
 } from '@/api';
 
-import { logEvent } from '@/api/logger';
+import { logEvent, observationMetadata } from '@/api/logger';
 import { Button } from '@/components/ui/button';
 import { useNotebook } from '@/contexts/NotebookContext';
 import { enhanceQuestion } from '@/utils/enhancedQuestionUtils';
@@ -30,7 +31,8 @@ export default function Chat() {
     notebookName,
     getNearestMarkdownCell,
     getSanitizedNotebook,
-    getStructuredContext
+    getStructuredContext,
+    getNotebookIdentity
   } = useNotebook();
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [isExamModeActive, setIsExamModeActive] = useState(false);
@@ -329,6 +331,11 @@ export default function Chat() {
             enhanceQuestion(text, getNearestMarkdownCell())
           );
 
+      const snapshot = isExamModeActive ? null : getSanitizedNotebook();
+      const notebookIdentity = getNotebookIdentity();
+      const structuredContext = snapshot
+        ? getStructuredContext(snapshot)
+        : null;
       const tutorRequest: IAskTutorParams = isExamModeActive
         ? {
             student_question: questionForTutor,
@@ -344,28 +351,17 @@ export default function Chat() {
         : {
             student_question: questionForTutor,
             conversation_id: conversationId,
-            notebook_json: JSON.stringify(getSanitizedNotebook()),
-            structured_context: (() => {
-              const structuredContext = getStructuredContext();
-              return structuredContext
-                ? JSON.stringify(structuredContext)
-                : undefined;
-            })(),
+            notebook_json: JSON.stringify(snapshot),
+            structured_context: structuredContext
+              ? JSON.stringify(structuredContext)
+              : undefined,
             exam_mode_conversation: undefined,
             prompt: promptToSend,
             prompt_mode: backendPromptMode,
             reset_conversation: shouldResetNext || undefined
           };
 
-      logEvent({
-        event_type: 'tutor_query',
-        payload: {
-          question: text,
-          mode,
-          conversation_id: conversationId,
-          notebook: notebookName
-        }
-      });
+      tutorRequest.request_id = UUID.uuid4();
 
       setMessages(prev => [
         ...prev,
@@ -431,47 +427,29 @@ export default function Chat() {
                 ]);
               }
 
-              setMessages(prev => {
-                const last = prev[prev.length - 1];
-                const responseText = last?.text ?? '';
-
-                logEvent({
-                  event_type: 'tutor_response',
-                  payload: {
-                    conversation_id: finalConversationId,
-                    response: responseText,
-                    mode,
-                    notebook: notebookName
-                  }
-                });
-
-                const resolvedId = finalConversationId || conversationId;
-                const isFirstTurn =
-                  !!resolvedId &&
-                  loggedNotebookJsonForConversationIdRef.current !== resolvedId;
-
-                const turnPayload: Record<string, unknown> = {
-                  student_message: text,
-                  tutor_response: responseText,
-                  prompt_mode: backendPromptMode,
-                  toggle_mode: mode,
-                  timestamp: new Date().toISOString(),
-                  conversation_id: resolvedId
-                };
-
-                if (isFirstTurn) {
-                  turnPayload.initial_notebook_json = JSON.stringify(
-                    getSanitizedNotebook()
-                  );
-                  loggedNotebookJsonForConversationIdRef.current =
-                    resolvedId ?? undefined;
-                }
-
-                logEvent({
-                  event_type: 'tutor_notebook_info',
-                  payload: turnPayload
-                });
-                return prev;
+              const resolvedId = finalConversationId || conversationId;
+              const isFirstTurn =
+                !!resolvedId &&
+                loggedNotebookJsonForConversationIdRef.current !== resolvedId;
+              // Legacy summary retained, now using the original request snapshot.
+              const turnPayload: Record<string, unknown> = {
+                ...observationMetadata,
+                request_id: tutorRequest.request_id,
+                student_message: text,
+                tutor_response: streamedTutorResponse,
+                prompt_mode: tutorRequest.prompt_mode,
+                toggle_mode: mode,
+                timestamp: new Date().toISOString(),
+                capture_phase: 'request',
+                conversation_id: resolvedId
+              };
+              if (isFirstTurn) {
+                turnPayload.initial_notebook_json = tutorRequest.notebook_json;
+                loggedNotebookJsonForConversationIdRef.current = resolvedId;
+              }
+              logEvent({
+                event_type: 'tutor_notebook_info',
+                payload: turnPayload
               });
 
               resolve();
@@ -479,7 +457,13 @@ export default function Chat() {
               console.error('[Tutor] Stream error:', event.message);
             }
           },
-          err => reject(err)
+          err => reject(err),
+          {
+            question: text,
+            mode,
+            notebook: snapshot?.notebookName ?? notebookName,
+            ...notebookIdentity
+          }
         );
 
         abortStreamRef.current = abort;

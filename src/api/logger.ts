@@ -1,4 +1,10 @@
 import { getStudentEmailFromUrl, isProduction } from '@/utils';
+import packageInfo from '../../package.json';
+
+export const observationMetadata = {
+  schema_version: 1,
+  client_version: packageInfo.version
+};
 
 const LOG_API = isProduction()
   ? 'https://dsc10-tutor-logging-api.nrp-nautilus.io'
@@ -20,7 +26,13 @@ export function logEvent(event: ILogEvent): void {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
-  }).catch(err => {
-    console.error('Failed to log event:', err);
-  });
+  })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`Logging endpoint returned HTTP ${response.status}`);
+      }
+    })
+    .catch(err => {
+      console.error('Failed to log event:', err);
+    });
 }

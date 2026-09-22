@@ -1,6 +1,8 @@
 import { URLExt } from '@jupyterlab/coreutils';
+import { UUID } from '@lumino/coreutils';
 
 import { ServerConnection } from '@jupyterlab/services';
+import { logEvent, observationMetadata } from './logger';
 
 // import { getStudentEmailFromUrl, isProduction } from '@/utils';
 
@@ -13,6 +15,7 @@ import { ServerConnection } from '@jupyterlab/services';
  */
 export type PromptMode = 'append' | 'none' | 'override';
 export interface IAskTutorParams {
+  request_id?: string;
   student_question: string;
   notebook_json: string;
   prompt?: string;
@@ -149,7 +152,16 @@ export async function askTutor({
 export function askTutorStream(
   params: IAskTutorParams,
   onEvent: (event: ITutorStreamEvent) => void,
-  onError: (err: Error) => void
+  onError: (err: Error) => void,
+  observation?: {
+    question: string;
+    notebook: string;
+    mode: string;
+    notebook_path?: string | null;
+    notebook_session_id?: string | null;
+    kernel_id?: string | null;
+    kernel_client_id?: string | null;
+  }
 ): () => void {
   const settings = ServerConnection.makeSettings();
   const requestUrl = URLExt.join(
@@ -159,93 +171,187 @@ export function askTutorStream(
   );
 
   const controller = new AbortController();
+  // Serialize once, before any await: the editor and caller may change meanwhile.
+  const body = JSON.stringify({
+    request_id: params.request_id ?? UUID.uuid4(),
+    student_question: params.student_question,
+    notebook_json: params.notebook_json,
+    prompt: params.prompt,
+    prompt_mode: params.prompt_mode,
+    conversation_id: params.conversation_id,
+    reset_conversation: params.reset_conversation,
+    nearest_markdown_cell_text: params.nearest_markdown_cell_text,
+    structured_context: params.structured_context,
+    exam_mode_conversation: params.exam_mode_conversation
+  });
+  const request = JSON.parse(body) as IAskTutorParams;
+  const capturedAt = new Date().toISOString();
+  const identity = {
+    ...observationMetadata,
+    request_id: request.request_id,
+    notebook: observation?.notebook ?? null,
+    notebook_path: observation?.notebook_path ?? null,
+    notebook_session_id: observation?.notebook_session_id ?? null,
+    kernel_id: observation?.kernel_id ?? null,
+    kernel_client_id: observation?.kernel_client_id ?? null,
+    mode: observation?.mode ?? null
+  };
+  let started = false;
+  let finished = false;
+  let responseText = '';
+  const fail = (error: Error) => {
+    if (finished) {
+      return;
+    }
+    finished = true;
+    logEvent({
+      event_type: 'tutor_request_failed',
+      payload: {
+        ...identity,
+        timestamp: new Date().toISOString(),
+        conversation_id: request.conversation_id ?? null,
+        status: controller.signal.aborted ? 'cancelled' : 'error',
+        error: error.message,
+        partial_response: responseText
+      }
+    });
+    onError(error);
+  };
 
   (async () => {
-    let response: Response;
+    let notebookSha256: string | null = null;
     try {
-      response = await fetch(requestUrl, {
+      const hash = await crypto.subtle.digest(
+        'SHA-256',
+        new TextEncoder().encode(request.notebook_json)
+      );
+      notebookSha256 = Array.from(new Uint8Array(hash), byte =>
+        byte.toString(16).padStart(2, '0')
+      ).join('');
+    } catch (error) {
+      // Work remains recorded even if this browser cannot compute its checksum.
+      console.warn('Notebook checksum unavailable:', error);
+    }
+    logEvent({
+      event_type: 'tutor_query',
+      payload: {
+        ...identity,
+        timestamp: capturedAt,
+        capture_phase: 'request',
+        question: observation?.question ?? request.student_question,
+        conversation_id: request.conversation_id ?? null,
+        task_id: null,
+        task_version: null,
+        notebook_sha256: notebookSha256,
+        request
+      }
+    });
+    started = true;
+    if (controller.signal.aborted) {
+      fail(new Error('Tutor request cancelled'));
+      return;
+    }
+
+    try {
+      const response = await fetch(requestUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Forward JupyterLab auth token so @tornado.web.authenticated passes
           ...(settings.token
             ? { Authorization: `token ${settings.token}` }
             : {})
         },
-        body: JSON.stringify({
-          student_question: params.student_question,
-          notebook_json: params.notebook_json,
-          prompt: params.prompt,
-          prompt_mode: params.prompt_mode,
-          conversation_id: params.conversation_id,
-          reset_conversation: params.reset_conversation,
-          nearest_markdown_cell_text: params.nearest_markdown_cell_text,
-          structured_context: params.structured_context,
-          exam_mode_conversation: params.exam_mode_conversation
-        }),
+        body,
         signal: controller.signal
       });
-    } catch (err) {
-      if ((err as Error).name !== 'AbortError') {
-        onError(err as Error);
-      }
-      return;
-    }
-
-    if (!response.ok || !response.body) {
-      onError(
-        new Error(
+      if (!response.ok || !response.body) {
+        throw new Error(
           `Stream request failed: ${response.status} ${response.statusText}`
-        )
-      );
-      return;
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    try {
-      let reading = true;
-      while (reading) {
-        const { done, value } = await reader.read();
-        if (done) {
-          reading = false;
-        } else {
-          buffer += decoder.decode(value, { stream: true });
-
+        );
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      const acceptFrame = (frame: string) => {
+        if (finished) {
+          return;
+        }
+        const line = frame.trim();
+        if (!line.startsWith('data:')) {
+          return;
+        }
+        let event: ITutorStreamEvent;
+        try {
+          event = JSON.parse(line.slice(5).trim()) as ITutorStreamEvent;
+        } catch {
+          throw new Error('Malformed tutor stream event');
+        }
+        if (!event || typeof event.type !== 'string') {
+          throw new Error('Malformed tutor stream event');
+        }
+        if (event.type === 'token') {
+          if (typeof event.text !== 'string') {
+            throw new Error('Invalid tutor token');
+          }
+          responseText += event.text;
+        } else if (event.type === 'done') {
+          if (
+            typeof event.conversation_id !== 'string' ||
+            !event.conversation_id
+          ) {
+            throw new Error('Missing tutor conversation ID');
+          }
+          finished = true;
+          logEvent({
+            event_type: 'tutor_response',
+            payload: {
+              ...identity,
+              timestamp: new Date().toISOString(),
+              conversation_id: event.conversation_id,
+              response: responseText,
+              status: 'completed'
+            }
+          });
+        } else if (event.type === 'error') {
+          throw new Error(event.message);
+        }
+        onEvent(event);
+      };
+      try {
+        while (!finished) {
+          const { done, value } = await reader.read();
+          buffer += decoder.decode(value, { stream: !done });
+          buffer = buffer.replace(/\r\n/g, '\n');
           const frames = buffer.split('\n\n');
           buffer = frames.pop() ?? '';
-
           for (const frame of frames) {
-            const line = frame.trim();
-            if (!line.startsWith('data:')) {
-              continue;
+            acceptFrame(frame);
+          }
+          if (done) {
+            if (buffer.trim()) {
+              acceptFrame(buffer);
             }
-            const jsonStr = line.slice('data:'.length).trim();
-            if (!jsonStr) {
-              continue;
+            if (!finished) {
+              throw new Error('Tutor stream ended before completion');
             }
-            try {
-              const event = JSON.parse(jsonStr) as ITutorStreamEvent;
-              onEvent(event);
-            } catch (parseErr) {
-              console.debug(
-                '[askTutorStream] Skipping malformed SSE frame',
-                parseErr
-              );
-            }
+            break;
           }
         }
+      } finally {
+        await reader.cancel().catch(() => undefined);
+        reader.releaseLock();
       }
-    } catch (err) {
-      if ((err as Error).name !== 'AbortError') {
-        onError(err as Error);
-      }
+    } catch (error) {
+      fail(error instanceof Error ? error : new Error(String(error)));
     }
   })();
 
-  return () => controller.abort();
+  return () => {
+    controller.abort();
+    if (started) {
+      fail(new Error('Tutor request cancelled'));
+    }
+  };
 }
 
 /**

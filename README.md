@@ -2,6 +2,9 @@
 
 AI Tutor for DSC 10
 
+See [request and execution records](docs/observations.md) for the logging fields,
+replay boundaries, and verification instructions.
+
 This extension is composed of a Python package named `dsc10_tutor_jlab_backend`
 for the server extension and a NPM package named `dsc10-tutor-jlab-frontend`
 for the frontend extension.

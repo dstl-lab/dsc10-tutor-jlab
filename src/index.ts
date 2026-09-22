@@ -9,6 +9,7 @@ import { INotebookTracker } from '@jupyterlab/notebook';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 
 import { createAppWidget } from './AppWidget';
+import { startExecutionLogging } from './utils/executionLogger';
 // import { requestAPI } from './handler';
 
 const plugin: JupyterFrontEndPlugin<void> = {
@@ -22,6 +23,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     notebookTracker: INotebookTracker,
     settingRegistry: ISettingRegistry | null
   ) => {
+    startExecutionLogging(notebookTracker);
     console.log('JupyterLab extension dsc10-tutor-jlab-frontend is activated!');
 
     if (settingRegistry) {

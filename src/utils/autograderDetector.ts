@@ -1,20 +1,15 @@
-import { ICellModel } from '@jupyterlab/cells';
-
-export function isAutograderExecution(cell: ICellModel): {
+export function isAutograderExecution(source: string): {
   isGrader: boolean;
   graderId?: string;
 } {
-  const source = cell.sharedModel?.source || '';
-  const sourceStr = Array.isArray(source) ? source.join('') : source;
-
   const graderPattern = /grader\.check\(['"]([^'"]+)['"]\)/;
-  const graderMatch = sourceStr.match(graderPattern);
+  const graderMatch = source.match(graderPattern);
   if (graderMatch) {
     return { isGrader: true, graderId: graderMatch[1] };
   }
 
   const graderCheckAllPattern = /grader\.check_all\s*\(/;
-  if (graderCheckAllPattern.test(sourceStr)) {
+  if (graderCheckAllPattern.test(source)) {
     return { isGrader: true, graderId: 'check_all' };
   }
 
@@ -65,7 +60,7 @@ function outputToText(output: unknown): string {
 
   const data = (obj.data ?? o.data) as Record<string, unknown> | undefined;
   if (data) {
-    return toStr(data['text/plain']) || toStr(data['text/html']) || '';
+    return toStr(data['text/plain']);
   }
 
   return String(output);
@@ -73,15 +68,17 @@ function outputToText(output: unknown): string {
 
 export function parseGraderOutput(output: unknown): {
   output: string;
-  success: boolean;
+  success: boolean | null;
 } {
   const text = outputToText(output).trim();
   const lower = text.toLowerCase();
   return {
     output: text,
     success:
-      lower.includes('passed') &&
-      !lower.includes('failed') &&
-      !lower.includes('error')
+      lower.includes('failed') || lower.includes('error')
+        ? false
+        : lower.includes('passed')
+          ? true
+          : null
   };
 }

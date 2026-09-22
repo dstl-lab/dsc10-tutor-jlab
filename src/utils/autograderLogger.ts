@@ -1,9 +1,9 @@
-import { logEvent } from '@/api/logger';
+import { logEvent, observationMetadata } from '@/api/logger';
 
-export interface IAutograderEvent {
+export interface IAutograderEvent extends Record<string, unknown> {
   grader_id: string;
   output: string;
-  success: boolean;
+  success: boolean | null;
   notebook?: string;
 }
 
@@ -13,9 +13,8 @@ export async function logAutograderEvent(
   logEvent({
     event_type: 'autograder_info',
     payload: {
-      grader_id: event.grader_id,
-      output: event.output,
-      success: event.success,
+      ...observationMetadata,
+      ...event,
       timestamp: new Date().toISOString(),
       notebook: event.notebook || ''
     }

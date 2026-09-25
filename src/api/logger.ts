@@ -1,4 +1,5 @@
 import { getStudentEmailFromUrl, isProduction } from '@/utils';
+import { UUID } from '@lumino/coreutils';
 import packageInfo from '../../package.json';
 
 export const observationMetadata = {
@@ -16,10 +17,20 @@ interface ILogEvent {
   payload?: Record<string, unknown>;
 }
 
+const analyticsSessionId = UUID.uuid4();
+let clientSequence = 0;
+
 export function logEvent(event: ILogEvent): void {
   const body: ILogEvent = {
     ...event,
-    user_email: event.user_email ?? getStudentEmailFromUrl()
+    user_email: event.user_email ?? getStudentEmailFromUrl(),
+    payload: {
+      ...(event.payload ?? {}),
+      event_id: UUID.uuid4(),
+      analytics_session_id: analyticsSessionId,
+      client_sequence: ++clientSequence,
+      client_timestamp: new Date().toISOString()
+    }
   };
 
   fetch(`${LOG_API}/events`, {

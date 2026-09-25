@@ -32,7 +32,8 @@ export default function Chat() {
     getNearestMarkdownCell,
     getSanitizedNotebook,
     getStructuredContext,
-    getNotebookIdentity
+    getNotebookIdentity,
+    getActiveObservationContext
   } = useNotebook();
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [isExamModeActive, setIsExamModeActive] = useState(false);
@@ -333,6 +334,7 @@ export default function Chat() {
 
       const snapshot = isExamModeActive ? null : getSanitizedNotebook();
       const notebookIdentity = getNotebookIdentity();
+      const activeObservationContext = getActiveObservationContext();
       const structuredContext = snapshot
         ? getStructuredContext(snapshot)
         : null;
@@ -462,7 +464,8 @@ export default function Chat() {
             question: text,
             mode,
             notebook: snapshot?.notebookName ?? notebookName,
-            ...notebookIdentity
+            ...notebookIdentity,
+            ...activeObservationContext
           }
         );
 

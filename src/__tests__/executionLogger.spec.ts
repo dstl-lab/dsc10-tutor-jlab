@@ -14,7 +14,9 @@ function notebook(path: string) {
   kernel.connectionStatusChanged = new Signal(kernel);
   kernel.statusChanged = new Signal(kernel);
   const cell: any = {
+    id: 'cell-1',
     type: 'code',
+    getMetadata: () => undefined,
     sharedModel: { getId: () => 'cell-1', getSource: () => 'edited later' }
   };
   const panel: any = {
@@ -86,7 +88,8 @@ test('binds a background notebook result to outbound source and requires reply p
       execution_id: 'run-1',
       source: 'grader.check("q1")',
       cell_id: 'cell-1',
-      notebook_path: 'background.ipynb'
+      notebook_path: 'background.ipynb',
+      task_context: { task_id: null, attribution: 'unknown' }
     }
   });
   message('recv', 'stream', { text: 'pa', name: 'stdout' });

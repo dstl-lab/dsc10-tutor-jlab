@@ -24,6 +24,11 @@ import {
   type ISanitizedNotebook,
   type IStructuredContext
 } from '@/utils/notebookSanitizer';
+import {
+  type ITaskContext,
+  resolveTaskContext,
+  unknownTaskContext
+} from '@/utils/taskContext';
 import { INotebookTracker, NotebookActions } from '@jupyterlab/notebook';
 
 export interface INotebookContext {
@@ -36,6 +41,12 @@ export interface INotebookContext {
     notebook_session_id: string | null;
     kernel_id: string | null;
     kernel_client_id: string | null;
+  };
+  getActiveObservationContext: () => {
+    active_cell_id: string | null;
+    active_cell_index: number | null;
+    active_cell_type: string | null;
+    active_task_context: ITaskContext;
   };
   getNotebookJson: () => string;
   getSanitizedNotebook: () => ISanitizedNotebook;
@@ -66,6 +77,7 @@ export function NotebookProvider({
       INotebookContext,
       | 'getNotebookJson'
       | 'getNotebookIdentity'
+      | 'getActiveObservationContext'
       | 'getSanitizedNotebook'
       | 'getStructuredContext'
       | 'getActiveCellInfo'
@@ -85,6 +97,27 @@ export function NotebookProvider({
       notebook_session_id: session?.id ?? null,
       kernel_id: session?.kernel?.id ?? null,
       kernel_client_id: session?.kernel?.clientId ?? null
+    };
+  }, [notebookTracker]);
+
+  const getActiveObservationContext = useCallback(() => {
+    const panel = notebookTracker.currentWidget;
+    const cells = panel?.content.model?.cells;
+    const index = panel?.content.activeCellIndex ?? -1;
+    if (!cells || index < 0 || index >= cells.length) {
+      return {
+        active_cell_id: null,
+        active_cell_index: null,
+        active_cell_type: null,
+        active_task_context: unknownTaskContext()
+      };
+    }
+    const cell = cells.get(index);
+    return {
+      active_cell_id: cell.id,
+      active_cell_index: index,
+      active_cell_type: cell.type,
+      active_task_context: resolveTaskContext(cells, index)
     };
   }, [notebookTracker]);
 
@@ -248,6 +281,7 @@ export function NotebookProvider({
   const fullContextValue: INotebookContext = {
     ...contextValue,
     getNotebookIdentity,
+    getActiveObservationContext,
     getNotebookJson,
     getSanitizedNotebook,
     getStructuredContext,

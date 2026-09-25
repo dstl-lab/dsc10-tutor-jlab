@@ -3,7 +3,9 @@
 The tutor records the work present at each streamed help request, and separately
 records notebook-cell execution submissions and results. These records support
 comparing changes between help requests without guessing which code produced an
-output. They do not record every edit or establish what a student learned.
+output. Cell lifecycle observations additionally retain editing bursts without
+uploading their source. None of these observations establish student intent or
+what a student learned.
 
 ## Help requests
 
@@ -75,14 +77,54 @@ execution is not a recognized passing grade. The bound source may be only
 that this command checked. This compatibility detector is not a generic course
 grader specification.
 
+## Task context and cell activity
+
+Course-authored cells can declare durable task structure in notebook JSON:
+
+```json
+{
+  "metadata": {
+    "ai_tutor": {
+      "task_id": "lab01-q03",
+      "task_version": "2026-fall-v1"
+    }
+  }
+}
+```
+
+The logger never writes this metadata. Course notebook generation owns the ID and
+version. Direct cell metadata is emitted with `attribution: "cell_metadata"`.
+For an untagged student-created cell, the nearest preceding tagged cell is emitted
+only as `attribution: "nearest_preceding_cell_metadata"`. With no such marker the
+task remains null and `attribution` is `"unknown"`.
+
+This is notebook structure, not student intent. Tutor request records call it
+`active_task_context`; selecting a Question 2 cell does not establish that a typed
+question concerns Question 2. Analyses must retain the attribution value and must
+not relabel active or inferred context as an explicitly referenced task.
+
+`notebook_cell_created`, `notebook_cell_deleted`, and `notebook_cell_moved` retain
+native cell identity, index, type and task context. `notebook_cell_source_changed`
+coalesces an editing burst after 750 ms of inactivity and records the number of
+source changes, source revision and final character length. It deliberately omits
+source text; exact source is still retained only at tutor requests and execution
+submissions. `notebook_cell_task_context_changed` makes changes to direct or
+inferred context visible. `notebook_active_cell_changed` records selected context,
+again without claiming that it is the subject of a tutor request.
+
 ## Joining and interpreting observations
 
-New observation payloads carry `schema_version: 1`, the frontend package
-`client_version`, and client UTC timestamps. Release/deployment provenance should
+Every logging payload carries a unique `event_id`, one page-lifetime
+`analytics_session_id`, a monotonic `client_sequence`, and a `client_timestamp`.
+These fields reveal retained sequence gaps and allow network reordering to be
+repaired after import; they do not prove delivery. New observation payloads also
+carry `schema_version: 1`, the frontend package `client_version`, and event-specific
+client UTC timestamps. Release/deployment provenance should
 also retain the built Git commit; a package version alone does not identify local
 changes. Request metadata captures live notebook/session/kernel identities where
 available, with nulls for unknowns. Notebook paths can change and are not global
-task IDs. Task identity/version remain explicitly unknown.
+task IDs. Task identity/version are present only where authored metadata or an
+explicitly labeled structural inference supports them.
 
 For an invented example, a student can execute `x = 1`, edit it to `x = 2`, and
 ask why the output remains `1`. The execution source and later request snapshot
@@ -93,8 +135,9 @@ a nearby tutor response and execution from timestamps alone.
 The existing collector accepts these payload fields without a database migration.
 Delivery remains **best effort**: HTTP failures and network errors are reported to
 the browser console, with no persistent queue or automatic retry. A local logging
-call does not prove database retention. Network delivery can reorder events; join
-by identifiers rather than database row order. Deployment verification must inspect
+call does not prove database retention. Network delivery can reorder events; order
+by the per-session sequence and join by identifiers rather than database row order.
+Missing sequence values expose some loss but cannot recover it. Deployment verification must inspect
 the records actually received before using a session in a study. This change does
 not repair missing historical captures.
 

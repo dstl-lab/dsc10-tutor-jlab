@@ -3,6 +3,8 @@ import { UUID } from '@lumino/coreutils';
 
 import { ServerConnection } from '@jupyterlab/services';
 import { logEvent, observationMetadata } from './logger';
+import type { ITaskContext } from '../utils/taskContext';
+import { unknownTaskContext } from '../utils/taskContext';
 
 // import { getStudentEmailFromUrl, isProduction } from '@/utils';
 
@@ -161,6 +163,10 @@ export function askTutorStream(
     notebook_session_id?: string | null;
     kernel_id?: string | null;
     kernel_client_id?: string | null;
+    active_cell_id?: string | null;
+    active_cell_index?: number | null;
+    active_cell_type?: string | null;
+    active_task_context?: ITaskContext;
   }
 ): () => void {
   const settings = ServerConnection.makeSettings();
@@ -194,6 +200,11 @@ export function askTutorStream(
     notebook_session_id: observation?.notebook_session_id ?? null,
     kernel_id: observation?.kernel_id ?? null,
     kernel_client_id: observation?.kernel_client_id ?? null,
+    active_cell_id: observation?.active_cell_id ?? null,
+    active_cell_index: observation?.active_cell_index ?? null,
+    active_cell_type: observation?.active_cell_type ?? null,
+    active_task_context:
+      observation?.active_task_context ?? unknownTaskContext(),
     mode: observation?.mode ?? null
   };
   let started = false;

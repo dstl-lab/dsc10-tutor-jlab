@@ -3,6 +3,7 @@ import type { Kernel, KernelMessage } from '@jupyterlab/services';
 import { logEvent, observationMetadata } from '../api/logger';
 import { isAutograderExecution, parseGraderOutput } from './autograderDetector';
 import { logAutograderEvent } from './autograderLogger';
+import { resolveTaskContext } from './taskContext';
 
 type INotebookKernel = NonNullable<
   NonNullable<NotebookPanel['sessionContext']['session']>['kernel']
@@ -118,6 +119,7 @@ export function startExecutionLogging(tracker: INotebookTracker): () => void {
           notebook_name: panel.title.label,
           cell_id: cellId,
           cell_index: cellIndex,
+          task_context: resolveTaskContext(cells, cellIndex),
           source: request.content.code,
           source_capture: 'execute_request'
         };

@@ -53,7 +53,16 @@ it('retains two exact request snapshots and joins their replies despite edits wh
         {
           question: 'why is it still 1?',
           notebook: 'invented.ipynb',
-          mode: 'tutor'
+          mode: 'tutor',
+          active_cell_id: 'cell-a',
+          active_cell_index: 0,
+          active_cell_type: 'code',
+          active_task_context: {
+            task_id: 'lab01-q03',
+            task_version: 'v1',
+            attribution: 'cell_metadata',
+            anchor_cell_id: 'cell-a'
+          }
         }
       );
     });
@@ -99,6 +108,13 @@ it('retains two exact request snapshots and joins their replies despite edits wh
     createHash('sha256').update(original).digest('hex')
   );
   expect(queries[0].payload.question).toBe('why is it still 1?');
+  expect(queries[0].payload.active_task_context).toEqual({
+    task_id: 'lab01-q03',
+    task_version: 'v1',
+    attribution: 'cell_metadata',
+    anchor_cell_id: 'cell-a'
+  });
+  expect(replies[0].payload.active_cell_id).toBe('cell-a');
   expect(queries[0].payload.request_id).not.toBe(queries[1].payload.request_id);
   for (let index = 0; index < 2; index++) {
     expect(replies[index].payload.request_id).toBe(

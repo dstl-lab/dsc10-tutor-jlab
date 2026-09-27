@@ -24,7 +24,7 @@ module.exports = {
   modulePathIgnorePatterns: [
     ...(baseConfig.modulePathIgnorePatterns ?? []),
     '<rootDir>/.venv/',
-    '<rootDir>/jupyterlab_ai_tutor_backend/labextension/'
+    '<rootDir>/dsc10_tutor_jlab_backend/labextension/'
   ],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',

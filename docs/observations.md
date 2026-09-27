@@ -166,9 +166,6 @@ checks emitted records, not deployed database retention. No model, real student 
 live course kernel is involved. No learner fidelity, learning, delivery-completeness
 or historical-data claim follows from passing these controls.
 
-The package requires Tornado `>=6.5.10`. CI follows that requirement without the
-earlier temporary `<6.5.9` bound, which would conflict with the package dependency.
-
 Reply latency has not been benchmarked. Request serialization, copying and the
 notebook checksum currently precede tutor dispatch. Logging HTTP requests are not
 awaited, but serialization and concurrent uploads still consume resources. Measure

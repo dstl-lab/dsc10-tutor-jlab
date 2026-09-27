@@ -22,15 +22,6 @@ test('records real kernel execution and two request snapshots while work changes
     const url = new URL(route.request().url());
     return url.hostname === localHost ? route.fallback() : route.abort();
   });
-  await context.route('**/jupyterlab-ai-tutor-backend/config', route =>
-    route.fulfill({
-      json: {
-        courseName: 'Invented course',
-        sidebarTitle: 'AI Tutor',
-        enableChatGPTMode: false
-      }
-    })
-  );
   await context.route(
     'https://dsc10-tutor-logging-api*.nrp-nautilus.io/events',
     async route => {
@@ -47,21 +38,18 @@ test('records real kernel execution and two request snapshots while work changes
       });
     }
   );
-  await context.route(
-    '**/jupyterlab-ai-tutor-backend/ask-stream',
-    async route => {
-      requests.push(route.request().postDataJSON());
-      if (requests.length === 1) {
-        await firstReply;
-      }
-      await route.fulfill({
-        contentType: 'text/event-stream',
-        body:
-          'data: {"type":"token","text":"Try running the edited cell."}\n\n' +
-          'data: {"type":"done","conversation_id":"invented-conversation"}\n\n'
-      });
+  await context.route('**/dsc10-tutor-jlab-backend/ask-stream', async route => {
+    requests.push(route.request().postDataJSON());
+    if (requests.length === 1) {
+      await firstReply;
     }
-  );
+    await route.fulfill({
+      contentType: 'text/event-stream',
+      body:
+        'data: {"type":"token","text":"Try running the edited cell."}\n\n' +
+        'data: {"type":"done","conversation_id":"invented-conversation"}\n\n'
+    });
+  });
   const events = (type: string) =>
     records.filter(row => row.event_type === type);
   const gate = 'release-observation';

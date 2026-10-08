@@ -56,9 +56,10 @@ test('records real kernel execution and two request snapshots while work changes
   const submitted =
     'import time\nfrom pathlib import Path\nx = 1\nwhile not Path("release-observation").exists():\n    time.sleep(0.05)\nprint(x)';
   try {
-    await page.goto();
-    await page.filebrowser.openDirectory(tmpPath);
-    await page.notebook.createNew('observation.ipynb', { kernel: 'python3' });
+    // Navigate directly: newer Galata file-browser helpers assume 4.6 markup,
+    // while the course and CI target JupyterLab 4.4. The UI still creates the file.
+    await page.goto(`tree/${tmpPath}`);
+    await page.notebook.createNew(undefined, { kernel: 'python3' });
     await page.notebook.setCell(
       0,
       'markdown',
@@ -221,9 +222,8 @@ test('real UI moves, edits, deletion and undo preserve cell identity', async ({
   const events = (type: string) =>
     records.filter(row => row.event_type === type);
   try {
-    await page.goto();
-    await page.filebrowser.openDirectory(tmpPath);
-    await page.notebook.createNew('activity.ipynb', { kernel: 'python3' });
+    await page.goto(`tree/${tmpPath}`);
+    await page.notebook.createNew(undefined, { kernel: 'python3' });
     await page.notebook.addCell('code', 'x = 1');
     const cell = await page.notebook.getCellLocator(1);
     await cell!.getByRole('textbox').fill('x = 123');

@@ -2,6 +2,13 @@
 
 The extension can be published to `PyPI` and `npm` manually or using the [Jupyter Releaser](https://github.com/jupyter-server/jupyter_releaser).
 
+Source builds, the development environment, and installed-wheel CI tests use
+JupyterLab `~=4.4.0` (4.4.x) with the existing `@jupyterlab/builder`. The build
+requirements, release hook, and CI workflows enforce this range; for direct
+`jlpm` builds, use the documented `uv sync --dev` environment. Revisit this pin
+after validating newer runtimes and
+[migrating to jupyter-builder](https://jupyterlab.readthedocs.io/en/stable/extension/extension_migration.html#migrating-to-jupyter-builder).
+
 ## Manual release
 
 ### Python package

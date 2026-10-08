@@ -12,6 +12,7 @@ export interface ISanitizedNotebook {
 }
 
 export interface ISanitizedCell {
+  id?: string;
   cell_type: 'code' | 'markdown';
   source: string;
   execution_count?: number | null;
@@ -34,6 +35,7 @@ interface IRawNotebook {
 }
 
 interface IRawCell {
+  id?: string;
   cell_type: string;
   source: string | string[];
   outputs?: any[];
@@ -175,6 +177,10 @@ function sanitizeCell(cell: IRawCell): ISanitizedCell {
           : ''
   };
 
+  if (typeof cell.id === 'string' && cell.id.length > 0) {
+    sanitized.id = cell.id;
+  }
+
   if (cell.cell_type === 'code') {
     if (cell.execution_count !== undefined) {
       sanitized.execution_count = cell.execution_count;
@@ -265,6 +271,7 @@ export function sanitizeNotebook(notebook: IRawNotebook): ISanitizedNotebook {
  * Gets the active cell info from a notebook
  */
 export interface IActiveCellInfo {
+  id?: string;
   index: number;
   type: 'code' | 'markdown';
   source: string;
@@ -282,6 +289,7 @@ export function getActiveCellInfo(
 
   const cell = notebook.cells[activeCellIndex];
   return {
+    id: cell.id,
     index: activeCellIndex,
     type: cell.cell_type,
     source: cell.source,

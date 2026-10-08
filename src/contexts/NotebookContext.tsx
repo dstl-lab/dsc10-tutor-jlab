@@ -24,21 +24,35 @@ import {
   type ISanitizedNotebook,
   type IStructuredContext
 } from '@/utils/notebookSanitizer';
-import { INotebookTracker, NotebookActions } from '@jupyterlab/notebook';
 import {
-  isAutograderExecution,
-  parseGraderOutput
-} from '@/utils/autograderDetector';
-import { logAutograderEvent } from '@/utils/autograderLogger';
+  type ITaskContext,
+  resolveTaskContext,
+  unknownTaskContext
+} from '@/utils/taskContext';
+import { INotebookTracker, NotebookActions } from '@jupyterlab/notebook';
 
 export interface INotebookContext {
   notebookName: string;
   notebookPath: string;
   activeCellIndex: number;
 
+  getNotebookIdentity: () => {
+    notebook_path: string | null;
+    notebook_session_id: string | null;
+    kernel_id: string | null;
+    kernel_client_id: string | null;
+  };
+  getActiveObservationContext: () => {
+    active_cell_id: string | null;
+    active_cell_index: number | null;
+    active_cell_type: string | null;
+    active_task_context: ITaskContext;
+  };
   getNotebookJson: () => string;
   getSanitizedNotebook: () => ISanitizedNotebook;
-  getStructuredContext: () => IStructuredContext | null;
+  getStructuredContext: (
+    snapshot?: ISanitizedNotebook
+  ) => IStructuredContext | null;
   getActiveCellInfo: () => IActiveCellInfo | null;
   getNearestMarkdownCell: () => { cellIndex: number; text: string } | null;
   insertCodeBelowActiveCell?: (code: string) => void;
@@ -62,6 +76,8 @@ export function NotebookProvider({
     Omit<
       INotebookContext,
       | 'getNotebookJson'
+      | 'getNotebookIdentity'
+      | 'getActiveObservationContext'
       | 'getSanitizedNotebook'
       | 'getStructuredContext'
       | 'getActiveCellInfo'
@@ -72,6 +88,38 @@ export function NotebookProvider({
     notebookPath: '',
     activeCellIndex: -1
   });
+
+  const getNotebookIdentity = useCallback(() => {
+    const panel = notebookTracker.currentWidget;
+    const session = panel?.sessionContext.session;
+    return {
+      notebook_path: panel?.context.path ?? null,
+      notebook_session_id: session?.id ?? null,
+      kernel_id: session?.kernel?.id ?? null,
+      kernel_client_id: session?.kernel?.clientId ?? null
+    };
+  }, [notebookTracker]);
+
+  const getActiveObservationContext = useCallback(() => {
+    const panel = notebookTracker.currentWidget;
+    const cells = panel?.content.model?.cells;
+    const index = panel?.content.activeCellIndex ?? -1;
+    if (!cells || index < 0 || index >= cells.length) {
+      return {
+        active_cell_id: null,
+        active_cell_index: null,
+        active_cell_type: null,
+        active_task_context: unknownTaskContext()
+      };
+    }
+    const cell = cells.get(index);
+    return {
+      active_cell_id: cell.id,
+      active_cell_index: index,
+      active_cell_type: cell.type,
+      active_task_context: resolveTaskContext(cells, index)
+    };
+  }, [notebookTracker]);
 
   const getSelectedCellIndex = useCallback((): number => {
     const panel = notebookTracker.currentWidget;
@@ -140,6 +188,7 @@ export function NotebookProvider({
 
     const cell = sanitized.cells[activeCellIndex];
     return {
+      id: cell.id,
       index: activeCellIndex,
       type: cell.cell_type,
       source: cell.source,
@@ -193,13 +242,20 @@ export function NotebookProvider({
   }, [notebookTracker, getSelectedCellIndex]);
 
   // Get structured context for a request
-  const getStructuredContext = useCallback((): IStructuredContext | null => {
-    const sanitized = getSanitizedNotebook();
-    const activeCellIndex = getSelectedCellIndex();
-    const nearestMarkdown = getNearestMarkdownCell();
+  const getStructuredContext = useCallback(
+    (snapshot?: ISanitizedNotebook): IStructuredContext | null => {
+      const sanitized = snapshot ?? getSanitizedNotebook();
+      const activeCellIndex = getSelectedCellIndex();
+      const nearestMarkdown = getNearestMarkdownCell();
 
-    return buildStructuredContext(sanitized, activeCellIndex, nearestMarkdown);
-  }, [getSanitizedNotebook, getSelectedCellIndex, getNearestMarkdownCell]);
+      return buildStructuredContext(
+        sanitized,
+        activeCellIndex,
+        nearestMarkdown
+      );
+    },
+    [getSanitizedNotebook, getSelectedCellIndex, getNearestMarkdownCell]
+  );
 
   useEffect(() => {
     setContextValue(getTrackerState());
@@ -222,197 +278,10 @@ export function NotebookProvider({
     };
   }, [getTrackerState, getSelectedCellIndex, notebookTracker]);
 
-  useEffect(() => {
-    let cleanup: (() => void) | null = null;
-
-    const setupAutograderLogging = () => {
-      if (cleanup) {
-        cleanup();
-        cleanup = null;
-      }
-
-      const panel = notebookTracker.currentWidget;
-      if (!panel) {
-        return;
-      }
-
-      const notebook = panel.content;
-      const model = notebook.model;
-      if (!model) {
-        return;
-      }
-
-      const lastLoggedExecutionCount = new Map<number, number | null>();
-
-      const handleAutograderExecution = async (
-        cellModel: any,
-        cellIndex: number
-      ) => {
-        if (!cellModel || cellModel.type !== 'code') {
-          return;
-        }
-
-        const detection = isAutograderExecution(cellModel);
-        if (!detection.isGrader) {
-          return;
-        }
-
-        const executionCount = cellModel.executionCount;
-        if (!executionCount || executionCount === null) {
-          return;
-        }
-
-        const lastLogged = lastLoggedExecutionCount.get(cellIndex);
-        if (lastLogged === executionCount) {
-          return;
-        }
-
-        let outputs: any[] = [];
-        if (cellModel.outputs) {
-          const cellOutputs = cellModel.outputs;
-          if (cellOutputs.length !== undefined) {
-            for (let j = 0; j < cellOutputs.length; j++) {
-              outputs.push(
-                cellOutputs.get ? cellOutputs.get(j) : cellOutputs[j]
-              );
-            }
-          } else if (Array.isArray(cellOutputs)) {
-            outputs = cellOutputs;
-          }
-        }
-
-        if (outputs.length === 0) {
-          return;
-        }
-
-        let fullOutput = '';
-        let hasError = false;
-
-        for (let i = 0; i < outputs.length; i++) {
-          const output = outputs[i];
-          const parsed = parseGraderOutput(output);
-
-          if (parsed.output) {
-            fullOutput += parsed.output;
-            if (i < outputs.length - 1) {
-              fullOutput += '\n';
-            }
-          }
-
-          if (!parsed.success) {
-            hasError = true;
-          }
-        }
-
-        const overallSuccess = !hasError && fullOutput.length > 0;
-        const graderId = detection.graderId || 'unknown';
-
-        lastLoggedExecutionCount.set(cellIndex, executionCount);
-
-        console.log(
-          `[Autograder Logger] ✅ Logging autograder info for cell ${cellIndex}:`,
-          {
-            grader_id: graderId,
-            success: overallSuccess
-          }
-        );
-
-        await logAutograderEvent({
-          grader_id: graderId,
-          output: fullOutput.trim(),
-          success: overallSuccess,
-          notebook: panel.title?.label || ''
-        });
-      };
-
-      const cells = model.cells;
-
-      const setupCellExecutionListeners = () => {
-        const cellConnections: Array<{ disconnect: () => void }> = [];
-
-        for (let i = 0; i < cells.length; i++) {
-          const cell = cells.get(i);
-          if (cell && cell.type === 'code') {
-            if ((cell as any).stateChanged) {
-              const handler = () => {
-                setTimeout(() => {
-                  handleAutograderExecution(cell, i);
-                }, 200);
-              };
-              (cell as any).stateChanged.connect(handler);
-              cellConnections.push({
-                disconnect: () => (cell as any).stateChanged.disconnect(handler)
-              });
-            }
-
-            if ((cell as any).outputsChanged) {
-              const outputHandler = () => {
-                setTimeout(() => {
-                  handleAutograderExecution(cell, i);
-                }, 100);
-              };
-              (cell as any).outputsChanged.connect(outputHandler);
-              cellConnections.push({
-                disconnect: () =>
-                  (cell as any).outputsChanged.disconnect(outputHandler)
-              });
-            }
-          }
-        }
-
-        return cellConnections;
-      };
-
-      const connections: Array<{ disconnect: () => void }> = [];
-      let cellConnections: Array<{ disconnect: () => void }> = [];
-
-      const handleCellsChanged = (
-        sender: any,
-        args: {
-          type: string;
-          newValues?: any[];
-          oldValues?: any[];
-          newIndex?: number;
-        }
-      ) => {
-        // Re-setup cell execution listeners when cells are added/changed
-        cellConnections.forEach(conn => conn.disconnect());
-        cellConnections = setupCellExecutionListeners();
-      };
-
-      if (model.cells.changed) {
-        model.cells.changed.connect(handleCellsChanged);
-        connections.push({
-          disconnect: () => model.cells.changed.disconnect(handleCellsChanged)
-        });
-      }
-
-      cellConnections = setupCellExecutionListeners();
-
-      cleanup = () => {
-        connections.forEach(conn => conn.disconnect());
-        cellConnections.forEach(conn => conn.disconnect());
-      };
-    };
-
-    setupAutograderLogging();
-
-    const handleNotebookChanged = () => {
-      setupAutograderLogging();
-    };
-
-    notebookTracker.currentChanged.connect(handleNotebookChanged);
-
-    return () => {
-      notebookTracker.currentChanged.disconnect(handleNotebookChanged);
-      if (cleanup) {
-        cleanup();
-      }
-    };
-  }, [notebookTracker]);
-
   const fullContextValue: INotebookContext = {
     ...contextValue,
+    getNotebookIdentity,
+    getActiveObservationContext,
     getNotebookJson,
     getSanitizedNotebook,
     getStructuredContext,

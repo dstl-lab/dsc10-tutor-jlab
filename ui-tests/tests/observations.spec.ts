@@ -104,14 +104,20 @@ test('records real kernel execution and two request snapshots while work changes
     });
 
     const input = page.locator('#chatbot-widget textarea');
+    // A real pointer click activates the tutor panel in Jupyter's focus tracker;
+    // fill() alone can leave notebook keyboard commands active on Linux CI.
+    await input.click();
     await input.fill('why is it still 1?');
+    await expect(input).toBeFocused();
     await input.press('Enter');
     await expect.poll(() => requests.length).toBe(1);
     await codeCell!.getByRole('textbox').fill('x = 3\nprint(x)');
     releaseTutor!();
     await expect.poll(() => events('tutor_response').length).toBe(1);
     await expect(input).toBeEnabled();
+    await input.click();
     await input.fill('what about now?');
+    await expect(input).toBeFocused();
     await input.press('Enter');
     await expect.poll(() => events('tutor_response').length).toBe(2);
     await expect.poll(() => events('tutor_query').length).toBe(2);

@@ -2,6 +2,7 @@ import { webcrypto, createHash } from 'crypto';
 import { ReadableStream } from 'stream/web';
 import { TextDecoder, TextEncoder } from 'util';
 import { askTutorStream, IAskTutorParams } from '../api';
+import { registerNotebookEditFlusher } from '../utils/notebookEditBoundary';
 
 jest.mock('@jupyterlab/services', () => ({
   ServerConnection: { makeSettings: () => ({ baseUrl: '/', token: '' }) }
@@ -13,6 +14,30 @@ jest.mock('@/utils', () => ({
 
 Object.defineProperty(globalThis, 'crypto', { value: webcrypto });
 Object.assign(globalThis, { TextDecoder, TextEncoder });
+
+it('flushes the request edit boundary synchronously before awaiting the checksum', async () => {
+  const flush = jest.fn();
+  const unregister = registerNotebookEditFlusher(flush);
+  const records: any[] = [];
+  globalThis.fetch = jest.fn(async (_url, init) => {
+    records.push(JSON.parse(String(init?.body)));
+    return { ok: true } as Response;
+  });
+  try {
+    await new Promise<void>(resolve => {
+      const cancel = askTutorStream(
+        { student_question: 'help', notebook_json: '{}' },
+        () => {},
+        () => resolve()
+      );
+      expect(flush).toHaveBeenCalledTimes(1);
+      expect(records).toHaveLength(0);
+      cancel();
+    });
+  } finally {
+    unregister();
+  }
+});
 
 it('retains two exact request snapshots and joins their replies despite edits while streaming', async () => {
   const records: any[] = [];

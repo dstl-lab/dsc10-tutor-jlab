@@ -104,20 +104,39 @@ question concerns Question 2. Analyses must retain the attribution value and mus
 not relabel active or inferred context as an explicitly referenced task.
 
 `notebook_cell_created`, `notebook_cell_deleted`, and `notebook_cell_moved` retain
-native cell identity, index, type and task context. `notebook_cell_source_changed`
-coalesces an editing burst after 750 ms of inactivity and records the number of
-source changes, source revision and final character length. It deliberately omits
-source text; exact source is still retained only at tutor requests and execution
-submissions. `notebook_cell_task_context_changed` makes changes to direct or
-inferred context visible. `notebook_active_cell_changed` records selected context,
-again without claiming that it is the subject of a tutor request.
+native cell identity, index, type and task context. Lifecycle tracking reconciles
+cached IDs against JupyterLab's current cell models: removals can contain disposed
+cell placeholders, and moves recreate models while retaining their IDs. Index
+shifts of neighboring cells are not separate moves. Pending edits retain their
+old location/context before structural or task-metadata changes.
+
+`notebook_cell_source_changed` coalesces an editing burst after 750 ms of inactivity,
+or flushes it before another logged action. Tutor capture also flushes synchronously
+before its asynchronous checksum. Thus an edit just before a request, reply, or run
+is not combined with later edits across that observation boundary. Each summary
+records the number of source changes, source revision, final character length,
+`edit_started_at`, and `edit_ended_at`. Its `timestamp` is the last actual source
+change time, not the later flush/upload time. A burst remains an interval rather
+than a complete keystroke trace. It deliberately omits source text; exact source is
+still retained only at tutor requests and execution submissions. Revisions persist
+through moves within an observed notebook; a deleted/recreated cell starts a new
+observed lifetime.
+
+`notebook_cell_task_context_changed` makes changes to direct or inferred context
+visible. Task metadata is resolved in a single forward pass; unrelated metadata
+changes do not rescan task context. `notebook_active_cell_changed` records selected
+context, again without claiming that it is the subject of a tutor request.
 
 ## Joining and interpreting observations
 
 Every logging payload carries a unique `event_id`, one page-lifetime
 `analytics_session_id`, a monotonic `client_sequence`, and a `client_timestamp`.
 These fields reveal retained sequence gaps and allow network reordering to be
-repaired after import; they do not prove delivery. New observation payloads also
+repaired after import; they do not prove delivery. `client_sequence` orders logging
+calls, and `client_timestamp` marks that logging time. Event-specific timestamps
+describe capture/occurrence times: debounced edits retain their edit interval, and
+tutor queries retain request capture time even if checksum calculation delays their
+logging call. Do not mistake logging/upload time for exact action time. New observation payloads also
 carry `schema_version: 1`, the frontend package `client_version`, and event-specific
 client UTC timestamps. Release/deployment provenance should
 also retain the built Git commit; a package version alone does not identify local
@@ -148,7 +167,10 @@ cover two different request snapshots, mutation during streaming, exact hashes,
 request/response joins, cancellation before and during streaming, partial output,
 EOF/server errors, malformed events, native/missing cell IDs, overlapping and
 background executions, matching reply/idle boundaries, shared views, output bounds,
-and interruptions. Serializing and reopening the emitted request records preserves
+and interruptions. Real Jupyter notebook-model regressions additionally cover
+deletion, single/multi-cell movement, undo/redo, edits across task boundaries,
+shared-view cleanup, edit occurrence times, logging boundaries, and linear context
+resolution. Serializing and reopening the emitted request records preserves
 the work and response joins without a model call.
 
 The existing Galata browser suite also runs `ui-tests/tests/observations.spec.ts`
@@ -159,6 +181,12 @@ submitted source, native identities, hashes, request/response joins and the lega
 first-turn snapshot. Run it using `jlpm test` in `ui-tests` after building and
 installing the extension as described in that directory's README. Each run attaches
 `observations.json` with the intercepted request and logging bodies.
+
+A second browser regression uses actual command-mode keyboard shortcuts to move,
+delete, and undo deletion of an edited cell. It checks stable identity, continued
+edit revisions after movement, no phantom creation on movement, and flushing before
+deletion, and attaches `cell-activity.json`. The execution/request test also checks
+that pending edit summaries precede the corresponding logged actions.
 
 Tutor responses are scripted and collector uploads intercepted in the browser;
 other nonlocal HTTP traffic is blocked, including during fixture cleanup. This

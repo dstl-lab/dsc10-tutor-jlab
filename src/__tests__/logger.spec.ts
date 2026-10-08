@@ -4,6 +4,26 @@ jest.mock('@/utils', () => ({
 }));
 
 import { logEvent } from '../api/logger';
+import { registerNotebookEditFlusher } from '../utils/notebookEditBoundary';
+
+test('a broken edit observer cannot prevent the next event from being logged', () => {
+  const unregister = registerNotebookEditFlusher(() => {
+    throw new Error('observer failed');
+  });
+  const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+  const fetchMock = jest
+    .spyOn(global, 'fetch')
+    .mockResolvedValue({ ok: true } as Response);
+  try {
+    expect(() => logEvent({ event_type: 'tutor_query' })).not.toThrow();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalled();
+  } finally {
+    unregister();
+    fetchMock.mockRestore();
+    error.mockRestore();
+  }
+});
 
 test('adds joinable client identity and ordering to every event', () => {
   const fetchMock = jest

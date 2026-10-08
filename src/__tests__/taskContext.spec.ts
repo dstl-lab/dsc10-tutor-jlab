@@ -1,5 +1,9 @@
 import type { ICellModel } from '@jupyterlab/cells';
-import { resolveTaskContext, TASK_METADATA_KEY } from '../utils/taskContext';
+import {
+  resolveTaskContext,
+  resolveTaskContexts,
+  TASK_METADATA_KEY
+} from '../utils/taskContext';
 
 function cell(id: string, task?: Record<string, unknown>): ICellModel {
   return {
@@ -14,6 +18,23 @@ function cells(...values: ICellModel[]) {
     get: (index: number) => values[index]
   };
 }
+
+test('the forward pass agrees with individual lookups across multiple anchors', () => {
+  const collection = cells(
+    cell('unknown'),
+    cell('q1', { task_id: ' q1 ', task_version: 'v1' }),
+    cell('student-a'),
+    cell('bad', { task_id: ' ' }),
+    cell('q2', { task_id: 'q2' }),
+    cell('student-b')
+  );
+  expect(resolveTaskContexts(collection)).toEqual(
+    Array.from({ length: collection.length }, (_, index) =>
+      resolveTaskContext(collection, index)
+    )
+  );
+  expect(resolveTaskContexts(cells())).toEqual([]);
+});
 
 test('uses authored task metadata on the cell', () => {
   const context = resolveTaskContext(

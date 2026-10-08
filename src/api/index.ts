@@ -5,6 +5,7 @@ import { ServerConnection } from '@jupyterlab/services';
 import { logEvent, observationMetadata } from './logger';
 import type { ITaskContext } from '../utils/taskContext';
 import { unknownTaskContext } from '../utils/taskContext';
+import { flushPendingNotebookEdits } from '../utils/notebookEditBoundary';
 
 // import { getStudentEmailFromUrl, isProduction } from '@/utils';
 
@@ -169,6 +170,8 @@ export function askTutorStream(
     active_task_context?: ITaskContext;
   }
 ): () => void {
+  // Capture the boundary before the async checksum, while the request is frozen.
+  flushPendingNotebookEdits();
   const settings = ServerConnection.makeSettings();
   const requestUrl = URLExt.join(
     settings.baseUrl,

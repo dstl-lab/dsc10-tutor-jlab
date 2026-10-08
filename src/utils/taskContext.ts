@@ -51,6 +51,26 @@ function authoredTask(
   };
 }
 
+/** Resolve a whole notebook in one pass, retaining the nearest authored anchor. */
+export function resolveTaskContexts(cells: ICellCollection): ITaskContext[] {
+  const contexts: ITaskContext[] = [];
+  let preceding: Omit<ITaskContext, 'attribution'> | null = null;
+  for (let index = 0; index < cells.length; index++) {
+    const direct = authoredTask(cells.get(index));
+    if (direct) {
+      preceding = direct;
+      contexts.push({ ...direct, attribution: 'cell_metadata' });
+    } else {
+      contexts.push(
+        preceding
+          ? { ...preceding, attribution: 'nearest_preceding_cell_metadata' }
+          : unknownTaskContext()
+      );
+    }
+  }
+  return contexts;
+}
+
 /**
  * Describe the task context around a cell without claiming student intent.
  *

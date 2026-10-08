@@ -76,6 +76,16 @@ test('records real kernel execution and two request snapshots while work changes
     expect(execution.execution_id).toEqual(expect.stringMatching(/\S/));
     expect(execution.kernel_id).toEqual(expect.stringMatching(/\S/));
     expect(execution.cell_id).toEqual(expect.stringMatching(/\S/));
+    const submittedEdits = events('notebook_cell_source_changed').filter(
+      row =>
+        row.payload.cell_id === execution.cell_id &&
+        row.payload.client_sequence < execution.client_sequence
+    );
+    expect(submittedEdits.length).toBeGreaterThan(0);
+    expect(submittedEdits[submittedEdits.length - 1].payload).toMatchObject({
+      source_length: submitted.length,
+      edit_ended_at: expect.any(String)
+    });
     // The file gate keeps the real kernel running until the editor has changed.
     await codeCell!.getByRole('textbox').fill('x = 2\nprint(x)');
     expect(events('notebook_execution_finished')).toHaveLength(0);
@@ -131,6 +141,15 @@ test('records real kernel execution and two request snapshots while work changes
       expect(JSON.parse(query.request.notebook_json).cells[1].id).toBe(
         events('notebook_execution_requested')[0].payload.cell_id
       );
+      const beforeRequest = events('notebook_cell_source_changed').filter(
+        row =>
+          row.payload.cell_id === execution.cell_id &&
+          row.payload.client_sequence < query.client_sequence
+      );
+      expect(beforeRequest.length).toBeGreaterThan(0);
+      expect(
+        beforeRequest[beforeRequest.length - 1].payload.edit_ended_at
+      ).toBeTruthy();
     }
     await expect.poll(() => events('tutor_notebook_info').length).toBe(2);
     expect(
@@ -155,6 +174,113 @@ test('records real kernel execution and two request snapshots while work changes
       )
     );
     await testInfo.attach('observations', {
+      path: artifact,
+      contentType: 'application/json'
+    });
+  }
+});
+
+test('real UI moves, edits, deletion and undo preserve cell identity', async ({
+  page,
+  tmpPath
+}, testInfo) => {
+  const records: any[] = [];
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => {
+    if (
+      message.type() === 'error' &&
+      /TypeError|Cannot read properties/.test(message.text())
+    ) {
+      errors.push(message.text());
+    }
+  });
+  const localHost = new URL(page.baseURL).hostname;
+  const context = page.context();
+  await context.route('**/*', route =>
+    new URL(route.request().url()).hostname === localHost
+      ? route.fallback()
+      : route.abort()
+  );
+  await context.route(
+    'https://dsc10-tutor-logging-api*.nrp-nautilus.io/events',
+    async route => {
+      if (route.request().method() === 'POST') {
+        records.push(route.request().postDataJSON());
+      }
+      await route.fulfill({
+        status: 201,
+        headers: {
+          'access-control-allow-origin': '*',
+          'access-control-allow-headers': 'content-type'
+        },
+        body: '{}'
+      });
+    }
+  );
+  const events = (type: string) =>
+    records.filter(row => row.event_type === type);
+  try {
+    await page.goto();
+    await page.filebrowser.openDirectory(tmpPath);
+    await page.notebook.createNew('activity.ipynb', { kernel: 'python3' });
+    await page.notebook.addCell('code', 'x = 1');
+    const cell = await page.notebook.getCellLocator(1);
+    await cell!.getByRole('textbox').fill('x = 123');
+    await cell!.getByRole('textbox').press('Escape');
+    const creates = events('notebook_cell_created').length;
+    const deletes = events('notebook_cell_deleted').length;
+    // These are Jupyter's actual command-mode keyboard shortcuts, not synthetic
+    // cell-list signals or calls to the shared-model API.
+    await page.keyboard.press('Control+Shift+ArrowUp');
+    await expect.poll(() => events('notebook_cell_moved').length).toBe(1);
+    const moved = events('notebook_cell_moved')[0].payload;
+    expect(moved).toMatchObject({ old_cell_index: 1, cell_index: 0 });
+    expect(events('notebook_cell_created')).toHaveLength(creates);
+    expect(events('notebook_cell_deleted')).toHaveLength(deletes);
+    const priorEdits = events('notebook_cell_source_changed').filter(
+      row => row.payload.cell_id === moved.cell_id
+    );
+    expect(priorEdits.length).toBeGreaterThan(0);
+    const priorRevision =
+      priorEdits[priorEdits.length - 1].payload.source_revision;
+    const movedCell = await page.notebook.getCellLocator(0);
+    await movedCell!.getByRole('textbox').fill('x = 456');
+    await movedCell!.getByRole('textbox').press('Escape');
+    await page.keyboard.press('d');
+    await page.keyboard.press('d');
+    await expect
+      .poll(() => events('notebook_cell_deleted').length)
+      .toBe(deletes + 1);
+    await expect.poll(() => page.notebook.getCellCount()).toBe(1);
+    const deleted = events('notebook_cell_deleted')[deletes].payload;
+    expect(deleted.cell_id).toBe(moved.cell_id);
+    const edits = events('notebook_cell_source_changed').filter(
+      row => row.payload.cell_id === moved.cell_id
+    );
+    const lastEdit = edits[edits.length - 1].payload;
+    expect(lastEdit.source_revision).toBeGreaterThan(priorRevision);
+    expect(lastEdit.client_sequence).toBeLessThan(deleted.client_sequence);
+    await page.keyboard.press('z');
+    await expect.poll(() => page.notebook.getCellCount()).toBe(2);
+    await expect
+      .poll(() => events('notebook_cell_created').length)
+      .toBe(creates + 1);
+    expect(events('notebook_cell_created')[creates].payload.cell_id).toBe(
+      moved.cell_id
+    );
+    expect(errors).toEqual([]);
+  } finally {
+    const artifact = testInfo.outputPath('cell-activity.json');
+    await writeFile(
+      artifact,
+      JSON.stringify(
+        { invented: true, collector: 'browser interception', records, errors },
+        null,
+        2
+      )
+    );
+    await testInfo.attach('cell-activity', {
       path: artifact,
       contentType: 'application/json'
     });

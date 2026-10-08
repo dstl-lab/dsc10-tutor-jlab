@@ -1,6 +1,7 @@
 import { getStudentEmailFromUrl, isProduction } from '@/utils';
 import { UUID } from '@lumino/coreutils';
 import packageInfo from '../../package.json';
+import { flushPendingNotebookEdits } from '../utils/notebookEditBoundary';
 
 export const observationMetadata = {
   schema_version: 1,
@@ -21,6 +22,10 @@ const analyticsSessionId = UUID.uuid4();
 let clientSequence = 0;
 
 export function logEvent(event: ILogEvent): void {
+  // Source summaries must precede the next observed action, not their idle timer.
+  if (event.event_type !== 'notebook_cell_source_changed') {
+    flushPendingNotebookEdits();
+  }
   const body: ILogEvent = {
     ...event,
     user_email: event.user_email ?? getStudentEmailFromUrl(),

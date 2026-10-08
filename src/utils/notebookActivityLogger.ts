@@ -2,34 +2,45 @@ import type { ICellModel } from '@jupyterlab/cells';
 import type { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
 import type { IObservableList } from '@jupyterlab/observables';
 import { logEvent, observationMetadata } from '../api/logger';
-import { ITaskContext, resolveTaskContext } from './taskContext';
+import { registerNotebookEditFlusher } from './notebookEditBoundary';
+import {
+  ITaskContext,
+  resolveTaskContext,
+  resolveTaskContexts,
+  TASK_METADATA_KEY
+} from './taskContext';
 
 const EDIT_IDLE_MS = 750;
 type INotebookCells = NonNullable<NotebookPanel['content']['model']>['cells'];
 
 interface ICellState {
+  cell: ICellModel;
+  id: string;
+  type: ICellModel['type'];
+  index: number;
   source: string;
   sourceRevision: number;
   pendingChanges: number;
+  editStartedAt: string;
+  editEndedAt: string;
+  editOrder: number;
   timer: ReturnType<typeof setTimeout> | null;
   taskContext: ITaskContext;
   onContentChanged: () => void;
-  onMetadataChanged: () => void;
+  onMetadataChanged: Parameters<ICellModel['metadataChanged']['connect']>[0];
 }
 
 interface INotebookObservation {
   panel: NotebookPanel;
   panels: Set<NotebookPanel>;
   cells: INotebookCells;
-  states: Map<ICellModel, ICellState>;
+  // IDs and cached values survive disposal and Jupyter's clone-based moves.
+  states: Map<string, ICellState>;
+  pendingEdits: Set<ICellState>;
   onCellsChanged: (
     sender: unknown,
     args: IObservableList.IChangedArgs<ICellModel>
   ) => void;
-}
-
-function sourceOf(cell: ICellModel): string {
-  return cell.sharedModel.getSource();
 }
 
 function sameTask(left: ITaskContext, right: ITaskContext): boolean {
@@ -39,15 +50,6 @@ function sameTask(left: ITaskContext, right: ITaskContext): boolean {
     left.attribution === right.attribution &&
     left.anchor_cell_id === right.anchor_cell_id
   );
-}
-
-function cellIndex(cells: INotebookCells, cell: ICellModel): number {
-  for (let index = 0; index < cells.length; index++) {
-    if (cells.get(index) === cell) {
-      return index;
-    }
-  }
-  return -1;
 }
 
 function notebookIdentity(panel: NotebookPanel) {
@@ -66,11 +68,13 @@ export function startNotebookActivityLogging(
   const panelModels = new Map<NotebookPanel, object>();
   const waitingPanels = new Set<NotebookPanel>();
   let stopped = false;
+  let editOrder = 0;
 
   const emit = (
     eventType: string,
     panel: NotebookPanel,
-    payload: Record<string, unknown>
+    payload: Record<string, unknown>,
+    timestamp = new Date().toISOString()
   ) =>
     logEvent({
       event_type: eventType,
@@ -78,128 +82,247 @@ export function startNotebookActivityLogging(
         ...observationMetadata,
         ...notebookIdentity(panel),
         ...payload,
-        timestamp: new Date().toISOString()
+        timestamp
       }
     });
 
+  const flushEdit = (observation: INotebookObservation, state: ICellState) => {
+    if (!state.pendingChanges) {
+      return;
+    }
+    if (state.timer !== null) {
+      clearTimeout(state.timer);
+      state.timer = null;
+    }
+    const changes = state.pendingChanges;
+    state.pendingChanges = 0;
+    observation.pendingEdits.delete(state);
+    emit(
+      'notebook_cell_source_changed',
+      observation.panel,
+      {
+        cell_id: state.id,
+        cell_index: state.index,
+        cell_type: state.type,
+        source_revision: state.sourceRevision,
+        source_change_count: changes,
+        source_length: state.source.length,
+        task_context: state.taskContext,
+        edit_started_at: state.editStartedAt,
+        edit_ended_at: state.editEndedAt
+      },
+      state.editEndedAt
+    );
+  };
+
+  const flushEdits = (observation: INotebookObservation) => {
+    const pending = [...observation.pendingEdits].sort(
+      (left, right) => left.editOrder - right.editOrder
+    );
+    for (const state of pending) {
+      flushEdit(observation, state);
+    }
+  };
+  const unregisterFlusher = registerNotebookEditFlusher(() => {
+    for (const observation of observations.values()) {
+      flushEdits(observation);
+    }
+  });
+
   const refreshTaskContexts = (observation: INotebookObservation) => {
-    const cells = observation.cells;
-    for (let index = 0; index < cells.length; index++) {
-      const cell = cells.get(index);
-      const state = observation.states.get(cell);
-      if (!state) {
-        continue;
-      }
-      const next = resolveTaskContext(cells, index);
-      if (sameTask(state.taskContext, next)) {
+    // A metadata boundary must not reattribute an already-recorded edit burst.
+    flushEdits(observation);
+    const contexts = resolveTaskContexts(observation.cells);
+    for (let index = 0; index < observation.cells.length; index++) {
+      const state = observation.states.get(observation.cells.get(index).id);
+      const next = contexts[index];
+      if (!state || sameTask(state.taskContext, next)) {
         continue;
       }
       const previous = state.taskContext;
       state.taskContext = next;
       emit('notebook_cell_task_context_changed', observation.panel, {
-        cell_id: cell.id,
+        cell_id: state.id,
         cell_index: index,
-        cell_type: cell.type,
+        cell_type: state.type,
         previous_task_context: previous,
         task_context: next
       });
     }
   };
 
-  const flushEdit = (
-    observation: INotebookObservation,
-    cell: ICellModel,
-    indexOverride?: number
-  ) => {
-    const state = observation.states.get(cell);
-    if (!state || state.pendingChanges === 0) {
-      return;
-    }
-    if (state.timer) {
-      clearTimeout(state.timer);
-      state.timer = null;
-    }
-    const index = indexOverride ?? cellIndex(observation.cells, cell);
-    emit('notebook_cell_source_changed', observation.panel, {
-      cell_id: cell.id,
-      cell_index: index >= 0 ? index : null,
-      cell_type: cell.type,
-      source_revision: state.sourceRevision,
-      source_change_count: state.pendingChanges,
-      source_length: state.source.length,
-      task_context: state.taskContext
-    });
-    state.pendingChanges = 0;
-  };
-
   const observeCell = (
     observation: INotebookObservation,
     cell: ICellModel,
-    index: number
-  ) => {
-    const cells = observation.cells;
+    index: number,
+    taskContext: ITaskContext
+  ): ICellState => {
     const state: ICellState = {
-      source: sourceOf(cell),
+      cell,
+      id: cell.id,
+      type: cell.type,
+      index,
+      source: cell.sharedModel.getSource(),
       sourceRevision: 0,
       pendingChanges: 0,
+      editStartedAt: '',
+      editEndedAt: '',
+      editOrder: 0,
       timer: null,
-      taskContext: resolveTaskContext(cells, index),
+      taskContext,
       onContentChanged: () => undefined,
       onMetadataChanged: () => undefined
     };
     state.onContentChanged = () => {
-      const source = sourceOf(cell);
+      const source = state.cell.sharedModel.getSource();
       if (source === state.source) {
         return;
       }
+      const now = new Date().toISOString();
+      if (!state.pendingChanges) {
+        state.editStartedAt = now;
+      }
+      state.editEndedAt = now;
+      state.editOrder = ++editOrder;
       state.source = source;
       state.sourceRevision += 1;
       state.pendingChanges += 1;
-      if (state.timer) {
+      observation.pendingEdits.add(state);
+      if (state.timer !== null) {
         clearTimeout(state.timer);
       }
-      state.timer = setTimeout(() => {
-        state.timer = null;
-        flushEdit(observation, cell);
-      }, EDIT_IDLE_MS);
+      state.timer = setTimeout(
+        () => flushEdit(observation, state),
+        EDIT_IDLE_MS
+      );
     };
-    state.onMetadataChanged = () => refreshTaskContexts(observation);
-    observation.states.set(cell, state);
+    state.onMetadataChanged = (_sender, change) => {
+      if (change.key === TASK_METADATA_KEY) {
+        refreshTaskContexts(observation);
+      }
+    };
+    observation.states.set(state.id, state);
     cell.contentChanged.connect(state.onContentChanged);
     cell.metadataChanged.connect(state.onMetadataChanged);
+    return state;
   };
 
-  const forgetCell = (
+  const disconnectCell = (state: ICellState) => {
+    state.cell.contentChanged.disconnect(state.onContentChanged);
+    state.cell.metadataChanged.disconnect(state.onMetadataChanged);
+  };
+
+  const reconcileCells = (
     observation: INotebookObservation,
-    cell: ICellModel,
-    oldIndex: number
+    args: IObservableList.IChangedArgs<ICellModel>
   ) => {
-    const state = observation.states.get(cell);
-    if (!state) {
+    // CellList emits multiple deltas for a transaction, but all current models
+    // are already available. Reconcile the complete state once; later deltas
+    // are no-ops. Never dereference disposed cells from args.oldValues.
+    const cells = Array.from({ length: observation.cells.length }, (_, index) =>
+      observation.cells.get(index)
+    );
+    if (
+      cells.length === observation.states.size &&
+      cells.every((cell, index) => {
+        const state = observation.states.get(cell.id);
+        return state?.cell === cell && state.index === index;
+      })
+    ) {
       return;
     }
-    flushEdit(observation, cell, oldIndex);
-    cell.contentChanged.disconnect(state.onContentChanged);
-    cell.metadataChanged.disconnect(state.onMetadataChanged);
-    observation.states.delete(cell);
+    flushEdits(observation);
+    const current = new Map(cells.map(cell => [cell.id, cell]));
+    for (const state of observation.states.values()) {
+      const cell = current.get(state.id);
+      if (cell && cell.type === state.type) {
+        continue;
+      }
+      disconnectCell(state);
+      observation.states.delete(state.id);
+      emit('notebook_cell_deleted', observation.panel, {
+        cell_id: state.id,
+        cell_index: state.index,
+        cell_type: state.type,
+        source_length: state.source.length,
+        task_context: state.taskContext
+      });
+    }
+    const contexts = resolveTaskContexts(observation.cells);
+    const explicitMoves = new Set(
+      args.type === 'move' ? args.newValues.map(cell => cell.id) : []
+    );
+    const rebound: ICellState[] = [];
+    cells.forEach((cell, index) => {
+      let state = observation.states.get(cell.id);
+      if (!state) {
+        state = observeCell(observation, cell, index, contexts[index]);
+        emit('notebook_cell_created', observation.panel, {
+          cell_id: state.id,
+          cell_index: index,
+          cell_type: state.type,
+          source_length: state.source.length,
+          task_context: state.taskContext
+        });
+        return;
+      }
+      const previousIndex = state.index;
+      const replacedModel = state.cell !== cell;
+      state.index = index;
+      if (replacedModel) {
+        disconnectCell(state);
+        state.cell = cell;
+        cell.contentChanged.connect(state.onContentChanged);
+        cell.metadataChanged.connect(state.onMetadataChanged);
+        rebound.push(state);
+      }
+      // Jupyter's shared-model move clones the moved cells, preserving their
+      // IDs. Neighbors shifted by an insertion/deletion are not themselves moves.
+      if (
+        previousIndex !== index &&
+        (replacedModel || explicitMoves.has(state.id))
+      ) {
+        emit('notebook_cell_moved', observation.panel, {
+          cell_id: state.id,
+          cell_type: state.type,
+          old_cell_index: previousIndex,
+          cell_index: index,
+          task_context: contexts[index]
+        });
+      }
+      if (!sameTask(state.taskContext, contexts[index])) {
+        const previous = state.taskContext;
+        state.taskContext = contexts[index];
+        emit('notebook_cell_task_context_changed', observation.panel, {
+          cell_id: state.id,
+          cell_index: index,
+          cell_type: state.type,
+          previous_task_context: previous,
+          task_context: state.taskContext
+        });
+      }
+    });
+    for (const state of rebound) {
+      state.onContentChanged();
+    }
   };
 
   const disposeObservation = (model: object) => {
     const observation = observations.get(model);
     if (!observation) {
-      observations.delete(model);
       return;
     }
+    flushEdits(observation);
     observation.cells.changed.disconnect(observation.onCellsChanged);
-    for (const [cell] of observation.states) {
-      forgetCell(observation, cell, cellIndex(observation.cells, cell));
+    for (const state of observation.states.values()) {
+      disconnectCell(state);
     }
     observations.delete(model);
   };
 
   const attach = (panel: NotebookPanel) => {
     const model = panel.content.model;
-    if (stopped || panelModels.has(panel)) {
+    if (stopped || panel.isDisposed || panelModels.has(panel)) {
       return;
     }
     if (!model) {
@@ -226,60 +349,18 @@ export function startNotebookActivityLogging(
         panels: new Set([panel]),
         cells: model.cells,
         states: new Map(),
-        onCellsChanged: () => undefined
-      };
-      observation.onCellsChanged = (_sender, args) => {
-        const currentCells = observation.cells;
-        if (
-          args.type === 'remove' ||
-          args.type === 'set' ||
-          args.type === 'clear'
-        ) {
-          args.oldValues.forEach((cell, offset) => {
-            const state = observation.states.get(cell);
-            forgetCell(observation, cell, args.oldIndex + offset);
-            emit('notebook_cell_deleted', observation.panel, {
-              cell_id: cell.id,
-              cell_index: args.oldIndex + offset,
-              cell_type: cell.type,
-              source_length: state?.source.length ?? sourceOf(cell).length,
-              task_context: state?.taskContext ?? {
-                task_id: null,
-                task_version: null,
-                attribution: 'unknown',
-                anchor_cell_id: null
-              }
-            });
-          });
-        }
-        if (args.type === 'add' || args.type === 'set') {
-          args.newValues.forEach((cell, offset) => {
-            const index = args.newIndex + offset;
-            observeCell(observation, cell, index);
-            const state = observation.states.get(cell)!;
-            emit('notebook_cell_created', observation.panel, {
-              cell_id: cell.id,
-              cell_index: index,
-              cell_type: cell.type,
-              source_length: state.source.length,
-              task_context: state.taskContext
-            });
-          });
-        } else if (args.type === 'move') {
-          const moved = args.newValues[0] ?? currentCells.get(args.newIndex);
-          emit('notebook_cell_moved', observation.panel, {
-            cell_id: moved.id,
-            cell_type: moved.type,
-            old_cell_index: args.oldIndex,
-            cell_index: args.newIndex,
-            task_context: resolveTaskContext(currentCells, args.newIndex)
-          });
-        }
-        refreshTaskContexts(observation);
+        pendingEdits: new Set(),
+        onCellsChanged: (_sender, args) => reconcileCells(observation, args)
       };
       observations.set(model, observation);
+      const contexts = resolveTaskContexts(model.cells);
       for (let index = 0; index < model.cells.length; index++) {
-        observeCell(observation, model.cells.get(index), index);
+        observeCell(
+          observation,
+          model.cells.get(index),
+          index,
+          contexts[index]
+        );
       }
       model.cells.changed.connect(observation.onCellsChanged);
     }
@@ -325,6 +406,7 @@ export function startNotebookActivityLogging(
   tracker.forEach(attach);
   return () => {
     stopped = true;
+    unregisterFlusher();
     tracker.widgetAdded.disconnect(onAdded);
     tracker.activeCellChanged.disconnect(onActiveCell);
     for (const model of [...observations.keys()]) {

@@ -1,0 +1,7 @@
+#!/bin/sh
+# Resolve paths relative to this launcher, regardless of the caller's directory.
+task_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+if [ -x "$task_root/.venv/bin/python" ]; then
+  exec "$task_root/.venv/bin/python" "$task_root/prototypes/session_findings/run.py" "$@"
+fi
+exec python3 "$task_root/prototypes/session_findings/run.py" "$@"

@@ -1,0 +1,182 @@
+{
+  "input_sha256": "b72c8c4e70699ee187d83732c5ff3fca829b2a6074abfca4f0abee1cc57003f4",
+  "assessments": [
+    {
+      "session_id": "S01-persistence",
+      "decision": "surface",
+      "summary": "Hypothetical persistent difficulty after a changed attempt and repeated guidance.",
+      "findings": [
+        {
+          "category": "persistent_difficulty",
+          "explanation": "The edit implements the stated operator change, but failure and the reported empty result persist; guidance repeats.",
+          "interpretations": [
+            {
+              "statement": "The student reports trying the same change that appears in the revision; the tutor repeats it.",
+              "evidence_ids": [
+                "M1",
+                "M2",
+                "R2",
+                "E2",
+                "C2",
+                "M3",
+                "M4"
+              ]
+            }
+          ],
+          "facts": [
+            {
+              "kind": "revision_executed",
+              "record_id": "R2",
+              "related_id": "E2"
+            },
+            {
+              "kind": "execution_checked",
+              "record_id": "E2",
+              "related_id": "C2"
+            },
+            {
+              "kind": "check_result",
+              "record_id": "C2",
+              "result": "fail"
+            },
+            {
+              "kind": "before",
+              "record_id": "M2",
+              "related_id": "C2"
+            }
+          ],
+          "highlight_ids": [
+            "M1",
+            "M2",
+            "R2",
+            "E2",
+            "C2",
+            "M3",
+            "M4"
+          ],
+          "recovery_evidence_ids": [],
+          "uncertainties": [
+            "All evidence is invented; this finding concerns a hypothetical scenario.",
+            "Semantic interpretation is not established by structural validation."
+          ]
+        }
+      ]
+    },
+    {
+      "session_id": "S02-progress",
+      "decision": "no_supported_finding",
+      "summary": "Different obstacles were addressed, with a later passing check; failure count alone does not establish a problem.",
+      "findings": []
+    },
+    {
+      "session_id": "S03-mismatch",
+      "decision": "surface",
+      "summary": "Hypothetical explicit repair of a request/response mismatch.",
+      "findings": [
+        {
+          "category": "request_mismatch",
+          "explanation": "The response supplies replacement code despite a request for explanation, and the student explicitly corrects the mismatch.",
+          "interpretations": [
+            {
+              "statement": "The student restates the requested explanation after receiving replacement code.",
+              "evidence_ids": [
+                "M1",
+                "M2",
+                "M3"
+              ]
+            }
+          ],
+          "facts": [],
+          "highlight_ids": [
+            "M1",
+            "M2",
+            "M3"
+          ],
+          "recovery_evidence_ids": [],
+          "uncertainties": [
+            "All evidence is invented; this finding concerns a hypothetical scenario.",
+            "Semantic interpretation is not established by structural validation."
+          ]
+        }
+      ]
+    },
+    {
+      "session_id": "S04-other-question",
+      "decision": "insufficient_evidence",
+      "summary": "The Q2 pass is not Q1 recovery; a relevant attempted change is not established, and the final tutor response requests diagnostic information.",
+      "findings": []
+    },
+    {
+      "session_id": "S05-unchanged-retries",
+      "decision": "no_supported_finding",
+      "summary": "Repeated failed executions used unchanged source. The suggested change was then made and a check passed; repeated guidance alone is not an ineffective-help finding.",
+      "findings": []
+    },
+    {
+      "session_id": "S06-recovered-obstacle",
+      "decision": "surface",
+      "summary": "Hypothetical obstacle following advice, followed by explicit correction and a passing check.",
+      "findings": [
+        {
+          "category": "advice_linked_obstacle",
+          "explanation": "The attempted method matches the advice and the execution reports that method as unavailable. The tutor corrects it, followed by recovery.",
+          "interpretations": [
+            {
+              "statement": "The proposed method is associated with the reported execution obstacle; later guidance changes the method.",
+              "evidence_ids": [
+                "M1",
+                "M2",
+                "R2",
+                "E2",
+                "C2",
+                "M3",
+                "M4"
+              ]
+            }
+          ],
+          "facts": [
+            {
+              "kind": "revision_executed",
+              "record_id": "R2",
+              "related_id": "E2"
+            },
+            {
+              "kind": "execution_checked",
+              "record_id": "E2",
+              "related_id": "C2"
+            },
+            {
+              "kind": "check_result",
+              "record_id": "C2",
+              "result": "fail"
+            },
+            {
+              "kind": "check_result",
+              "record_id": "C3",
+              "result": "pass"
+            }
+          ],
+          "highlight_ids": [
+            "M1",
+            "M2",
+            "R2",
+            "E2",
+            "C2",
+            "M3",
+            "M4"
+          ],
+          "recovery_evidence_ids": [
+            "R3",
+            "E3",
+            "C3",
+            "M5"
+          ],
+          "uncertainties": [
+            "All evidence is invented; this finding concerns a hypothetical scenario.",
+            "Semantic interpretation is not established by structural validation."
+          ]
+        }
+      ]
+    }
+  ]
+}

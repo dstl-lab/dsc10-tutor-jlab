@@ -141,3 +141,6 @@ dmypy.json
 # Jupyter untitled notebooks
 **/Untitled.ipynb
 Untitled.ipynb
+
+# Local session evidence and private reports
+local-analytics/

@@ -1,0 +1,703 @@
+{
+  "sessions": [
+    {
+      "session_id": "S01-persistence",
+      "messages": [
+        {
+          "id": "M1",
+          "timestamp": "2026-10-01T12:02:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "student",
+          "text": "My filter returns no rows."
+        },
+        {
+          "id": "M2",
+          "timestamp": "2026-10-01T12:03:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "tutor",
+          "text": "Change > to >=."
+        },
+        {
+          "id": "M3",
+          "timestamp": "2026-10-01T12:07:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "student",
+          "text": "I changed it to >=, but it still returns no rows."
+        },
+        {
+          "id": "M4",
+          "timestamp": "2026-10-01T12:08:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "tutor",
+          "text": "Change > to >=."
+        }
+      ],
+      "activity": [
+        {
+          "id": "R1",
+          "timestamp": "2026-10-01T12:00:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "revision",
+          "revision_id": "R1",
+          "previous_revision_id": null,
+          "source": "table[table.score > 10]"
+        },
+        {
+          "id": "E1",
+          "timestamp": "2026-10-01T12:01:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "execution",
+          "execution_id": "E1",
+          "revision_id": "R1",
+          "status": "success",
+          "output": null
+        },
+        {
+          "id": "C1",
+          "timestamp": "2026-10-01T12:02:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "check",
+          "check_id": "Q1.result",
+          "execution_id": "E1",
+          "result": "fail",
+          "feedback": null
+        },
+        {
+          "id": "R2",
+          "timestamp": "2026-10-01T12:04:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "revision",
+          "revision_id": "R2",
+          "previous_revision_id": "R1",
+          "source": "table[table.score >= 10]"
+        },
+        {
+          "id": "E2",
+          "timestamp": "2026-10-01T12:05:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "execution",
+          "execution_id": "E2",
+          "revision_id": "R2",
+          "status": "success",
+          "output": null
+        },
+        {
+          "id": "C2",
+          "timestamp": "2026-10-01T12:06:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "check",
+          "check_id": "Q1.result",
+          "execution_id": "E2",
+          "result": "fail",
+          "feedback": null
+        }
+      ]
+    },
+    {
+      "session_id": "S02-progress",
+      "messages": [
+        {
+          "id": "M1",
+          "timestamp": "2026-10-01T12:02:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "student",
+          "text": "It says the column is missing."
+        },
+        {
+          "id": "M2",
+          "timestamp": "2026-10-01T12:03:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "tutor",
+          "text": "Use score instead of scores."
+        },
+        {
+          "id": "M3",
+          "timestamp": "2026-10-01T12:07:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "student",
+          "text": "Now it runs, but the grader wants a scalar."
+        },
+        {
+          "id": "M4",
+          "timestamp": "2026-10-01T12:08:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "tutor",
+          "text": "Select the first item to obtain the scalar."
+        },
+        {
+          "id": "M5",
+          "timestamp": "2026-10-01T12:12:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "student",
+          "text": "That passed."
+        }
+      ],
+      "activity": [
+        {
+          "id": "R1",
+          "timestamp": "2026-10-01T12:00:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "revision",
+          "revision_id": "R1",
+          "previous_revision_id": null,
+          "source": "table.get('scores')"
+        },
+        {
+          "id": "E1",
+          "timestamp": "2026-10-01T12:01:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "execution",
+          "execution_id": "E1",
+          "revision_id": "R1",
+          "status": "error",
+          "output": "missing column"
+        },
+        {
+          "id": "C1",
+          "timestamp": "2026-10-01T12:02:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "check",
+          "check_id": "Q1.result",
+          "execution_id": "E1",
+          "result": "fail",
+          "feedback": null
+        },
+        {
+          "id": "R2",
+          "timestamp": "2026-10-01T12:04:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "revision",
+          "revision_id": "R2",
+          "previous_revision_id": "R1",
+          "source": "table.get('score')"
+        },
+        {
+          "id": "E2",
+          "timestamp": "2026-10-01T12:05:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "execution",
+          "execution_id": "E2",
+          "revision_id": "R2",
+          "status": "success",
+          "output": null
+        },
+        {
+          "id": "C2",
+          "timestamp": "2026-10-01T12:06:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "check",
+          "check_id": "Q1.result",
+          "execution_id": "E2",
+          "result": "fail",
+          "feedback": "Expected scalar"
+        },
+        {
+          "id": "R3",
+          "timestamp": "2026-10-01T12:09:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "revision",
+          "revision_id": "R3",
+          "previous_revision_id": "R2",
+          "source": "table.get('score').iloc[0]"
+        },
+        {
+          "id": "E3",
+          "timestamp": "2026-10-01T12:10:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "execution",
+          "execution_id": "E3",
+          "revision_id": "R3",
+          "status": "success",
+          "output": null
+        },
+        {
+          "id": "C3",
+          "timestamp": "2026-10-01T12:11:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "check",
+          "check_id": "Q1.result",
+          "execution_id": "E3",
+          "result": "pass",
+          "feedback": null
+        }
+      ]
+    },
+    {
+      "session_id": "S03-mismatch",
+      "messages": [
+        {
+          "id": "M1",
+          "timestamp": "2026-10-01T12:00:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "student",
+          "text": "Can you explain why this expression works? Please do not just replace it."
+        },
+        {
+          "id": "M2",
+          "timestamp": "2026-10-01T12:01:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "tutor",
+          "text": "Replace it with this code: result = values.sum()."
+        },
+        {
+          "id": "M3",
+          "timestamp": "2026-10-01T12:02:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "student",
+          "text": "I am asking why the original expression works, not for replacement code."
+        }
+      ],
+      "activity": []
+    },
+    {
+      "session_id": "S04-other-question",
+      "messages": [
+        {
+          "id": "M1",
+          "timestamp": "2026-10-01T12:02:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "student",
+          "text": "Q1 still fails."
+        },
+        {
+          "id": "M2",
+          "timestamp": "2026-10-01T12:03:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "tutor",
+          "text": "Try changing the comparison."
+        },
+        {
+          "id": "M3",
+          "timestamp": "2026-10-01T12:10:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "student",
+          "text": "Q1 still does not work."
+        },
+        {
+          "id": "M4",
+          "timestamp": "2026-10-01T12:11:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "tutor",
+          "text": "What output are you getting?"
+        }
+      ],
+      "activity": [
+        {
+          "id": "R1",
+          "timestamp": "2026-10-01T12:00:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "revision",
+          "revision_id": "R1",
+          "previous_revision_id": null,
+          "source": "answer1 = 0"
+        },
+        {
+          "id": "E1",
+          "timestamp": "2026-10-01T12:01:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "execution",
+          "execution_id": "E1",
+          "revision_id": "R1",
+          "status": "success",
+          "output": null
+        },
+        {
+          "id": "C1",
+          "timestamp": "2026-10-01T12:02:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "check",
+          "check_id": "Q1.result",
+          "execution_id": "E1",
+          "result": "fail",
+          "feedback": null
+        },
+        {
+          "id": "R2",
+          "timestamp": "2026-10-01T12:04:00Z",
+          "origin": "synthetic",
+          "question_id": "Q2",
+          "type": "revision",
+          "revision_id": "R2",
+          "previous_revision_id": null,
+          "source": "answer2 = 1"
+        },
+        {
+          "id": "E2",
+          "timestamp": "2026-10-01T12:05:00Z",
+          "origin": "synthetic",
+          "question_id": "Q2",
+          "type": "execution",
+          "execution_id": "E2",
+          "revision_id": "R2",
+          "status": "success",
+          "output": null
+        },
+        {
+          "id": "C2",
+          "timestamp": "2026-10-01T12:06:00Z",
+          "origin": "synthetic",
+          "question_id": "Q2",
+          "type": "check",
+          "check_id": "Q2.result",
+          "execution_id": "E2",
+          "result": "pass",
+          "feedback": null
+        },
+        {
+          "id": "E3",
+          "timestamp": "2026-10-01T12:08:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "execution",
+          "execution_id": "E3",
+          "revision_id": "R1",
+          "status": "success",
+          "output": null
+        },
+        {
+          "id": "C3",
+          "timestamp": "2026-10-01T12:09:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "check",
+          "check_id": "Q1.result",
+          "execution_id": "E3",
+          "result": "fail",
+          "feedback": null
+        }
+      ]
+    },
+    {
+      "session_id": "S05-unchanged-retries",
+      "messages": [
+        {
+          "id": "M1",
+          "timestamp": "2026-10-01T12:02:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "student",
+          "text": "This variable is not defined."
+        },
+        {
+          "id": "M2",
+          "timestamp": "2026-10-01T12:03:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "tutor",
+          "text": "Rename result to answer."
+        },
+        {
+          "id": "M3",
+          "timestamp": "2026-10-01T12:08:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "student",
+          "text": "Still broken."
+        },
+        {
+          "id": "M4",
+          "timestamp": "2026-10-01T12:09:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "tutor",
+          "text": "You still need to rename result to answer."
+        },
+        {
+          "id": "M5",
+          "timestamp": "2026-10-01T12:13:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "student",
+          "text": "It works now."
+        }
+      ],
+      "activity": [
+        {
+          "id": "R1",
+          "timestamp": "2026-10-01T12:00:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "revision",
+          "revision_id": "R1",
+          "previous_revision_id": null,
+          "source": "print(result)"
+        },
+        {
+          "id": "E1",
+          "timestamp": "2026-10-01T12:01:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "execution",
+          "execution_id": "E1",
+          "revision_id": "R1",
+          "status": "error",
+          "output": null
+        },
+        {
+          "id": "C1",
+          "timestamp": "2026-10-01T12:02:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "check",
+          "check_id": "Q1.result",
+          "execution_id": "E1",
+          "result": "fail",
+          "feedback": null
+        },
+        {
+          "id": "E2",
+          "timestamp": "2026-10-01T12:04:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "execution",
+          "execution_id": "E2",
+          "revision_id": "R1",
+          "status": "error",
+          "output": null
+        },
+        {
+          "id": "C2",
+          "timestamp": "2026-10-01T12:05:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "check",
+          "check_id": "Q1.result",
+          "execution_id": "E2",
+          "result": "fail",
+          "feedback": null
+        },
+        {
+          "id": "E3",
+          "timestamp": "2026-10-01T12:06:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "execution",
+          "execution_id": "E3",
+          "revision_id": "R1",
+          "status": "error",
+          "output": null
+        },
+        {
+          "id": "C3",
+          "timestamp": "2026-10-01T12:07:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "check",
+          "check_id": "Q1.result",
+          "execution_id": "E3",
+          "result": "fail",
+          "feedback": null
+        },
+        {
+          "id": "R2",
+          "timestamp": "2026-10-01T12:10:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "revision",
+          "revision_id": "R2",
+          "previous_revision_id": "R1",
+          "source": "print(answer)"
+        },
+        {
+          "id": "E4",
+          "timestamp": "2026-10-01T12:11:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "execution",
+          "execution_id": "E4",
+          "revision_id": "R2",
+          "status": "success",
+          "output": null
+        },
+        {
+          "id": "C4",
+          "timestamp": "2026-10-01T12:12:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "check",
+          "check_id": "Q1.result",
+          "execution_id": "E4",
+          "result": "pass",
+          "feedback": null
+        }
+      ]
+    },
+    {
+      "session_id": "S06-recovered-obstacle",
+      "messages": [
+        {
+          "id": "M1",
+          "timestamp": "2026-10-01T12:02:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "student",
+          "text": "How do I get group counts in Babypandas?"
+        },
+        {
+          "id": "M2",
+          "timestamp": "2026-10-01T12:03:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "tutor",
+          "text": "Call table.groupby(\"kind\").size()."
+        },
+        {
+          "id": "M3",
+          "timestamp": "2026-10-01T12:07:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "student",
+          "text": "I used size(), but Babypandas says that method does not exist."
+        },
+        {
+          "id": "M4",
+          "timestamp": "2026-10-01T12:08:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "tutor",
+          "text": "That method is unavailable here. Use count() and select the relevant column."
+        },
+        {
+          "id": "M5",
+          "timestamp": "2026-10-01T12:12:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "role": "student",
+          "text": "That passed."
+        }
+      ],
+      "activity": [
+        {
+          "id": "R1",
+          "timestamp": "2026-10-01T12:00:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "revision",
+          "revision_id": "R1",
+          "previous_revision_id": null,
+          "source": "counts = None"
+        },
+        {
+          "id": "E1",
+          "timestamp": "2026-10-01T12:01:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "execution",
+          "execution_id": "E1",
+          "revision_id": "R1",
+          "status": "success",
+          "output": null
+        },
+        {
+          "id": "C1",
+          "timestamp": "2026-10-01T12:02:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "check",
+          "check_id": "Q1.result",
+          "execution_id": "E1",
+          "result": "fail",
+          "feedback": null
+        },
+        {
+          "id": "R2",
+          "timestamp": "2026-10-01T12:04:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "revision",
+          "revision_id": "R2",
+          "previous_revision_id": "R1",
+          "source": "counts = table.groupby(\"kind\").size()"
+        },
+        {
+          "id": "E2",
+          "timestamp": "2026-10-01T12:05:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "execution",
+          "execution_id": "E2",
+          "revision_id": "R2",
+          "status": "error",
+          "output": "AttributeError: size"
+        },
+        {
+          "id": "C2",
+          "timestamp": "2026-10-01T12:06:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "check",
+          "check_id": "Q1.result",
+          "execution_id": "E2",
+          "result": "fail",
+          "feedback": null
+        },
+        {
+          "id": "R3",
+          "timestamp": "2026-10-01T12:09:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "revision",
+          "revision_id": "R3",
+          "previous_revision_id": "R2",
+          "source": "counts = table.groupby(\"kind\").count().get(\"value\")"
+        },
+        {
+          "id": "E3",
+          "timestamp": "2026-10-01T12:10:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "execution",
+          "execution_id": "E3",
+          "revision_id": "R3",
+          "status": "success",
+          "output": null
+        },
+        {
+          "id": "C3",
+          "timestamp": "2026-10-01T12:11:00Z",
+          "origin": "synthetic",
+          "question_id": "Q1",
+          "type": "check",
+          "check_id": "Q1.result",
+          "execution_id": "E3",
+          "result": "pass",
+          "feedback": null
+        }
+      ]
+    }
+  ]
+}

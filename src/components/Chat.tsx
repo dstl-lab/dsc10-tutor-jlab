@@ -9,7 +9,7 @@ import {
   type IAskTutorParams
 } from '@/api';
 
-import { logEvent, observationMetadata } from '@/api/logger';
+import { logError, logEvent, observationMetadata } from '@/api/logger';
 import { Button } from '@/components/ui/button';
 import { useNotebook } from '@/contexts/NotebookContext';
 import { enhanceQuestion } from '@/utils/enhancedQuestionUtils';
@@ -476,6 +476,13 @@ export default function Chat() {
       }
     } catch (error) {
       console.error('Error asking tutor:', error);
+      // No-op for errors already logged by the API layer.
+      logError('chat_submit', error, {
+        mode,
+        conversation_id: conversationId ?? null,
+        notebook: notebookName,
+        exam_mode: isExamModeActive
+      });
       const errorMessage =
         error instanceof Error
           ? error.message

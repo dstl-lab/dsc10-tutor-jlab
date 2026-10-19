@@ -61,9 +61,7 @@ function App() {
       className="flex h-full w-full flex-col gap-2 p-2"
     >
       <strong className="text-center">🧑‍🏫 DSC 10 AI Tutor</strong>
-      <TutorErrorBoundary>
-        <Chat />
-      </TutorErrorBoundary>
+      <Chat />
     </div>
   );
 }
@@ -77,9 +75,12 @@ export function createAppWidget({
 }): Widget {
   const widget = ReactWidget.create(
     <StrictMode>
-      <NotebookProvider notebookTracker={notebookTracker} commands={commands}>
-        <App />
-      </NotebookProvider>
+      {/* Outermost, so a crash in NotebookProvider is caught too. */}
+      <TutorErrorBoundary>
+        <NotebookProvider notebookTracker={notebookTracker} commands={commands}>
+          <App />
+        </NotebookProvider>
+      </TutorErrorBoundary>
     </StrictMode>
   );
 

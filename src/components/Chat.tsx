@@ -6,6 +6,7 @@ import {
   askTutorStream,
   getPracticeProblems,
   getRandomExamQuestion,
+  isAbortError,
   type IAskTutorParams
 } from '@/api';
 
@@ -475,6 +476,10 @@ export default function Chat() {
         setShouldResetNext(false);
       }
     } catch (error) {
+      // Cancelled requests are already recorded as tutor_request_failed.
+      if (isAbortError(error)) {
+        return;
+      }
       console.error('Error asking tutor:', error);
       // No-op for errors already logged by the API layer.
       logError('chat_submit', error, {

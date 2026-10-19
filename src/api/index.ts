@@ -151,6 +151,20 @@ export async function askTutor({
   });
 }
 
+function cancellationError(): Error {
+  const error = new Error('Tutor request cancelled');
+  error.name = 'AbortError';
+  return error;
+}
+
+/**
+ * Whether an error only means the request was cancelled, so callers can skip
+ * logging it as a failure.
+ */
+export function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError';
+}
+
 // Stream tutor response from /ask-stream using SSE over a POST body.
 export function askTutorStream(
   params: IAskTutorParams,
@@ -277,7 +291,7 @@ export function askTutorStream(
     });
     started = true;
     if (controller.signal.aborted) {
-      fail(new Error('Tutor request cancelled'));
+      fail(cancellationError());
       return;
     }
 
@@ -391,7 +405,7 @@ export function askTutorStream(
   return () => {
     controller.abort();
     if (started) {
-      fail(new Error('Tutor request cancelled'));
+      fail(cancellationError());
     }
   };
 }

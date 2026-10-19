@@ -1,7 +1,7 @@
 import { webcrypto, createHash } from 'crypto';
 import { ReadableStream } from 'stream/web';
 import { TextDecoder, TextEncoder } from 'util';
-import { askTutorStream, IAskTutorParams } from '../api';
+import { askTutorStream, IAskTutorParams, isAbortError } from '../api';
 import { registerNotebookEditFlusher } from '../utils/notebookEditBoundary';
 
 jest.mock('@jupyterlab/services', () => ({
@@ -176,16 +176,18 @@ it.each(['eof', 'server-error', 'cancel'])(
         })
       } as unknown as Response;
     });
-    await new Promise<void>(resolve => {
+    const received = await new Promise<Error>(resolve => {
       const cancel = askTutorStream(
         { student_question: 'help', notebook_json: '{}' },
         () => {},
-        () => resolve()
+        resolve
       );
       if (kind === 'cancel') {
         cancel();
       }
     });
+    // Callers skip logging only for cancellations.
+    expect(isAbortError(received)).toBe(kind === 'cancel');
     const failures = records.filter(
       row => row.event_type === 'tutor_request_failed'
     );

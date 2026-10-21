@@ -8,7 +8,6 @@ import { MainAreaWidget } from '@jupyterlab/apputils';
 import { INotebookTracker } from '@jupyterlab/notebook';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 
-import { logError, startGlobalErrorLogging } from './api/logger';
 import { createAppWidget } from './AppWidget';
 import { startExecutionLogging } from './utils/executionLogger';
 import { startNotebookActivityLogging } from './utils/notebookActivityLogger';
@@ -25,13 +24,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
     notebookTracker: INotebookTracker,
     settingRegistry: ISettingRegistry | null
   ) => {
-    startGlobalErrorLogging();
-    try {
-      startExecutionLogging(notebookTracker);
-      startNotebookActivityLogging(notebookTracker);
-    } catch (error) {
-      logError('plugin_activate', error, { stage: 'observation_logging' });
-    }
+    startExecutionLogging(notebookTracker);
+    startNotebookActivityLogging(notebookTracker);
     console.log('JupyterLab extension dsc10-tutor-jlab-frontend is activated!');
 
     if (settingRegistry) {
@@ -48,28 +42,22 @@ const plugin: JupyterFrontEndPlugin<void> = {
             'Failed to load settings for dsc10-tutor-jlab-frontend.',
             reason
           );
-          logError('plugin_activate', reason, { stage: 'load_settings' });
         });
     }
 
     // Attach app to the right-hand sidebar!
     // TODO: we should set a min-width so the sidebar can't be dragged to 0 width
-    try {
-      const widget = new MainAreaWidget({
-        content: createAppWidget({ notebookTracker, commands: app.commands })
-      });
-      widget.id = 'chatbot-widget';
-      widget.title.label = 'AI Tutor';
-      widget.title.closable = true;
+    const widget = new MainAreaWidget({
+      content: createAppWidget({ notebookTracker, commands: app.commands })
+    });
+    widget.id = 'chatbot-widget';
+    widget.title.label = 'AI Tutor';
+    widget.title.closable = true;
 
-      const labShell = app.shell as LabShell;
-      labShell.add(widget, 'right');
-      labShell.activateById(widget.id);
-      labShell.expandRight();
-    } catch (error) {
-      logError('plugin_activate', error, { stage: 'create_widget' });
-      throw error;
-    }
+    const labShell = app.shell as LabShell;
+    labShell.add(widget, 'right');
+    labShell.activateById(widget.id);
+    labShell.expandRight();
 
     // requestAPI<any>('get-example')
     //   .then(data => {

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { type ILectureCell } from '@/api';
-import { logError, logEvent } from '@/api/logger';
+import { logEvent } from '@/api/logger';
 import { cn } from '@/utils';
 import { useNotebook } from '@/contexts/NotebookContext';
 import Markdown from './Markdown';
@@ -85,10 +85,6 @@ export default function RelevantLectures({ lectures }: IRelevantLecturesProps) {
       }
     } catch (error) {
       console.error('Failed to open lecture notebook:', error);
-      logError('open_lecture', error, {
-        path: lecture.path,
-        cell_index: lecture.cell_index
-      });
     }
   };
 

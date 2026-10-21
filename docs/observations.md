@@ -127,6 +127,27 @@ visible. Task metadata is resolved in a single forward pass; unrelated metadata
 changes do not rescan task context. `notebook_active_cell_changed` records selected
 context, again without claiming that it is the subject of a tutor request.
 
+## Client errors
+
+`client_error` records failures students would otherwise only see in their
+browser console. `source` names where it surfaced: `tutor_stream`,
+`api_request` (practice problems, exam questions), `react_render` (the sidebar
+crashed; the student sees a "please refresh" message), `plugin_activate`,
+`chat_submit`, `open_lecture`, `insert_code`, and `uncaught_error` /
+`unhandled_rejection` for stray exceptions whose stack is in this extension.
+
+Each record has `error_name`, `error_message`, `stack`, and, where known,
+`http_status`, `response_body`, the server's `server_error_type`, and `stage`:
+the step in progress (`connect` = network failure, `http_response` = non-OK
+status, `streaming`, `server_error`, `stream_ended_early`). It also records
+`online`, `user_agent`, `page_visibility` and `ms_since_page_load`. Tutor stream
+errors carry the `request_id` for a join with `tutor_query` and
+`tutor_request_failed`. Cancellation is not an error. Each error object is
+logged once, with at most 100 per page session.
+
+Failures that stop the extension's own code from loading, and failures to
+reach the logging API itself, cannot be recorded this way.
+
 ## Joining and interpreting observations
 
 Every logging payload carries a unique `event_id`, one page-lifetime

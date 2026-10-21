@@ -1,7 +1,7 @@
 import { webcrypto, createHash } from 'crypto';
 import { ReadableStream } from 'stream/web';
 import { TextDecoder, TextEncoder } from 'util';
-import { askTutorStream, IAskTutorParams } from '../api';
+import { askTutorStream, IAskTutorParams, isAbortError } from '../api';
 import { registerNotebookEditFlusher } from '../utils/notebookEditBoundary';
 
 jest.mock('@jupyterlab/services', () => ({
@@ -176,16 +176,18 @@ it.each(['eof', 'server-error', 'cancel'])(
         })
       } as unknown as Response;
     });
-    await new Promise<void>(resolve => {
+    const received = await new Promise<Error>(resolve => {
       const cancel = askTutorStream(
         { student_question: 'help', notebook_json: '{}' },
         () => {},
-        () => resolve()
+        resolve
       );
       if (kind === 'cancel') {
         cancel();
       }
     });
+    // Callers skip logging only for cancellations.
+    expect(isAbortError(received)).toBe(kind === 'cancel');
     const failures = records.filter(
       row => row.event_type === 'tutor_request_failed'
     );
@@ -193,6 +195,19 @@ it.each(['eof', 'server-error', 'cancel'])(
     expect(failures[0].payload.status).toBe(
       kind === 'cancel' ? 'cancelled' : 'error'
     );
+    // Cancellation is not an error; real failures carry their reason.
+    const errors = records.filter(row => row.event_type === 'client_error');
+    if (kind === 'cancel') {
+      expect(errors).toHaveLength(0);
+    } else {
+      expect(errors).toHaveLength(1);
+      expect(errors[0].payload).toMatchObject({
+        source: 'tutor_stream',
+        request_id: failures[0].payload.request_id,
+        error_message: failures[0].payload.error,
+        stage: kind === 'eof' ? 'stream_ended_early' : 'server_error'
+      });
+    }
     expect(records.some(row => row.event_type === 'tutor_response')).toBe(
       false
     );

@@ -6,10 +6,11 @@ import {
   askTutorStream,
   getPracticeProblems,
   getRandomExamQuestion,
+  isAbortError,
   type IAskTutorParams
 } from '@/api';
 
-import { logEvent, observationMetadata } from '@/api/logger';
+import { logError, logEvent, observationMetadata } from '@/api/logger';
 import { Button } from '@/components/ui/button';
 import { useNotebook } from '@/contexts/NotebookContext';
 import { enhanceQuestion } from '@/utils/enhancedQuestionUtils';
@@ -475,7 +476,18 @@ export default function Chat() {
         setShouldResetNext(false);
       }
     } catch (error) {
+      // Cancelled requests are already recorded as tutor_request_failed.
+      if (isAbortError(error)) {
+        return;
+      }
       console.error('Error asking tutor:', error);
+      // No-op for errors already logged by the API layer.
+      logError('chat_submit', error, {
+        mode,
+        conversation_id: conversationId ?? null,
+        notebook: notebookName,
+        exam_mode: isExamModeActive
+      });
       const errorMessage =
         error instanceof Error
           ? error.message

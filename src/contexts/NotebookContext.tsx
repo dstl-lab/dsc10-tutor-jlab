@@ -17,7 +17,6 @@ import {
 } from 'react';
 
 import { CommandRegistry } from '@lumino/commands';
-import { logError } from '@/api/logger';
 import {
   buildStructuredContext,
   sanitizeNotebook,
@@ -326,7 +325,6 @@ export function NotebookProvider({
         }
       } catch (e) {
         console.error('Failed to insert code cell', e);
-        logError('insert_code', e);
       }
     },
     [notebookTracker]

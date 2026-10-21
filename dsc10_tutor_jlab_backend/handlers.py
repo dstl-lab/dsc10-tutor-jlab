@@ -69,9 +69,8 @@ class AskHandler(APIHandler):
 
             self.finish(json.dumps(result))
         except Exception as e:
-            logger.error("[Ask] Unhandled error:\n%s", traceback.format_exc())
             self.set_status(500)
-            self.finish(json.dumps({"error": str(e), "error_type": type(e).__name__}))
+            self.finish(json.dumps({"error": str(e)}))
 
 
 class AskStreamHandler(APIHandler):
@@ -114,11 +113,7 @@ class AskStreamHandler(APIHandler):
                 await self.flush()
         except Exception as e:
             logger.error("[AskStream] Unhandled error:\n%s", traceback.format_exc())
-            error_event = {
-                "type": "error",
-                "message": str(e),
-                "error_type": type(e).__name__,
-            }
+            error_event = {"type": "error", "message": str(e)}
             self.write(f"data: {json.dumps(error_event)}\n\n")
             await self.flush()
         finally:

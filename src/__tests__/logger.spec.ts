@@ -3,7 +3,7 @@ jest.mock('@/utils', () => ({
   isProduction: () => false
 }));
 
-import { logError, logEvent, TutorError } from '../api/logger';
+import { logEvent } from '../api/logger';
 import { registerNotebookEditFlusher } from '../utils/notebookEditBoundary';
 
 test('a broken edit observer cannot prevent the next event from being logged', () => {
@@ -49,37 +49,6 @@ test('adds joinable client identity and ordering to every event', () => {
     bodies[0].payload.client_sequence + 1
   );
   expect(bodies[0].payload.client_timestamp).toEqual(expect.any(String));
-
-  fetchMock.mockRestore();
-});
-
-test('logs an error with its reason once, even if reported twice', () => {
-  const fetchMock = jest
-    .spyOn(global, 'fetch')
-    .mockResolvedValue({ ok: true } as Response);
-  const error = new TutorError('Stream request failed: 502 Bad Gateway', {
-    http_status: 502,
-    stage: 'http_response'
-  });
-
-  logError('tutor_stream', error, { request_id: 'r1' });
-  logError('chat_submit', error);
-
-  expect(fetchMock).toHaveBeenCalledTimes(1);
-  const body = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
-  expect(body).toMatchObject({
-    event_type: 'client_error',
-    user_email: 'student@example.edu',
-    payload: {
-      source: 'tutor_stream',
-      error_name: 'TutorError',
-      error_message: 'Stream request failed: 502 Bad Gateway',
-      http_status: 502,
-      stage: 'http_response',
-      request_id: 'r1'
-    }
-  });
-  expect(body.payload.stack).toEqual(expect.any(String));
 
   fetchMock.mockRestore();
 });

@@ -2,7 +2,7 @@ import { URLExt } from '@jupyterlab/coreutils';
 import { UUID } from '@lumino/coreutils';
 
 import { ServerConnection } from '@jupyterlab/services';
-import { logError, logEvent, observationMetadata, TutorError } from './logger';
+import { logEvent, observationMetadata } from './logger';
 import type { ITaskContext } from '../utils/taskContext';
 import { unknownTaskContext } from '../utils/taskContext';
 import { flushPendingNotebookEdits } from '../utils/notebookEditBoundary';
@@ -52,7 +52,7 @@ export type ITutorStreamEvent =
   | { type: 'lectures'; relevant_lectures: ILectureCell[] }
   | { type: 'follow_up'; text: string }
   | { type: 'done'; conversation_id: string }
-  | { type: 'error'; message: string; error_type?: string };
+  | { type: 'error'; message: string };
 
 export interface IPracticeProblemsParams {
   topic_query: string;
@@ -151,20 +151,6 @@ export async function askTutor({
   });
 }
 
-function cancellationError(): Error {
-  const error = new Error('Tutor request cancelled');
-  error.name = 'AbortError';
-  return error;
-}
-
-/**
- * Whether an error only means the request was cancelled, so callers can skip
- * logging it as a failure.
- */
-export function isAbortError(error: unknown): boolean {
-  return error instanceof Error && error.name === 'AbortError';
-}
-
 // Stream tutor response from /ask-stream using SSE over a POST body.
 export function askTutorStream(
   params: IAskTutorParams,
@@ -227,26 +213,11 @@ export function askTutorStream(
   let started = false;
   let finished = false;
   let responseText = '';
-  // Which step was in progress, so failures can be told apart in the logs.
-  let stage = 'checksum';
-  let tokenCount = 0;
   const fail = (error: Error) => {
     if (finished) {
       return;
     }
     finished = true;
-    if (!controller.signal.aborted) {
-      logError('tutor_stream', error, {
-        stage,
-        request_id: request.request_id,
-        conversation_id: request.conversation_id ?? null,
-        mode: identity.mode,
-        notebook: identity.notebook,
-        notebook_json_chars: request.notebook_json.length,
-        tokens_received: tokenCount,
-        ms_since_request: Date.now() - Date.parse(capturedAt)
-      });
-    }
     logEvent({
       event_type: 'tutor_request_failed',
       payload: {
@@ -291,12 +262,11 @@ export function askTutorStream(
     });
     started = true;
     if (controller.signal.aborted) {
-      fail(cancellationError());
+      fail(new Error('Tutor request cancelled'));
       return;
     }
 
     try {
-      stage = 'connect';
       const response = await fetch(requestUrl, {
         method: 'POST',
         headers: {
@@ -309,17 +279,10 @@ export function askTutorStream(
         signal: controller.signal
       });
       if (!response.ok || !response.body) {
-        stage = 'http_response';
-        const responseBody = await response
-          .text()
-          .then(text => text.slice(0, 2000))
-          .catch(() => null);
-        throw new TutorError(
-          `Stream request failed: ${response.status} ${response.statusText}`,
-          { http_status: response.status, response_body: responseBody }
+        throw new Error(
+          `Stream request failed: ${response.status} ${response.statusText}`
         );
       }
-      stage = 'streaming';
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
@@ -345,7 +308,6 @@ export function askTutorStream(
             throw new Error('Invalid tutor token');
           }
           responseText += event.text;
-          tokenCount++;
         } else if (event.type === 'done') {
           if (
             typeof event.conversation_id !== 'string' ||
@@ -365,10 +327,7 @@ export function askTutorStream(
             }
           });
         } else if (event.type === 'error') {
-          stage = 'server_error';
-          throw new TutorError(event.message, {
-            server_error_type: event.error_type ?? null
-          });
+          throw new Error(event.message);
         }
         onEvent(event);
       };
@@ -387,7 +346,6 @@ export function askTutorStream(
               acceptFrame(buffer);
             }
             if (!finished) {
-              stage = 'stream_ended_early';
               throw new Error('Tutor stream ended before completion');
             }
             break;
@@ -405,7 +363,7 @@ export function askTutorStream(
   return () => {
     controller.abort();
     if (started) {
-      fail(cancellationError());
+      fail(new Error('Tutor request cancelled'));
     }
   };
 }
@@ -435,12 +393,7 @@ export async function requestAPI<T>(
   try {
     response = await ServerConnection.makeRequest(requestUrl, init, settings);
   } catch (error) {
-    const networkError = new ServerConnection.NetworkError(error as any);
-    logError('api_request', networkError, {
-      endpoint: endPoint,
-      stage: 'connect'
-    });
-    throw networkError;
+    throw new ServerConnection.NetworkError(error as any);
   }
 
   let data: any = await response.text();
@@ -454,19 +407,7 @@ export async function requestAPI<T>(
   }
 
   if (!response.ok) {
-    const responseError = new ServerConnection.ResponseError(
-      response,
-      data.message || data.error || data
-    );
-    logError('api_request', responseError, {
-      endpoint: endPoint,
-      stage: 'http_response',
-      response_body: (typeof data === 'string'
-        ? data
-        : JSON.stringify(data)
-      ).slice(0, 2000)
-    });
-    throw responseError;
+    throw new ServerConnection.ResponseError(response, data.message || data);
   }
 
   return data;
